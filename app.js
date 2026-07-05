@@ -199,7 +199,7 @@ function loadData() {
     }
 
     // 5. Google Sheets Sync URL
-    state.sheetsUrl = localStorage.getItem('fitflow_sheets_url') || '';
+    state.sheetsUrl = localStorage.getItem('fitflow_sheets_url') || 'https://script.google.com/macros/s/AKfycbzvGub8qkPOxTPDcoDbGfiT-U3tdky93ZRMr1SriYq8L4mfPENtZr5iAYyPSJ-xxaZ8/exec';
     
     saveData();
 }
