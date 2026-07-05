@@ -1463,7 +1463,7 @@ function initSettingsControls() {
 
 function exportWorkouts() {
     const backupData = {
-        version: '1.2.0',
+        version: '1.2.1',
         workouts: state.workouts,
         weightLogs: state.weightLogs,
         cardioLogs: state.cardioLogs,

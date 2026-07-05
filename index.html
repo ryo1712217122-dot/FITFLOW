@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>FITFLOW - 筋トレ実績管理アプリ</title>
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -24,7 +24,7 @@
                 </div>
                 <div class="brand-text">
                     <h1>FITFLOW</h1>
-                    <span class="app-version">v1.2.0</span>
+                    <span class="app-version">v1.2.1</span>
                 </div>
             </div>
             
@@ -61,7 +61,7 @@
             <!-- Top bar -->
             <header class="top-bar">
                 <div class="welcome">
-                    <h2 id="greeting-text">こんにちは！</h2>
+                    <h2 id="greeting-text">こんにちは！<span class="app-version-badge">v1.2.1</span></h2>
                     <p id="date-text">2026年7月3日 金曜日</p>
                 </div>
                 <div class="header-right-controls">
@@ -132,28 +132,23 @@
                                 <div class="mood-selector">
                                     <label class="mood-option">
                                         <input type="radio" name="workout-mood" value="fire" checked>
-                                        <span class="mood-emoji">🔥</span>
-                                        <span class="mood-label">絶好調</span>
+                                        <span class="mood-btn" title="絶好調">🔥</span>
                                     </label>
                                     <label class="mood-option">
                                         <input type="radio" name="workout-mood" value="strong">
-                                        <span class="mood-emoji">💪</span>
-                                        <span class="mood-label">良い</span>
+                                        <span class="mood-btn" title="良い">💪</span>
                                     </label>
                                     <label class="mood-option">
                                         <input type="radio" name="workout-mood" value="good">
-                                        <span class="mood-emoji">😊</span>
-                                        <span class="mood-label">普通</span>
+                                        <span class="mood-btn" title="普通">😊</span>
                                     </label>
                                     <label class="mood-option">
                                         <input type="radio" name="workout-mood" value="tired">
-                                        <span class="mood-emoji">🥱</span>
-                                        <span class="mood-label">眠い/疲労</span>
+                                        <span class="mood-btn" title="眠い/疲労">🥱</span>
                                     </label>
                                     <label class="mood-option">
                                         <input type="radio" name="workout-mood" value="exhausted">
-                                        <span class="mood-emoji">☠️</span>
-                                        <span class="mood-label">限界</span>
+                                        <span class="mood-btn" title="限界">☠️</span>
                                     </label>
                                 </div>
                             </div>
