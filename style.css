@@ -32,6 +32,12 @@
     --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
     --font-display: 'Outfit', sans-serif;
+    
+    --bg-input: rgba(0, 0, 0, 0.2);
+    --bg-wrapper: rgba(0, 0, 0, 0.1);
+    --bg-item: rgba(0, 0, 0, 0.15);
+    --bg-impression: rgba(0, 0, 0, 0.12);
+    --bg-icon-neutral: rgba(255, 255, 255, 0.03);
 }
 
 /* Light Theme overrides if toggled */
@@ -55,6 +61,12 @@ body.light-theme {
     --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.05);
     --shadow-md: 0 8px 20px rgba(0, 0, 0, 0.08);
     --shadow-lg: 0 12px 30px rgba(0, 0, 0, 0.12);
+    
+    --bg-input: #f8fafc;
+    --bg-wrapper: #f1f5f9;
+    --bg-item: #f8fafc;
+    --bg-impression: #f1f5f9;
+    --bg-icon-neutral: rgba(0, 0, 0, 0.03);
 }
 
 /* Base Styles */
@@ -345,7 +357,7 @@ body:not(.light-theme) .light-icon { display: none; }
     width: 56px;
     height: 56px;
     border-radius: 12px;
-    background-color: rgba(255, 255, 255, 0.03);
+    background-color: var(--bg-icon-neutral);
     border: 1px solid var(--border-color);
     display: flex;
     align-items: center;
@@ -397,7 +409,7 @@ body:not(.light-theme) .light-icon { display: none; }
 /* Calendar Heatmap */
 .calendar-wrapper {
     margin-top: 1rem;
-    background-color: rgba(0, 0, 0, 0.1);
+    background-color: var(--bg-wrapper);
     border-radius: var(--radius-sm);
     padding: 1rem;
 }
@@ -647,7 +659,7 @@ input[type="date"],
 input[type="number"],
 select,
 textarea {
-    background-color: rgba(0, 0, 0, 0.2);
+    background-color: var(--bg-input);
     border: 1px solid var(--border-color);
     border-radius: var(--radius-sm);
     padding: 0.75rem 1rem;
@@ -731,7 +743,7 @@ textarea:focus {
 
 .exercise-item {
     border: 1px solid var(--border-color);
-    background-color: rgba(0, 0, 0, 0.15);
+    background-color: var(--bg-item);
     border-radius: var(--radius-md);
     padding: 1.25rem;
     position: relative;
@@ -968,7 +980,7 @@ textarea:focus {
 }
 
 .history-impression {
-    background-color: rgba(0, 0, 0, 0.12);
+    background-color: var(--bg-impression);
     border: 1px solid var(--border-color);
     border-radius: var(--radius-sm);
     padding: 0.75rem 1rem;

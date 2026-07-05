@@ -88,6 +88,13 @@ document.addEventListener('DOMContentLoaded', () => {
     lucide.createIcons();
 });
 
+// Helper to get local date string YYYY-MM-DD
+function getLocalDateString(date = new Date()) {
+    const offset = date.getTimezoneOffset();
+    const localDate = new Date(date.getTime() - (offset * 60 * 1000));
+    return localDate.toISOString().split('T')[0];
+}
+
 // ==========================================
 // DATA MANAGEMENT (LocalStorage)
 // ==========================================
@@ -121,7 +128,7 @@ function getMockWorkouts() {
     const daysAgo = (num) => {
         const d = new Date();
         d.setDate(today.getDate() - num);
-        return d.toISOString().split('T')[0];
+        return getLocalDateString(d);
     };
     
     list.push({
@@ -442,10 +449,10 @@ function calculateStreak(workouts) {
     const dates = workouts.map(w => w.date);
     const uniqueDates = [...new Set(dates)].sort((a, b) => new Date(b) - new Date(a));
     
-    const todayStr = new Date().toISOString().split('T')[0];
+    const todayStr = getLocalDateString();
     const yesterday = new Date();
     yesterday.setDate(yesterday.getDate() - 1);
-    const yesterdayStr = yesterday.toISOString().split('T')[0];
+    const yesterdayStr = getLocalDateString(yesterday);
     
     // Check if user has a workout today or yesterday
     if (uniqueDates[0] !== todayStr && uniqueDates[0] !== yesterdayStr) {
@@ -518,7 +525,7 @@ function renderCalendar() {
     }
     
     const today = new Date();
-    const todayStr = today.toISOString().split('T')[0];
+    const todayStr = getLocalDateString(today);
     
     // Map workout dates for quick lookups
     const workoutDates = {};
@@ -791,10 +798,7 @@ function resetWorkoutForm() {
     DOM.workoutForm.reset();
     
     // Reset Form Date input to today's local date
-    const today = new Date();
-    const offset = today.getTimezoneOffset();
-    const localToday = new Date(today.getTime() - (offset*60*1000));
-    DOM.workoutDate.value = localToday.toISOString().split('T')[0];
+    DOM.workoutDate.value = getLocalDateString();
     
     // Clear dynamic exercise items
     DOM.exerciseList.innerHTML = '';
@@ -1466,7 +1470,7 @@ function exportWorkouts() {
     const dataStr = JSON.stringify(state.workouts, null, 2);
     const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
     
-    const exportFileDefaultName = `fitflow_workouts_backup_${new Date().toISOString().split('T')[0]}.json`;
+    const exportFileDefaultName = `fitflow_workouts_backup_${getLocalDateString()}.json`;
     
     const linkElement = document.createElement('a');
     linkElement.setAttribute('href', dataUri);
