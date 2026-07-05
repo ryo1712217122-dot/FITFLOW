@@ -6,10 +6,15 @@ let state = {
     currentYear: new Date().getFullYear(),
     currentMonth: new Date().getMonth(), // 0-indexed
     editingWorkoutId: null,
+    weightLogs: [],
+    cardioLogs: [],
+    maintenanceCalories: 2000,
     charts: {
         category: null,
         frequency: null,
-        progression: null
+        progression: null,
+        weight: null,
+        calorieComparison: null
     }
 };
 
@@ -18,25 +23,29 @@ const DOM = {
     navItems: document.querySelectorAll('.nav-item'),
     tabContents: document.querySelectorAll('.tab-content'),
     themeToggleBtn: document.getElementById('theme-toggle-btn'),
+    mobileThemeToggleBtn: document.getElementById('mobile-theme-toggle-btn'),
     greetingText: document.getElementById('greeting-text'),
     dateText: document.getElementById('date-text'),
     streakCount: document.getElementById('streak-count'),
     
     // Dashboard
     totalWorkoutsNum: document.getElementById('total-workouts-num'),
-    monthWorkoutsNum: document.getElementById('month-workouts-num'),
-    monthWorkoutsPct: document.getElementById('month-workouts-pct'),
-    totalVolumeNum: document.getElementById('total-volume-num'),
+    latestWeightNum: document.getElementById('latest-weight-num'),
+    latestWeightDate: document.getElementById('latest-weight-date'),
+    todayCalorieNum: document.getElementById('today-calorie-num'),
+    todayCardioDist: document.getElementById('today-cardio-dist'),
     calendarMonthYear: document.getElementById('calendar-month-year'),
     calendarDays: document.getElementById('calendar-days'),
     prevMonthBtn: document.getElementById('prev-month-btn'),
     nextMonthBtn: document.getElementById('next-month-btn'),
     noCategoryData: document.getElementById('no-category-data'),
-    noFrequencyData: document.getElementById('no-frequency-data'),
+    noWeightData: document.getElementById('no-weight-data'),
+    noCalorieData: document.getElementById('no-calorie-data'),
     
     // Log Workout Form
     workoutForm: document.getElementById('workout-form'),
     workoutDate: document.getElementById('workout-date'),
+    workoutTime: document.getElementById('workout-time'),
     workoutTitle: document.getElementById('workout-title'),
     workoutCategory: document.getElementById('workout-category'),
     workoutImpression: document.getElementById('workout-impression'),
@@ -45,6 +54,16 @@ const DOM = {
     noExercisesHelper: document.getElementById('no-exercises-helper'),
     saveWorkoutBtn: document.getElementById('save-workout-btn'),
     
+    // Dashboard mini forms
+    weightForm: document.getElementById('weight-form'),
+    logWeightVal: document.getElementById('log-weight-val'),
+    cardioForm: document.getElementById('cardio-form'),
+    logCardioDate: document.getElementById('log-cardio-date'),
+    logCardioDist: document.getElementById('log-cardio-dist'),
+    cardioCalcHint: document.getElementById('cardio-calc-hint'),
+    todayBurnedKcal: document.getElementById('today-burned-kcal'),
+    currentMaintenanceKcal: document.getElementById('current-maintenance-kcal'),
+
     // History
     searchInput: document.getElementById('search-input'),
     filterCategory: document.getElementById('filter-category'),
@@ -55,6 +74,8 @@ const DOM = {
     historyContainer: document.getElementById('history-container'),
     
     // Settings
+    maintenanceInput: document.getElementById('maintenance-input'),
+    saveMaintenanceBtn: document.getElementById('save-maintenance-btn'),
     exportBtn: document.getElementById('export-btn'),
     importTriggerBtn: document.getElementById('import-trigger-btn'),
     importFileInput: document.getElementById('import-file-input'),
@@ -100,6 +121,7 @@ function getLocalDateString(date = new Date()) {
 // ==========================================
 
 function loadData() {
+    // 1. Workouts
     const data = localStorage.getItem('fitflow_workouts');
     if (data) {
         try {
@@ -109,14 +131,90 @@ function loadData() {
             state.workouts = [];
         }
     } else {
-        // Load default mock data for visualization if empty, so the user gets a feel of a premium app
         state.workouts = getMockWorkouts();
-        saveData();
     }
+    
+    // Ensure all mock workouts have a time property if they don't
+    state.workouts.forEach((w, idx) => {
+        if (!w.time) {
+            const times = ['10:00', '19:00', '18:30', '20:00', '08:00'];
+            w.time = times[idx % times.length];
+        }
+    });
+
+    // 2. Weight Logs
+    const weightData = localStorage.getItem('fitflow_weight_logs');
+    if (weightData) {
+        try {
+            state.weightLogs = JSON.parse(weightData);
+        } catch (e) {
+            console.error('Error parsing weight logs', e);
+            state.weightLogs = [];
+        }
+    } else {
+        state.weightLogs = getMockWeightLogs();
+    }
+
+    // 3. Cardio Logs
+    const cardioData = localStorage.getItem('fitflow_cardio_logs');
+    if (cardioData) {
+        try {
+            state.cardioLogs = JSON.parse(cardioData);
+        } catch (e) {
+            console.error('Error parsing cardio logs', e);
+            state.cardioLogs = [];
+        }
+    } else {
+        state.cardioLogs = getMockCardioLogs();
+    }
+
+    // 4. Maintenance Calories
+    const maintData = localStorage.getItem('fitflow_maintenance');
+    if (maintData) {
+        state.maintenanceCalories = parseInt(maintData) || 2000;
+    } else {
+        state.maintenanceCalories = 2000;
+    }
+    
+    saveData();
 }
 
 function saveData() {
     localStorage.setItem('fitflow_workouts', JSON.stringify(state.workouts));
+    localStorage.setItem('fitflow_weight_logs', JSON.stringify(state.weightLogs));
+    localStorage.setItem('fitflow_cardio_logs', JSON.stringify(state.cardioLogs));
+    localStorage.setItem('fitflow_maintenance', state.maintenanceCalories.toString());
+}
+
+function getMockWeightLogs() {
+    const list = [];
+    const today = new Date();
+    const daysAgo = (num) => {
+        const d = new Date();
+        d.setDate(today.getDate() - num);
+        return getLocalDateString(d);
+    };
+    
+    list.push({ date: daysAgo(6), weight: 73.2 });
+    list.push({ date: daysAgo(4), weight: 72.8 });
+    list.push({ date: daysAgo(2), weight: 72.5 });
+    list.push({ date: daysAgo(0), weight: 72.4 });
+    return list;
+}
+
+function getMockCardioLogs() {
+    const list = [];
+    const today = new Date();
+    const daysAgo = (num) => {
+        const d = new Date();
+        d.setDate(today.getDate() - num);
+        return getLocalDateString(d);
+    };
+    
+    list.push({ date: daysAgo(5), distance: 4.5, calories: 326 });
+    list.push({ date: daysAgo(3), distance: 6.0, calories: 436 });
+    list.push({ date: daysAgo(0), distance: 5.0, calories: 362 });
+    return list;
 }
 
 // Generate high quality mock data for demo
@@ -327,7 +425,7 @@ function initTheme() {
         document.body.classList.add('light-theme');
     }
     
-    DOM.themeToggleBtn.addEventListener('click', () => {
+    const handleThemeToggle = () => {
         document.body.classList.toggle('light-theme');
         const theme = document.body.classList.contains('light-theme') ? 'light' : 'dark';
         localStorage.setItem('fitflow_theme', theme);
@@ -336,7 +434,16 @@ function initTheme() {
         if (state.charts.category) renderCategoryChart();
         if (state.charts.frequency) renderFrequencyChart();
         if (state.charts.progression) renderProgressionChart();
-    });
+        if (state.charts.weight) renderWeightChart();
+        if (state.charts.calorieComparison) renderCalorieChart();
+    };
+    
+    if (DOM.themeToggleBtn) {
+        DOM.themeToggleBtn.addEventListener('click', handleThemeToggle);
+    }
+    if (DOM.mobileThemeToggleBtn) {
+        DOM.mobileThemeToggleBtn.addEventListener('click', handleThemeToggle);
+    }
 }
 
 function initDateTexts() {
@@ -396,50 +503,48 @@ function showConfirmModal(title, message, onConfirm) {
 // ==========================================
 
 function updateDashboard() {
-    // 1. Stats calculation
+    // 1. Stats: Total workouts
     const total = state.workouts.length;
     DOM.totalWorkoutsNum.textContent = total;
     
-    // Streaks
+    // 2. Stats: Latest Weight
+    if (state.weightLogs && state.weightLogs.length > 0) {
+        const sortedWeights = [...state.weightLogs].sort((a, b) => new Date(b.date) - new Date(a.date));
+        const latest = sortedWeights[0];
+        DOM.latestWeightNum.textContent = latest.weight.toFixed(1);
+        DOM.latestWeightDate.textContent = formatDateJp(latest.date);
+    } else {
+        DOM.latestWeightNum.textContent = '0.0';
+        DOM.latestWeightDate.textContent = '未登録';
+    }
+
+    // 3. Stats: Today's running
+    const todayStr = getLocalDateString();
+    let todayCalories = 0;
+    let todayDistance = 0;
+    
+    if (state.cardioLogs) {
+        state.cardioLogs.forEach(c => {
+            if (c.date === todayStr) {
+                todayCalories += c.calories || 0;
+                todayDistance += c.distance || 0;
+            }
+        });
+    }
+    DOM.todayCalorieNum.textContent = Math.round(todayCalories);
+    DOM.todayCardioDist.textContent = `${todayDistance.toFixed(2)} km 走行`;
+
+    // 4. Streaks
     const streak = calculateStreak(state.workouts);
     DOM.streakCount.textContent = `${streak} 日`;
     
-    // Current Month workouts
-    const now = new Date();
-    const currentYear = now.getFullYear();
-    const currentMonth = now.getMonth();
-    
-    const monthWorkouts = state.workouts.filter(w => {
-        const d = new Date(w.date);
-        return d.getFullYear() === currentYear && d.getMonth() === currentMonth;
-    }).length;
-    
-    DOM.monthWorkoutsNum.textContent = monthWorkouts;
-    // Goal: 10 workouts per month
-    const target = 12;
-    const pct = Math.min(Math.round((monthWorkouts / target) * 100), 100);
-    DOM.monthWorkoutsPct.textContent = `今月の目標(${target}回)の ${pct}%`;
-    
-    // Total lifting volume
-    let totalVolume = 0;
-    state.workouts.forEach(w => {
-        w.exercises.forEach(ex => {
-            ex.sets.forEach(s => {
-                const w = parseFloat(s.weight) || 0;
-                const r = parseInt(s.reps) || 0;
-                totalVolume += w * r;
-            });
-        });
-    });
-    
-    DOM.totalVolumeNum.innerHTML = `${totalVolume.toLocaleString()} <span class="unit">kg</span>`;
-    
-    // 2. Calendar Heatmap
+    // 5. Training Calendar
     renderCalendar();
     
-    // 3. Charts
+    // 6. Charts
     renderCategoryChart();
-    renderFrequencyChart();
+    renderWeightChart();
+    renderCalorieChart();
 }
 
 function calculateStreak(workouts) {
@@ -791,14 +896,45 @@ function initFormControls() {
         e.preventDefault();
         saveWorkout();
     });
+
+    // Weight logging submit
+    if (DOM.weightForm) {
+        DOM.weightForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            saveWeight();
+        });
+    }
+
+    // Cardio input dynamic calories update
+    if (DOM.logCardioDist) {
+        DOM.logCardioDist.addEventListener('input', updateCardioHint);
+    }
+
+    // Cardio logging submit
+    if (DOM.cardioForm) {
+        DOM.cardioForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            saveCardio();
+        });
+        
+        // Default cardio date input to today
+        if (DOM.logCardioDate) {
+            DOM.logCardioDate.value = getLocalDateString();
+        }
+    }
 }
 
 function resetWorkoutForm() {
     state.editingWorkoutId = null;
     DOM.workoutForm.reset();
     
-    // Reset Form Date input to today's local date
-    DOM.workoutDate.value = getLocalDateString();
+    // Reset Form Date and Time to now in local time
+    const now = new Date();
+    DOM.workoutDate.value = getLocalDateString(now);
+    
+    const hours = String(now.getHours()).padStart(2, '0');
+    const minutes = String(now.getMinutes()).padStart(2, '0');
+    DOM.workoutTime.value = `${hours}:${minutes}`;
     
     // Clear dynamic exercise items
     DOM.exerciseList.innerHTML = '';
@@ -948,6 +1084,7 @@ function addSetRow(tbody, weight = '', reps = '') {
 
 function saveWorkout() {
     const date = DOM.workoutDate.value;
+    const time = DOM.workoutTime.value;
     const title = DOM.workoutTitle.value.trim();
     const category = DOM.workoutCategory.value;
     const mood = DOM.workoutForm.querySelector('input[name="workout-mood"]:checked').value;
@@ -1005,6 +1142,7 @@ function saveWorkout() {
     const workoutData = {
         id: state.editingWorkoutId || 'workout-' + Date.now(),
         date,
+        time,
         title,
         category,
         mood,
@@ -1167,7 +1305,7 @@ function createHistoryCard(workout) {
                 </div>
                 <div class="history-date-row">
                     <i data-lucide="calendar"></i>
-                    <span>${formattedDate}</span>
+                    <span>${formattedDate} ${workout.time ? `&nbsp; ${workout.time}` : ''}</span>
                 </div>
             </div>
             <div class="history-actions">
@@ -1232,6 +1370,7 @@ function editWorkout(id) {
     
     // Populate simple fields
     DOM.workoutDate.value = workout.date;
+    DOM.workoutTime.value = workout.time || '12:00';
     DOM.workoutTitle.value = workout.title;
     DOM.workoutCategory.value = workout.category;
     DOM.workoutImpression.value = workout.impression;
@@ -1438,6 +1577,20 @@ function renderProgressionChart() {
 // ==========================================
 
 function initSettingsControls() {
+    if (DOM.maintenanceInput) {
+        DOM.maintenanceInput.value = state.maintenanceCalories;
+    }
+
+    if (DOM.saveMaintenanceBtn) {
+        DOM.saveMaintenanceBtn.addEventListener('click', () => {
+            const val = parseInt(DOM.maintenanceInput.value) || 2000;
+            state.maintenanceCalories = val;
+            saveData();
+            showToast('メンテナンスカロリーを保存しました！');
+            updateDashboard();
+        });
+    }
+
     DOM.exportBtn.addEventListener('click', () => {
         exportWorkouts();
     });
@@ -1546,10 +1699,249 @@ function mergeImportedData(importedList) {
 
 function clearAllWorkouts() {
     state.workouts = [];
+    state.weightLogs = [];
+    state.cardioLogs = [];
+    state.maintenanceCalories = 2000;
     saveData();
     showToast('すべてのデータを削除しました。');
     
     // Reset view
     updateDashboard();
     updateHistoryList();
+}
+
+// ==========================================
+// WEIGHT & CARDIO & CALORIE LOGGING LOGIC
+// ==========================================
+
+function saveWeight() {
+    const weight = parseFloat(DOM.logWeightVal.value);
+    if (isNaN(weight) || weight <= 0) {
+        showToast('有効な体重を入力してください');
+        return;
+    }
+    
+    const date = getLocalDateString();
+    
+    // Check if entry for date already exists
+    const existingIndex = state.weightLogs.findIndex(w => w.date === date);
+    if (existingIndex !== -1) {
+        state.weightLogs[existingIndex].weight = weight;
+    } else {
+        state.weightLogs.push({ date, weight });
+    }
+    
+    // Sort chronologically
+    state.weightLogs.sort((a, b) => new Date(a.date) - new Date(b.date));
+    
+    saveData();
+    DOM.logWeightVal.value = '';
+    showToast('体重を記録しました！');
+    updateDashboard();
+}
+
+function getLatestWeight() {
+    if (state.weightLogs && state.weightLogs.length > 0) {
+        const sorted = [...state.weightLogs].sort((a, b) => new Date(b.date) - new Date(a.date));
+        return sorted[0].weight;
+    }
+    return 70; // Fallback
+}
+
+function updateCardioHint() {
+    const dist = parseFloat(DOM.logCardioDist.value) || 0;
+    const latestWeight = getLatestWeight();
+    const kcal = Math.round(dist * latestWeight);
+    DOM.cardioCalcHint.textContent = `※消費目安: ${kcal} kcal (最新体重: ${latestWeight} kg)`;
+}
+
+function saveCardio() {
+    const dist = parseFloat(DOM.logCardioDist.value);
+    const dateStr = DOM.logCardioDate.value;
+    
+    if (isNaN(dist) || dist <= 0) {
+        showToast('有効な走行距離を入力してください');
+        return;
+    }
+    if (!dateStr) {
+        showToast('日付を入力してください');
+        return;
+    }
+    
+    const latestWeight = getLatestWeight();
+    const calories = Math.round(dist * latestWeight);
+    
+    // Save to logs
+    state.cardioLogs.push({
+        date: dateStr,
+        distance: dist,
+        calories: calories
+    });
+    
+    // Sort chronologically
+    state.cardioLogs.sort((a, b) => new Date(a.date) - new Date(b.date));
+    
+    saveData();
+    
+    // Reset form fields
+    DOM.logCardioDist.value = '';
+    DOM.logCardioDate.value = getLocalDateString();
+    updateCardioHint();
+    
+    showToast('ランニング距離を記録しました！');
+    updateDashboard();
+}
+
+function renderWeightChart() {
+    const theme = getChartThemeColors();
+    const canvas = document.getElementById('weightChart');
+    if (!canvas) return;
+    
+    const ctx = canvas.getContext('2d');
+    
+    if (state.weightLogs.length === 0) {
+        DOM.noWeightData.style.display = 'block';
+        if (state.charts.weight) {
+            state.charts.weight.destroy();
+            state.charts.weight = null;
+        }
+        return;
+    }
+    
+    DOM.noWeightData.style.display = 'none';
+    
+    const sortedLogs = [...state.weightLogs].sort((a, b) => new Date(a.date) - new Date(b.date));
+    const recentLogs = sortedLogs.slice(-10);
+    
+    const labels = recentLogs.map(l => {
+        const parts = l.date.split('-');
+        return parts.length === 3 ? `${parseInt(parts[1])}/${parseInt(parts[2])}` : l.date;
+    });
+    const weights = recentLogs.map(l => l.weight);
+    
+    if (state.charts.weight) {
+        state.charts.weight.destroy();
+    }
+    
+    state.charts.weight = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: '体重 (kg)',
+                data: weights,
+                borderColor: '#86ac41',
+                backgroundColor: 'rgba(134, 172, 65, 0.1)',
+                borderWidth: 2.5,
+                tension: 0.3,
+                fill: true,
+                pointBackgroundColor: '#86ac41',
+                pointRadius: 4
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false }
+            },
+            scales: {
+                x: {
+                    grid: { display: false },
+                    ticks: { color: theme.text, font: { size: 9 } }
+                },
+                y: {
+                    grid: { color: theme.grid },
+                    ticks: { color: theme.text, font: { size: 9 } },
+                    beginAtZero: false
+                }
+            }
+        }
+    });
+}
+
+function renderCalorieChart() {
+    const theme = getChartThemeColors();
+    const canvas = document.getElementById('calorieComparisonChart');
+    if (!canvas) return;
+    
+    const ctx = canvas.getContext('2d');
+    
+    const labels = [];
+    const datesYmd = [];
+    const today = new Date();
+    
+    for (let i = 6; i >= 0; i--) {
+        const d = new Date();
+        d.setDate(today.getDate() - i);
+        const ymd = getLocalDateString(d);
+        datesYmd.push(ymd);
+        
+        const parts = ymd.split('-');
+        labels.push(`${parseInt(parts[1])}/${parseInt(parts[2])}`);
+    }
+    
+    const activeCalories = datesYmd.map(ymd => {
+        let sum = 0;
+        state.cardioLogs.forEach(c => {
+            if (c.date === ymd) {
+                sum += c.calories || 0;
+            }
+        });
+        return sum;
+    });
+    
+    const maintenanceLimit = datesYmd.map(() => state.maintenanceCalories);
+    
+    if (state.charts.calorieComparison) {
+        state.charts.calorieComparison.destroy();
+    }
+    
+    state.charts.calorieComparison = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [
+                {
+                    label: '消費カロリー (ラン)',
+                    data: activeCalories,
+                    backgroundColor: '#86ac41',
+                    borderRadius: 4,
+                    barThickness: 16
+                },
+                {
+                    label: 'メンテナンス',
+                    data: maintenanceLimit,
+                    type: 'line',
+                    borderColor: '#7da3a1',
+                    borderWidth: 2,
+                    borderDash: [5, 5],
+                    fill: false,
+                    pointRadius: 0,
+                    pointHoverRadius: 0
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'top',
+                    labels: { color: theme.text, font: { size: 10 } }
+                }
+            },
+            scales: {
+                x: {
+                    grid: { display: false },
+                    ticks: { color: theme.text, font: { size: 9 } }
+                },
+                y: {
+                    grid: { color: theme.grid },
+                    ticks: { color: theme.text, font: { size: 9 } },
+                    beginAtZero: true
+                }
+            }
+        }
+    });
 }

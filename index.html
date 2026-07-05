@@ -22,7 +22,10 @@
                 <div class="logo-icon">
                     <i data-lucide="dumbbell"></i>
                 </div>
-                <h1>FITFLOW</h1>
+                <div class="brand-text">
+                    <h1>FITFLOW</h1>
+                    <span class="app-version">v1.2.0</span>
+                </div>
             </div>
             
             <nav class="nav-menu">
@@ -61,11 +64,17 @@
                     <h2 id="greeting-text">こんにちは！</h2>
                     <p id="date-text">2026年7月3日 金曜日</p>
                 </div>
-                <div class="quick-stats-header">
-                    <div class="header-stat">
-                        <span class="stat-label">継続日数</span>
-                        <span class="stat-value" id="streak-count">0 日</span>
+                <div class="header-right-controls">
+                    <div class="quick-stats-header">
+                        <div class="header-stat">
+                            <span class="stat-label">継続日数</span>
+                            <span class="stat-value" id="streak-count">0 日</span>
+                        </div>
                     </div>
+                    <button class="btn-icon theme-toggle-mobile" id="mobile-theme-toggle-btn" title="テーマ切り替え">
+                        <i data-lucide="moon" class="dark-icon"></i>
+                        <i data-lucide="sun" class="light-icon"></i>
+                    </button>
                 </div>
             </header>
 
@@ -82,21 +91,21 @@
                         </div>
                     </div>
 
-                    <div class="card stat-card monthly-workouts">
-                        <div class="card-icon"><i data-lucide="calendar"></i></div>
+                    <div class="card stat-card weight-stat-card">
+                        <div class="card-icon"><i data-lucide="scale"></i></div>
                         <div class="card-info">
-                            <h3>今月の実施日数</h3>
-                            <p class="big-number" id="month-workouts-num">0</p>
-                            <span class="stat-desc" id="month-workouts-pct">今月目標の 0%</span>
+                            <h3>最新体重</h3>
+                            <p class="big-number"><span id="latest-weight-num">0.0</span> <span class="unit">kg</span></p>
+                            <span class="stat-desc" id="latest-weight-date">未登録</span>
                         </div>
                     </div>
 
-                    <div class="card stat-card active-exercises">
-                        <div class="card-icon"><i data-lucide="activity"></i></div>
+                    <div class="card stat-card calorie-stat-card">
+                        <div class="card-icon"><i data-lucide="flame"></i></div>
                         <div class="card-info">
-                            <h3>総挙上ボリューム</h3>
-                            <p class="big-number" id="total-volume-num">0 <span class="unit">kg</span></p>
-                            <span class="stat-desc">セット総重量の累計</span>
+                            <h3>本日のラン消費</h3>
+                            <p class="big-number"><span id="today-calorie-num">0</span> <span class="unit">kcal</span></p>
+                            <span class="stat-desc" id="today-cardio-dist">0.00 km 走行</span>
                         </div>
                     </div>
 
@@ -127,6 +136,74 @@
                         </div>
                     </div>
 
+                    <!-- Weight Logger & Chart Card -->
+                    <div class="card weight-card">
+                        <div class="card-header flex-header">
+                            <div class="header-title">
+                                <i data-lucide="scale"></i>
+                                <h3>体重記録</h3>
+                            </div>
+                        </div>
+                        
+                        <form id="weight-form" class="dashboard-mini-form">
+                            <div class="form-row-2col">
+                                <input type="number" step="0.1" id="log-weight-val" placeholder="体重(kg)" required min="0">
+                                <button type="submit" class="btn btn-primary btn-sm">記録</button>
+                            </div>
+                        </form>
+
+                        <div class="chart-container weight-chart-container">
+                            <canvas id="weightChart"></canvas>
+                            <div id="no-weight-data" class="no-data-msg">データがありません</div>
+                        </div>
+                    </div>
+
+                    <!-- Calorie Balance Card -->
+                    <div class="card calorie-balance-card col-span-2">
+                        <div class="card-header flex-header">
+                            <div class="header-title">
+                                <i data-lucide="activity"></i>
+                                <h3>カロリーバランス（過去7日間）</h3>
+                            </div>
+                        </div>
+
+                        <!-- Mini input form for Cardio -->
+                        <form id="cardio-form" class="dashboard-mini-form">
+                            <div class="form-row-3col">
+                                <div class="form-group-mini">
+                                    <input type="date" id="log-cardio-date" required>
+                                </div>
+                                <div class="form-group-mini">
+                                    <input type="number" step="0.01" id="log-cardio-dist" placeholder="走行距離 (km)" required min="0">
+                                </div>
+                                <div class="form-group-mini flex-end-btn">
+                                    <button type="submit" class="btn btn-primary btn-sm">距離を記録</button>
+                                </div>
+                            </div>
+                            <div class="form-hint" id="cardio-calc-hint">
+                                ※消費目安: 0 kcal (最新体重: -- kg)
+                            </div>
+                        </form>
+
+                        <div class="calorie-analytics-wrapper">
+                            <div class="calorie-stats-column">
+                                <div class="calorie-summary-tile">
+                                    <span class="tile-label">本日の消費</span>
+                                    <span class="tile-value" id="today-burned-kcal">0 <span class="unit">kcal</span></span>
+                                </div>
+                                <div class="calorie-summary-tile">
+                                    <span class="tile-label">メンテナンス目安</span>
+                                    <span class="tile-value" id="current-maintenance-kcal">2000 <span class="unit">kcal</span></span>
+                                </div>
+                            </div>
+                            
+                            <div class="chart-container calorie-chart-container">
+                                <canvas id="calorieComparisonChart"></canvas>
+                                <div id="no-calorie-data" class="no-data-msg">データがありません</div>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- Category Chart Card -->
                     <div class="card chart-card">
                         <div class="card-header">
@@ -138,20 +215,6 @@
                         <div class="chart-container pie-container">
                             <canvas id="categoryChart"></canvas>
                             <div id="no-category-data" class="no-data-msg">データがありません</div>
-                        </div>
-                    </div>
-
-                    <!-- Weekly Frequency Chart Card -->
-                    <div class="card chart-card col-span-2">
-                        <div class="card-header">
-                            <div class="header-title">
-                                <i data-lucide="trending-up"></i>
-                                <h3>最近のトレーニング頻度</h3>
-                            </div>
-                        </div>
-                        <div class="chart-container">
-                            <canvas id="frequencyChart"></canvas>
-                            <div id="no-frequency-data" class="no-data-msg">データがありません</div>
                         </div>
                     </div>
                 </div>
@@ -178,11 +241,20 @@
                                     </div>
                                 </div>
                                 <div class="card-body">
-                                    <div class="form-group">
-                                        <label for="workout-date">日付 <span class="required">*</span></label>
-                                        <div class="input-icon-wrapper">
-                                            <i data-lucide="calendar" class="input-icon"></i>
-                                            <input type="date" id="workout-date" required>
+                                    <div class="form-row-2col">
+                                        <div class="form-group">
+                                            <label for="workout-date">日付 <span class="required">*</span></label>
+                                            <div class="input-icon-wrapper">
+                                                <i data-lucide="calendar" class="input-icon"></i>
+                                                <input type="date" id="workout-date" required>
+                                            </div>
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="workout-time">時刻 <span class="required">*</span></label>
+                                            <div class="input-icon-wrapper">
+                                                <i data-lucide="clock" class="input-icon"></i>
+                                                <input type="time" id="workout-time" required>
+                                            </div>
                                         </div>
                                     </div>
 
@@ -360,6 +432,26 @@
             <!-- Settings Tab -->
             <section id="settings" class="tab-content">
                 <div class="settings-grid">
+                    <!-- Maintenance Calories Card -->
+                    <div class="card settings-card">
+                        <div class="card-header">
+                            <div class="header-title">
+                                <i data-lucide="flame"></i>
+                                <h3>メンテナンスカロリーの設定</h3>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <p class="settings-desc">ご自身の1日のメンテナンスカロリー（体重維持に必要なエネルギー消費量）を設定し、消費カロリーと比較します。</p>
+                            <div class="form-group">
+                                <label for="maintenance-input">メンテナンスカロリー (kcal)</label>
+                                <input type="number" id="maintenance-input" min="0" value="2000" class="width-full">
+                            </div>
+                            <button class="btn btn-secondary" id="save-maintenance-btn">
+                                <i data-lucide="save"></i> 設定を保存
+                            </button>
+                        </div>
+                    </div>
+
                     <!-- Export/Import Card -->
                     <div class="card settings-card">
                         <div class="card-header">

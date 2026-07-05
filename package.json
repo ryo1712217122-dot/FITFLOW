@@ -1,0 +1,11 @@
+{
+  "name": "workout-tracker",
+  "version": "1.2.0",
+  "description": "筋トレ実績＆ヘルスケア実績管理Webアプリ",
+  "main": "app.js",
+  "scripts": {
+    "start": "npx serve ."
+  },
+  "author": "",
+  "license": "ISC"
+}
