@@ -27,6 +27,12 @@ let state = {
     }
 };
 
+// Sync Optimization Engine Flags (PayGuard inspired)
+const DIRTY_KEY = 'fitflow_db_dirty';
+let isSyncing = false;
+let syncTimeoutId = null;
+let pendingSync = false;
+
 // DOM elements mapping
 const DOM = {
     navItems: document.querySelectorAll('.nav-item'),
@@ -117,6 +123,16 @@ document.addEventListener('DOMContentLoaded', () => {
     // Load initial views
     updateDashboard();
     updateHistoryList();
+
+    // 起動時にサイレントにクラウドから同期
+    autoSyncFromCloud();
+
+    // オンライン復帰時に自動的に未同期データを送信
+    window.addEventListener('online', () => {
+        if (localStorage.getItem(DIRTY_KEY) === 'true') {
+            triggerSync(true);
+        }
+    });
     
     // Initialize Lucide Icons
     if (window.lucide) {
@@ -210,6 +226,12 @@ function saveData() {
     localStorage.setItem('fitflow_cardio_logs', JSON.stringify(state.cardioLogs));
     localStorage.setItem('fitflow_maintenance', state.maintenanceCalories.toString());
     localStorage.setItem('fitflow_sheets_url', state.sheetsUrl);
+}
+
+function saveDataAndSync() {
+    saveData();
+    localStorage.setItem(DIRTY_KEY, 'true');
+    scheduleSync(true);
 }
 
 function getMockWeightLogs() {
@@ -991,7 +1013,7 @@ function saveWorkout() {
         showToast('ワークアウト記録を保存しました！');
     }
     
-    saveData();
+    saveDataAndSync();
     state.editingWorkoutId = null;
     
     const historyNavItem = document.querySelector('[data-tab="history"]');
@@ -1208,7 +1230,7 @@ function deleteWorkout(id) {
     const idx = state.workouts.findIndex(w => w.id === id);
     if (idx !== -1) {
         state.workouts.splice(idx, 1);
-        saveData();
+        saveDataAndSync();
         showToast('ワークアウト記録を削除しました');
         updateDashboard(); // Sync total workouts and calendar count
         updateHistoryList();
@@ -1400,7 +1422,7 @@ function initSettingsControls() {
         DOM.saveMaintenanceBtn.addEventListener('click', () => {
             const val = parseInt(DOM.maintenanceInput.value) || DEFAULT_MAINTENANCE_CALORIES;
             state.maintenanceCalories = val;
-            saveData();
+            saveDataAndSync();
             showToast('メンテナンスカロリーを保存しました！');
             updateDashboard();
         });
@@ -1602,7 +1624,7 @@ function mergeImportedData(workouts, weights, cardio, maintenance) {
         if (DOM.maintenanceInput) DOM.maintenanceInput.value = maintenance;
     }
     
-    saveData();
+    saveDataAndSync();
     showToast('バックアップデータをマージ・復元しました！');
     
     updateDashboard();
@@ -1614,7 +1636,7 @@ function clearAllWorkouts() {
     state.weightLogs = [];
     state.cardioLogs = [];
     state.maintenanceCalories = DEFAULT_MAINTENANCE_CALORIES;
-    saveData();
+    saveDataAndSync();
     showToast('すべてのデータを初期化しました。');
     
     updateDashboard();
@@ -1644,7 +1666,7 @@ function saveWeight() {
     
     state.weightLogs.sort((a, b) => new Date(a.date) - new Date(b.date));
     
-    saveData();
+    saveDataAndSync();
     DOM.logWeightVal.value = '';
     showToast('体重を記録しました！');
     updateDashboard();
@@ -1691,7 +1713,7 @@ function saveCardio() {
     
     state.cardioLogs.sort((a, b) => new Date(a.date) - new Date(b.date));
     
-    saveData();
+    saveDataAndSync();
     
     DOM.logCardioDist.value = '';
     DOM.logCardioDate.value = getLocalDateString();
@@ -1860,13 +1882,27 @@ function renderCalorieChart() {
 // ==========================================
 
 function backupToSheets() {
-    if (!state.sheetsUrl) {
-        showToast('先にGASウェブアプリURLを設定・保存してください');
+    triggerSync(false);
+}
+
+function scheduleSync(isSilent = false) {
+    if (syncTimeoutId) clearTimeout(syncTimeoutId);
+    syncTimeoutId = setTimeout(() => {
+        triggerSync(isSilent);
+    }, 500);
+}
+
+function triggerSync(isSilent = false) {
+    if (!state.sheetsUrl || !state.sheetsUrl.trim()) return;
+    
+    if (isSyncing) {
+        pendingSync = true;
         return;
     }
-
-    showToast('クラウドに同期中...');
-
+    
+    isSyncing = true;
+    if (!isSilent) showToast('☁️ クラウドへ同期中...');
+    
     const payload = {
         action: 'backup',
         workouts: state.workouts,
@@ -1874,7 +1910,7 @@ function backupToSheets() {
         cardioLogs: state.cardioLogs,
         maintenanceCalories: state.maintenanceCalories
     };
-
+    
     fetch(state.sheetsUrl, {
         method: 'POST',
         mode: 'cors',
@@ -1883,17 +1919,85 @@ function backupToSheets() {
         },
         body: JSON.stringify(payload)
     })
-    .then(res => res.json())
+    .then(res => {
+        if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+        return res.json();
+    })
     .then(data => {
+        isSyncing = false;
         if (data && data.success) {
-            showToast('スプレッドシートへの同期が成功しました！');
+            if (!pendingSync) {
+                localStorage.setItem(DIRTY_KEY, 'false');
+            }
+            if (!isSilent) showToast('スプレッドシートへの同期が成功しました！');
         } else {
-            showToast('同期エラー: ' + (data.error || '不明なエラー'));
+            if (!isSilent) showToast('同期エラー: ' + (data.error || '不明なエラー'));
+        }
+        
+        if (pendingSync) {
+            pendingSync = false;
+            scheduleSync(true);
         }
     })
     .catch(err => {
-        console.error('Sheets backup error', err);
-        showToast('同期に失敗しました。接続設定を確認してください');
+        isSyncing = false;
+        console.error("Sync Connection Failed:", err);
+        if (!isSilent) showToast('同期に失敗しました。接続設定を確認してください');
+        pendingSync = false;
+    });
+}
+
+function autoSyncFromCloud() {
+    if (!state.sheetsUrl || !state.sheetsUrl.trim()) return;
+    
+    if (localStorage.getItem(DIRTY_KEY) === 'true') {
+        console.log("☁️ Local database is dirty. Uploading local changes instead of downloading.");
+        triggerSync(true);
+        return;
+    }
+    
+    fetch(state.sheetsUrl, {
+        method: 'GET',
+        mode: 'cors'
+    })
+    .then(res => {
+        if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+        return res.json();
+    })
+    .then(data => {
+        if (data && !data.error) {
+            const importedWorkouts = data.workouts || [];
+            const importedWeights = data.weightLogs || [];
+            const importedCardio = data.cardioLogs || [];
+            const importedMaint = data.maintenanceCalories || DEFAULT_MAINTENANCE_CALORIES;
+            
+            if (validateWorkoutsSchema(importedWorkouts)) {
+                state.workouts = importedWorkouts;
+                state.weightLogs = importedWeights;
+                state.cardioLogs = importedCardio;
+                state.maintenanceCalories = importedMaint;
+                
+                // Sort
+                state.weightLogs.sort((a, b) => new Date(a.date) - new Date(b.date));
+                state.cardioLogs.sort((a, b) => new Date(a.date) - new Date(b.date));
+                
+                // Save locally but keep clean state
+                localStorage.setItem('fitflow_workouts', JSON.stringify(state.workouts));
+                localStorage.setItem('fitflow_weight_logs', JSON.stringify(state.weightLogs));
+                localStorage.setItem('fitflow_cardio_logs', JSON.stringify(state.cardioLogs));
+                localStorage.setItem('fitflow_maintenance', state.maintenanceCalories.toString());
+                localStorage.setItem(DIRTY_KEY, 'false');
+                
+                // Update views
+                updateDashboard();
+                updateHistoryList();
+                
+                showToast('☁️ クラウドデータを同期しました');
+            }
+        }
+    })
+    .catch(err => {
+        console.error("Auto Sync Error:", err);
     });
 }
 
@@ -1927,6 +2031,7 @@ function restoreFromSheets() {
                 `スプレッドシートからデータを取得しました（ワークアウト: ${importedWorkouts.length}件, 体重ログ: ${importedWeights.length}件）。既存データにマージしますか？`,
                 () => {
                     mergeImportedData(importedWorkouts, importedWeights, importedCardio, importedMaint);
+                    localStorage.setItem(DIRTY_KEY, 'false'); // Mark clean on manual merge override
                 }
             );
         } else {
