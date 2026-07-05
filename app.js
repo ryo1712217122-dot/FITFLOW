@@ -18,6 +18,7 @@ let state = {
     weightLogs: [],
     cardioLogs: [],
     maintenanceCalories: DEFAULT_MAINTENANCE_CALORIES,
+    sheetsUrl: '',
     charts: {
         category: null,
         progression: null,
@@ -84,6 +85,10 @@ const DOM = {
     // Settings
     maintenanceInput: document.getElementById('maintenance-input'),
     saveMaintenanceBtn: document.getElementById('save-maintenance-btn'),
+    sheetsUrlInput: document.getElementById('sheets-url-input'),
+    saveSheetsUrlBtn: document.getElementById('save-sheets-url-btn'),
+    sheetsBackupBtn: document.getElementById('sheets-backup-btn'),
+    sheetsRestoreBtn: document.getElementById('sheets-restore-btn'),
     exportBtn: document.getElementById('export-btn'),
     importTriggerBtn: document.getElementById('import-trigger-btn'),
     importFileInput: document.getElementById('import-file-input'),
@@ -192,6 +197,9 @@ function loadData() {
     } else {
         state.maintenanceCalories = DEFAULT_MAINTENANCE_CALORIES;
     }
+
+    // 5. Google Sheets Sync URL
+    state.sheetsUrl = localStorage.getItem('fitflow_sheets_url') || '';
     
     saveData();
 }
@@ -201,6 +209,7 @@ function saveData() {
     localStorage.setItem('fitflow_weight_logs', JSON.stringify(state.weightLogs));
     localStorage.setItem('fitflow_cardio_logs', JSON.stringify(state.cardioLogs));
     localStorage.setItem('fitflow_maintenance', state.maintenanceCalories.toString());
+    localStorage.setItem('fitflow_sheets_url', state.sheetsUrl);
 }
 
 function getMockWeightLogs() {
@@ -1402,6 +1411,30 @@ function initSettingsControls() {
         });
     }
 
+    if (DOM.sheetsUrlInput) {
+        DOM.sheetsUrlInput.value = state.sheetsUrl;
+    }
+
+    if (DOM.saveSheetsUrlBtn) {
+        DOM.saveSheetsUrlBtn.addEventListener('click', () => {
+            state.sheetsUrl = DOM.sheetsUrlInput.value.trim();
+            saveData();
+            showToast('GASのウェブアプリURLを保存しました！');
+        });
+    }
+
+    if (DOM.sheetsBackupBtn) {
+        DOM.sheetsBackupBtn.addEventListener('click', () => {
+            backupToSheets();
+        });
+    }
+
+    if (DOM.sheetsRestoreBtn) {
+        DOM.sheetsRestoreBtn.addEventListener('click', () => {
+            restoreFromSheets();
+        });
+    }
+
     if (DOM.exportBtn) {
         DOM.exportBtn.addEventListener('click', () => {
             exportWorkouts();
@@ -1824,5 +1857,89 @@ function renderCalorieChart() {
                 }
             }
         }
+    });
+}
+
+// ==========================================
+// GOOGLE SHEETS CLOUD SYNC FUNCTIONS
+// ==========================================
+
+function backupToSheets() {
+    if (!state.sheetsUrl) {
+        showToast('先にGASウェブアプリURLを設定・保存してください');
+        return;
+    }
+
+    showToast('クラウドに同期中...');
+
+    const payload = {
+        action: 'backup',
+        workouts: state.workouts,
+        weightLogs: state.weightLogs,
+        cardioLogs: state.cardioLogs,
+        maintenanceCalories: state.maintenanceCalories
+    };
+
+    fetch(state.sheetsUrl, {
+        method: 'POST',
+        mode: 'cors',
+        headers: {
+            'Content-Type': 'text/plain'
+        },
+        body: JSON.stringify(payload)
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data && data.success) {
+            showToast('スプレッドシートへの同期が成功しました！');
+        } else {
+            showToast('同期エラー: ' + (data.error || '不明なエラー'));
+        }
+    })
+    .catch(err => {
+        console.error('Sheets backup error', err);
+        showToast('同期に失敗しました。接続設定を確認してください');
+    });
+}
+
+function restoreFromSheets() {
+    if (!state.sheetsUrl) {
+        showToast('先にGASウェブアプリURLを設定・保存してください');
+        return;
+    }
+
+    showToast('クラウドからデータ取得中...');
+
+    fetch(state.sheetsUrl, {
+        method: 'GET',
+        mode: 'cors'
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data && !data.error) {
+            const importedWorkouts = data.workouts || [];
+            const importedWeights = data.weightLogs || [];
+            const importedCardio = data.cardioLogs || [];
+            const importedMaint = data.maintenanceCalories || DEFAULT_MAINTENANCE_CALORIES;
+
+            if (!validateWorkoutsSchema(importedWorkouts)) {
+                showToast('受信したデータ形式が不正です');
+                return;
+            }
+
+            showConfirmModal(
+                'クラウドからの復元',
+                `スプレッドシートからデータを取得しました（ワークアウト: ${importedWorkouts.length}件, 体重ログ: ${importedWeights.length}件）。既存データにマージしますか？`,
+                () => {
+                    mergeImportedData(importedWorkouts, importedWeights, importedCardio, importedMaint);
+                }
+            );
+        } else {
+            showToast('復元エラー: ' + (data.error || 'データが空です'));
+        }
+    })
+    .catch(err => {
+        console.error('Sheets restore error', err);
+        showToast('復元に失敗しました。接続設定を確認してください');
     });
 }

@@ -452,6 +452,34 @@
                         </div>
                     </div>
 
+                    <!-- Google Sheets Cloud Sync Card -->
+                    <div class="card settings-card">
+                        <div class="card-header">
+                            <div class="header-title">
+                                <i data-lucide="cloud"></i>
+                                <h3>Googleスプレッドシート連携（クラウド同期）</h3>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <p class="settings-desc">デプロイしたGoogle Apps Script (GAS) のウェブアプリURLを設定することで、クラウド（スプレッドシート）と双方向同期が可能です。</p>
+                            <div class="form-group">
+                                <label for="sheets-url-input">GAS ウェブアプリ URL</label>
+                                <input type="url" id="sheets-url-input" placeholder="https://script.google.com/macros/s/.../exec" class="width-full">
+                            </div>
+                            <div class="settings-actions">
+                                <button class="btn btn-secondary" id="save-sheets-url-btn">
+                                    <i data-lucide="save"></i> 接続情報を保存
+                                </button>
+                                <button class="btn btn-primary" id="sheets-backup-btn">
+                                    <i data-lucide="cloud-lightning"></i> バックアップを送信
+                                </button>
+                                <button class="btn btn-secondary" id="sheets-restore-btn">
+                                    <i data-lucide="cloud-download"></i> クラウドから復元
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- Export/Import Card -->
                     <div class="card settings-card">
                         <div class="card-header">
