@@ -1,5 +1,14 @@
 // FITFLOW - Workout Tracker JS Logic
 
+// ==========================================
+// CONFIGURATION & CONSTANTS
+// ==========================================
+const DEFAULT_MAINTENANCE_CALORIES = 2000;
+const DEFAULT_WEIGHT_KG = 70.0;
+const TARGET_MONTHLY_WORKOUTS = 12;
+const MAX_RECENT_WEIGHT_LOGS = 10;
+const CARDIO_DAYS_WINDOW = 7;
+
 // Global state
 let state = {
     workouts: [],
@@ -8,17 +17,16 @@ let state = {
     editingWorkoutId: null,
     weightLogs: [],
     cardioLogs: [],
-    maintenanceCalories: 2000,
+    maintenanceCalories: DEFAULT_MAINTENANCE_CALORIES,
     charts: {
         category: null,
-        frequency: null,
         progression: null,
         weight: null,
         calorieComparison: null
     }
 };
 
-// DOM elements
+// DOM elements mapping
 const DOM = {
     navItems: document.querySelectorAll('.nav-item'),
     tabContents: document.querySelectorAll('.tab-content'),
@@ -106,14 +114,17 @@ document.addEventListener('DOMContentLoaded', () => {
     updateHistoryList();
     
     // Initialize Lucide Icons
-    lucide.createIcons();
+    if (window.lucide) {
+        lucide.createIcons();
+    }
 });
 
-// Helper to get local date string YYYY-MM-DD
+// Helper to get local date string YYYY-MM-DD (Safe from timezone shifting offsets)
 function getLocalDateString(date = new Date()) {
-    const offset = date.getTimezoneOffset();
-    const localDate = new Date(date.getTime() - (offset * 60 * 1000));
-    return localDate.toISOString().split('T')[0];
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
 }
 
 // ==========================================
@@ -155,6 +166,9 @@ function loadData() {
         state.weightLogs = getMockWeightLogs();
     }
 
+    // Ensure weight logs are sorted chronologically
+    state.weightLogs.sort((a, b) => new Date(a.date) - new Date(b.date));
+
     // 3. Cardio Logs
     const cardioData = localStorage.getItem('fitflow_cardio_logs');
     if (cardioData) {
@@ -168,12 +182,15 @@ function loadData() {
         state.cardioLogs = getMockCardioLogs();
     }
 
+    // Ensure cardio logs are sorted chronologically
+    state.cardioLogs.sort((a, b) => new Date(a.date) - new Date(b.date));
+
     // 4. Maintenance Calories
     const maintData = localStorage.getItem('fitflow_maintenance');
     if (maintData) {
-        state.maintenanceCalories = parseInt(maintData) || 2000;
+        state.maintenanceCalories = parseInt(maintData) || DEFAULT_MAINTENANCE_CALORIES;
     } else {
-        state.maintenanceCalories = 2000;
+        state.maintenanceCalories = DEFAULT_MAINTENANCE_CALORIES;
     }
     
     saveData();
@@ -217,12 +234,10 @@ function getMockCardioLogs() {
     return list;
 }
 
-// Generate high quality mock data for demo
+// Generate structured mock data for demo
 function getMockWorkouts() {
     const list = [];
     const today = new Date();
-    
-    // Helper to get formatted date string relative to today
     const daysAgo = (num) => {
         const d = new Date();
         d.setDate(today.getDate() - num);
@@ -232,10 +247,11 @@ function getMockWorkouts() {
     list.push({
         id: 'mock-1',
         date: daysAgo(0),
+        time: '19:30',
         title: '胸と三頭筋の日',
         category: '胸 (Chest)',
         mood: 'fire',
-        impression: 'ベンチプレス80kgで10レップ成功！調子がとても良かったです。最後はダンベルフライでしっかり追い込めました。',
+        impression: 'ベンチプレス80kgで10レップ成功！調子がとても良かったです。最後はダンベルフライで追い込めました。',
         exercises: [
             {
                 name: 'ベンチプレス',
@@ -251,13 +267,6 @@ function getMockWorkouts() {
                     { weight: 24, reps: 12 },
                     { weight: 24, reps: 10 }
                 ]
-            },
-            {
-                name: 'スカルクラッシャー',
-                sets: [
-                    { weight: 30, reps: 12 },
-                    { weight: 30, reps: 10 }
-                ]
             }
         ]
     });
@@ -265,32 +274,24 @@ function getMockWorkouts() {
     list.push({
         id: 'mock-2',
         date: daysAgo(2),
+        time: '18:15',
         title: '背中と二頭筋の日',
         category: '背中 (Back)',
         mood: 'strong',
-        impression: 'デッドリフトを久々に実施。腰のフォームを意識して、安全に120kgを引けました。ラットプルダウンは背中の広がりを意識。',
+        impression: 'デッドリフトを安全に120kg引けました。ラットプルダウンは広背筋を意識。',
         exercises: [
             {
                 name: 'デッドリフト',
                 sets: [
                     { weight: 100, reps: 8 },
-                    { weight: 120, reps: 6 },
-                    { weight: 120, reps: 5 }
+                    { weight: 120, reps: 6 }
                 ]
             },
             {
                 name: 'ラットプルダウン',
                 sets: [
                     { weight: 50, reps: 12 },
-                    { weight: 57, reps: 10 },
-                    { weight: 57, reps: 8 }
-                ]
-            },
-            {
-                name: 'インクラインダンベルカール',
-                sets: [
-                    { weight: 12, reps: 12 },
-                    { weight: 12, reps: 12 }
+                    { weight: 57, reps: 10 }
                 ]
             }
         ]
@@ -299,77 +300,24 @@ function getMockWorkouts() {
     list.push({
         id: 'mock-3',
         date: daysAgo(4),
-        title: '脚トレの日',
-        category: '脚 (Legs)',
-        mood: 'tired',
-        impression: 'スクワットがきつすぎた。足がガクガクで、レッグプレスは少し重量を落として回数を多めに設定した。やりきった自分を褒めたい。',
-        exercises: [
-            {
-                name: 'バックスクワット',
-                sets: [
-                    { weight: 80, reps: 8 },
-                    { weight: 90, reps: 8 },
-                    { weight: 90, reps: 6 }
-                ]
-            },
-            {
-                name: 'レッグプレス',
-                sets: [
-                    { weight: 120, reps: 15 },
-                    { weight: 120, reps: 12 }
-                ]
-            }
-        ]
-    });
-
-    list.push({
-        id: 'mock-4',
-        date: daysAgo(8),
-        title: '肩と腹筋の日',
+        time: '20:00',
+        title: '肩と脚の日',
         category: '肩 (Shoulders)',
         mood: 'good',
-        impression: 'ショルダープレスをメインに実施。サイドレイズはドロップセットで限界まで。腹筋もしっかり刺激できた。',
+        impression: 'ショルダープレスをメインに実施。脚はスクワットで下半身を強化。',
         exercises: [
             {
-                name: 'ダンベルショルダープレス',
+                name: 'ショルダープレス',
                 sets: [
-                    { weight: 18, reps: 10 },
-                    { weight: 20, reps: 8 },
-                    { weight: 20, reps: 8 }
+                    { weight: 20, reps: 12 },
+                    { weight: 22, reps: 10 }
                 ]
             },
             {
-                name: 'サイドレイズ',
+                name: 'バーベルスクワット',
                 sets: [
-                    { weight: 8, reps: 15 },
-                    { weight: 8, reps: 15 },
-                    { weight: 6, reps: 20 }
-                ]
-            },
-            {
-                name: 'ハンギングレッグレイズ',
-                sets: [
-                    { weight: 0, reps: 15 },
-                    { weight: 0, reps: 12 }
-                ]
-            }
-        ]
-    });
-
-    list.push({
-        id: 'mock-5',
-        date: daysAgo(10),
-        title: 'ベンチプレス強化デー',
-        category: '胸 (Chest)',
-        mood: 'fire',
-        impression: '今日は調子が良かった。ベンチプレス80kgで10回行けたので、次回は82.5kgに挑戦する！',
-        exercises: [
-            {
-                name: 'ベンチプレス',
-                sets: [
-                    { weight: 60, reps: 10 },
-                    { weight: 70, reps: 8 },
-                    { weight: 80, reps: 8 }
+                    { weight: 80, reps: 10 },
+                    { weight: 90, reps: 8 }
                 ]
             }
         ]
@@ -406,20 +354,17 @@ function initNavigation() {
             } else if (tabId === 'history') {
                 updateHistoryList();
             } else if (tabId === 'log-workout') {
-                // If not editing, set date to today and build 1 empty exercise
                 if (!state.editingWorkoutId) {
                     resetWorkoutForm();
                 }
             }
             
-            // Smooth scroll to top on tab change
             window.scrollTo({ top: 0, behavior: 'smooth' });
         });
     });
 }
 
 function initTheme() {
-    // Check local storage or system preference
     const savedTheme = localStorage.getItem('fitflow_theme');
     if (savedTheme === 'light') {
         document.body.classList.add('light-theme');
@@ -430,9 +375,8 @@ function initTheme() {
         const theme = document.body.classList.contains('light-theme') ? 'light' : 'dark';
         localStorage.setItem('fitflow_theme', theme);
         
-        // Re-render charts to adjust text color for theme
+        // Re-render active charts to adjust text color for theme
         if (state.charts.category) renderCategoryChart();
-        if (state.charts.frequency) renderFrequencyChart();
         if (state.charts.progression) renderProgressionChart();
         if (state.charts.weight) renderWeightChart();
         if (state.charts.calorieComparison) renderCalorieChart();
@@ -449,7 +393,9 @@ function initTheme() {
 function initDateTexts() {
     const today = new Date();
     const optDate = { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' };
-    DOM.dateText.textContent = today.toLocaleDateString('ja-JP', optDate);
+    if (DOM.dateText) {
+        DOM.dateText.textContent = today.toLocaleDateString('ja-JP', optDate);
+    }
     
     // Dynamic greeting based on time of day
     const hours = today.getHours();
@@ -458,7 +404,10 @@ function initDateTexts() {
     else if (hours < 11) greeting = 'おはようございます！今日も良い一日にしましょう☀️';
     else if (hours < 18) greeting = 'こんにちは！トレーニング日和ですね🔥';
     else greeting = 'こんばんは！今日もお疲れ様です🌙';
-    DOM.greetingText.textContent = greeting;
+    
+    if (DOM.greetingText) {
+        DOM.greetingText.textContent = greeting;
+    }
 }
 
 // ==========================================
@@ -466,6 +415,7 @@ function initDateTexts() {
 // ==========================================
 
 function showToast(message) {
+    if (!DOM.toast) return;
     DOM.toast.querySelector('.toast-message').textContent = message;
     DOM.toast.classList.remove('hidden');
     
@@ -475,11 +425,11 @@ function showToast(message) {
 }
 
 function showConfirmModal(title, message, onConfirm) {
+    if (!DOM.confirmModal) return;
     DOM.modalTitle.textContent = title;
     DOM.modalMessage.textContent = message;
     DOM.confirmModal.classList.remove('hidden');
     
-    // Clear handlers
     const newConfirmBtn = DOM.modalConfirmBtn.cloneNode(true);
     const newCancelBtn = DOM.modalCancelBtn.cloneNode(true);
     DOM.modalConfirmBtn.parentNode.replaceChild(newConfirmBtn, DOM.modalConfirmBtn);
@@ -505,17 +455,16 @@ function showConfirmModal(title, message, onConfirm) {
 function updateDashboard() {
     // 1. Stats: Total workouts
     const total = state.workouts.length;
-    DOM.totalWorkoutsNum.textContent = total;
+    if (DOM.totalWorkoutsNum) DOM.totalWorkoutsNum.textContent = total;
     
     // 2. Stats: Latest Weight
     if (state.weightLogs && state.weightLogs.length > 0) {
-        const sortedWeights = [...state.weightLogs].sort((a, b) => new Date(b.date) - new Date(a.date));
-        const latest = sortedWeights[0];
-        DOM.latestWeightNum.textContent = latest.weight.toFixed(1);
-        DOM.latestWeightDate.textContent = formatDateJp(latest.date);
+        const latest = state.weightLogs[state.weightLogs.length - 1]; // O(1) access since it's pre-sorted
+        if (DOM.latestWeightNum) DOM.latestWeightNum.textContent = latest.weight.toFixed(1);
+        if (DOM.latestWeightDate) DOM.latestWeightDate.textContent = formatDateJp(latest.date);
     } else {
-        DOM.latestWeightNum.textContent = '0.0';
-        DOM.latestWeightDate.textContent = '未登録';
+        if (DOM.latestWeightNum) DOM.latestWeightNum.textContent = '0.0';
+        if (DOM.latestWeightDate) DOM.latestWeightDate.textContent = '未登録';
     }
 
     // 3. Stats: Today's running
@@ -531,26 +480,24 @@ function updateDashboard() {
             }
         });
     }
-    DOM.todayCalorieNum.textContent = Math.round(todayCalories);
-    DOM.todayCardioDist.textContent = `${todayDistance.toFixed(2)} km 走行`;
+    if (DOM.todayCalorieNum) DOM.todayCalorieNum.textContent = Math.round(todayCalories);
+    if (DOM.todayCardioDist) DOM.todayCardioDist.textContent = `${todayDistance.toFixed(2)} km 走行`;
 
     // 4. Streaks
     const streak = calculateStreak(state.workouts);
-    DOM.streakCount.textContent = `${streak} 日`;
+    if (DOM.streakCount) DOM.streakCount.textContent = `${streak} 日`;
     
-    // 5. Training Calendar
+    // 5. Training Calendar & Charts
     renderCalendar();
-    
-    // 6. Charts
     renderCategoryChart();
     renderWeightChart();
     renderCalorieChart();
 }
 
 function calculateStreak(workouts) {
-    if (workouts.length === 0) return 0;
+    if (!workouts || workouts.length === 0) return 0;
     
-    // Get list of unique date strings, sorted descending
+    // Get unique date strings sorted descending
     const dates = workouts.map(w => w.date);
     const uniqueDates = [...new Set(dates)].sort((a, b) => new Date(b) - new Date(a));
     
@@ -559,16 +506,16 @@ function calculateStreak(workouts) {
     yesterday.setDate(yesterday.getDate() - 1);
     const yesterdayStr = getLocalDateString(yesterday);
     
-    // Check if user has a workout today or yesterday
+    // Check if user has logged a workout today or yesterday
     if (uniqueDates[0] !== todayStr && uniqueDates[0] !== yesterdayStr) {
         return 0;
     }
     
     let streak = 1;
-    let currentDate = new Date(uniqueDates[0]);
+    let currentDate = new Date(uniqueDates[0] + 'T00:00:00');
     
     for (let i = 1; i < uniqueDates.length; i++) {
-        const prevDate = new Date(uniqueDates[i]);
+        const prevDate = new Date(uniqueDates[i] + 'T00:00:00');
         const diffTime = Math.abs(currentDate - prevDate);
         const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
         
@@ -585,30 +532,34 @@ function calculateStreak(workouts) {
 
 // Calendar Heatmap rendering
 function initCalendarControls() {
-    DOM.prevMonthBtn.addEventListener('click', () => {
-        state.currentMonth--;
-        if (state.currentMonth < 0) {
-            state.currentMonth = 11;
-            state.currentYear--;
-        }
-        renderCalendar();
-    });
+    if (DOM.prevMonthBtn) {
+        DOM.prevMonthBtn.addEventListener('click', () => {
+            state.currentMonth--;
+            if (state.currentMonth < 0) {
+                state.currentMonth = 11;
+                state.currentYear--;
+            }
+            renderCalendar();
+        });
+    }
     
-    DOM.nextMonthBtn.addEventListener('click', () => {
-        state.currentMonth++;
-        if (state.currentMonth > 11) {
-            state.currentMonth = 0;
-            state.currentYear++;
-        }
-        renderCalendar();
-    });
+    if (DOM.nextMonthBtn) {
+        DOM.nextMonthBtn.addEventListener('click', () => {
+            state.currentMonth++;
+            if (state.currentMonth > 11) {
+                state.currentMonth = 0;
+                state.currentYear++;
+            }
+            renderCalendar();
+        });
+    }
 }
 
 function renderCalendar() {
+    if (!DOM.calendarMonthYear || !DOM.calendarDays) return;
     const year = state.currentYear;
     const month = state.currentMonth;
     
-    // Set Header
     const monthsJapanese = [
         '1月', '2月', '3月', '4月', '5月', '6月', 
         '7月', '8月', '9月', '10月', '11月', '12月'
@@ -617,25 +568,25 @@ function renderCalendar() {
     
     DOM.calendarDays.innerHTML = '';
     
-    // First day of month
     const firstDay = new Date(year, month, 1).getDay();
-    // Total days in month
     const totalDays = new Date(year, month + 1, 0).getDate();
     
-    // Empty cells for padding before the first day
+    // Empty cells padding
     for (let i = 0; i < firstDay; i++) {
         const emptyCell = document.createElement('div');
         emptyCell.classList.add('calendar-day', 'empty');
         DOM.calendarDays.appendChild(emptyCell);
     }
     
-    const today = new Date();
-    const todayStr = getLocalDateString(today);
+    const todayStr = getLocalDateString();
     
-    // Map workout dates for quick lookups
-    const workoutDates = {};
+    // O(W) Group workouts by date beforehand for fast O(1) lookup in render loop
+    const workoutsByDate = {};
     state.workouts.forEach(w => {
-        workoutDates[w.date] = (workoutDates[w.date] || 0) + 1;
+        if (!workoutsByDate[w.date]) {
+            workoutsByDate[w.date] = [];
+        }
+        workoutsByDate[w.date].push(w);
     });
     
     // Render actual days
@@ -644,34 +595,31 @@ function renderCalendar() {
         dayCell.classList.add('calendar-day');
         dayCell.textContent = day;
         
-        // Format current day to ISO date string
         const currentMonthPadded = String(month + 1).padStart(2, '0');
         const currentDayPadded = String(day).padStart(2, '0');
         const dateStr = `${year}-${currentMonthPadded}-${currentDayPadded}`;
         
-        // Match conditions
         if (dateStr === todayStr) {
             dayCell.classList.add('today');
         }
         
-        if (workoutDates[dateStr]) {
+        const dayWorkouts = workoutsByDate[dateStr];
+        if (dayWorkouts && dayWorkouts.length > 0) {
             dayCell.classList.add('workout-done');
             
-            // Add a little dot in case they want a visual indicator
             const dot = document.createElement('span');
             dot.classList.add('workout-dot-indicator');
             dayCell.appendChild(dot);
             
-            // Show workout summary on hover
-            const dayWorkouts = state.workouts.filter(w => w.date === dateStr);
-            const titles = dayWorkouts.map(w => w.title).join(', ');
+            const titles = dayWorkouts.map(w => w.title || '無題').join(', ');
             dayCell.setAttribute('title', `${titles} (${dayWorkouts.length}件)`);
             
-            // Click calendar day to go to history and search that date!
             dayCell.addEventListener('click', () => {
-                DOM.searchInput.value = dateStr;
-                // Navigate to History Tab
                 const historyNavItem = document.querySelector('[data-tab="history"]');
+                if (DOM.searchInput) {
+                    DOM.searchInput.value = dateStr;
+                    updateHistoryList();
+                }
                 if (historyNavItem) historyNavItem.click();
             });
         }
@@ -684,9 +632,10 @@ function renderCalendar() {
 function getChartThemeColors() {
     const isLight = document.body.classList.contains('light-theme');
     return {
-        text: isLight ? '#475569' : '#94a3b8',
-        grid: isLight ? 'rgba(0, 0, 0, 0.05)' : 'rgba(255, 255, 255, 0.05)',
-        border: isLight ? 'rgba(0, 0, 0, 0.08)' : 'rgba(255, 255, 255, 0.08)'
+        text: isLight ? '#475569' : '#a8c0be',
+        grid: isLight ? 'rgba(50, 72, 81, 0.05)' : 'rgba(125, 163, 161, 0.1)',
+        border: isLight ? 'rgba(50, 72, 81, 0.08)' : 'rgba(125, 163, 161, 0.15)',
+        surface: isLight ? '#ffffff' : '#1e2d33'
     };
 }
 
@@ -706,32 +655,33 @@ function renderCategoryChart() {
     const data = Object.values(categoriesCount);
     
     if (labels.length === 0) {
-        DOM.noCategoryData.style.display = 'block';
+        if (DOM.noCategoryData) DOM.noCategoryData.style.display = 'block';
         if (state.charts.category) {
-            state.charts.category.destroy();
+            try { state.charts.category.destroy(); } catch(e){}
             state.charts.category = null;
         }
         return;
     }
     
-    DOM.noCategoryData.style.display = 'none';
+    if (DOM.noCategoryData) DOM.noCategoryData.style.display = 'none';
     
-    const ctx = document.getElementById('categoryChart').getContext('2d');
+    const canvas = document.getElementById('categoryChart');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
     
     if (state.charts.category) {
-        state.charts.category.destroy();
+        try { state.charts.category.destroy(); } catch(e){}
     }
     
-    // Beautiful color mapping matching our workout category colors
     const colorsMap = {
-        '胸 (Chest)': '#f87171',
-        '背中 (Back)': '#60a5fa',
-        '肩 (Shoulders)': '#fbbf24',
-        '腕 (Arms)': '#a78bfa',
-        '脚 (Legs)': '#34d399',
-        '腹筋 (Core)': '#22d3ee',
-        '有酸素 (Cardio)': '#ec4899',
-        'その他 (Other)': '#94a3b8'
+        '胸 (Chest)': '#e05a47',
+        '背中 (Back)': '#7da3a1',
+        '肩 (Shoulders)': '#d9a05b',
+        '腕 (Arms)': '#34675c',
+        '脚 (Legs)': '#86ac41',
+        '腹筋 (Core)': '#5ca393',
+        '有酸素 (Cardio)': '#a2bfa7',
+        'その他 (Other)': '#577c8a'
     };
     
     const backgroundColors = labels.map(label => colorsMap[label] || '#94a3b8');
@@ -744,7 +694,7 @@ function renderCategoryChart() {
                 data: data,
                 backgroundColor: backgroundColors,
                 borderWidth: 2,
-                borderColor: document.body.classList.contains('light-theme') ? '#ffffff' : '#121826'
+                borderColor: theme.surface
             }]
         },
         options: {
@@ -755,10 +705,7 @@ function renderCategoryChart() {
                     position: 'right',
                     labels: {
                         color: theme.text,
-                        font: {
-                            family: 'Inter',
-                            size: 11
-                        },
+                        font: { family: 'Inter', size: 11 },
                         padding: 15
                     }
                 },
@@ -778,126 +725,24 @@ function renderCategoryChart() {
     });
 }
 
-// Bar Chart - Training Frequency (workouts per week for past 6 weeks)
-function renderFrequencyChart() {
-    const theme = getChartThemeColors();
-    
-    // Generate past 6 weeks dates ranges
-    const weeksData = [];
-    const today = new Date();
-    
-    for (let i = 5; i >= 0; i--) {
-        const startOfWeek = new Date(today);
-        startOfWeek.setDate(today.getDate() - (today.getDay() === 0 ? 6 : today.getDay() - 1) - (i * 7));
-        startOfWeek.setHours(0, 0, 0, 0);
-        
-        const endOfWeek = new Date(startOfWeek);
-        endOfWeek.setDate(startOfWeek.getDate() + 6);
-        endOfWeek.setHours(23, 59, 59, 999);
-        
-        weeksData.push({
-            start: startOfWeek,
-            end: endOfWeek,
-            label: `${startOfWeek.getMonth()+1}/${startOfWeek.getDate()}~`,
-            count: 0
-        });
-    }
-    
-    // Distribute workouts count
-    state.workouts.forEach(w => {
-        const wDate = new Date(w.date);
-        for (let week of weeksData) {
-            if (wDate >= week.start && wDate <= week.end) {
-                week.count++;
-                break;
-            }
-        }
-    });
-    
-    const labels = weeksData.map(w => w.label);
-    const counts = weeksData.map(w => w.count);
-    
-    if (state.workouts.length === 0) {
-        DOM.noFrequencyData.style.display = 'block';
-        if (state.charts.frequency) {
-            state.charts.frequency.destroy();
-            state.charts.frequency = null;
-        }
-        return;
-    }
-    
-    DOM.noFrequencyData.style.display = 'none';
-    
-    const ctx = document.getElementById('frequencyChart').getContext('2d');
-    
-    if (state.charts.frequency) {
-        state.charts.frequency.destroy();
-    }
-    
-    state.charts.frequency = new Chart(ctx, {
-        type: 'bar',
-        data: {
-            labels: labels,
-            datasets: [{
-                label: 'ワークアウト回数',
-                data: counts,
-                backgroundColor: 'rgba(139, 92, 246, 0.75)',
-                borderColor: '#8b5cf6',
-                borderWidth: 1.5,
-                borderRadius: 6,
-                barPercentage: 0.5
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: {
-                    display: false
-                }
-            },
-            scales: {
-                x: {
-                    grid: {
-                        display: false
-                    },
-                    ticks: {
-                        color: theme.text
-                    }
-                },
-                y: {
-                    grid: {
-                        color: theme.grid
-                    },
-                    ticks: {
-                        color: theme.text,
-                        stepSize: 1,
-                        precision: 0
-                    },
-                    beginAtZero: true
-                }
-            }
-        }
-    });
-}
-
 // ==========================================
 // WORKOUT LOGGING FORM
 // ==========================================
 
 function initFormControls() {
-    // Add exercise action
-    DOM.addExerciseBtn.addEventListener('click', () => {
-        addExerciseBlock();
-    });
+    if (DOM.addExerciseBtn) {
+        DOM.addExerciseBtn.addEventListener('click', () => {
+            addExerciseBlock();
+        });
+    }
     
-    // Save workout action
-    DOM.workoutForm.addEventListener('submit', (e) => {
-        e.preventDefault();
-        saveWorkout();
-    });
+    if (DOM.workoutForm) {
+        DOM.workoutForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            saveWorkout();
+        });
+    }
 
-    // Weight logging submit
     if (DOM.weightForm) {
         DOM.weightForm.addEventListener('submit', (e) => {
             e.preventDefault();
@@ -905,19 +750,16 @@ function initFormControls() {
         });
     }
 
-    // Cardio input dynamic calories update
     if (DOM.logCardioDist) {
         DOM.logCardioDist.addEventListener('input', updateCardioHint);
     }
 
-    // Cardio logging submit
     if (DOM.cardioForm) {
         DOM.cardioForm.addEventListener('submit', (e) => {
             e.preventDefault();
             saveCardio();
         });
         
-        // Default cardio date input to today
         if (DOM.logCardioDate) {
             DOM.logCardioDate.value = getLocalDateString();
         }
@@ -926,31 +768,31 @@ function initFormControls() {
 
 function resetWorkoutForm() {
     state.editingWorkoutId = null;
-    DOM.workoutForm.reset();
+    if (DOM.workoutForm) DOM.workoutForm.reset();
     
-    // Reset Form Date and Time to now in local time
     const now = new Date();
-    DOM.workoutDate.value = getLocalDateString(now);
+    if (DOM.workoutDate) DOM.workoutDate.value = getLocalDateString(now);
     
     const hours = String(now.getHours()).padStart(2, '0');
     const minutes = String(now.getMinutes()).padStart(2, '0');
-    DOM.workoutTime.value = `${hours}:${minutes}`;
+    if (DOM.workoutTime) DOM.workoutTime.value = `${hours}:${minutes}`;
     
-    // Clear dynamic exercise items
-    DOM.exerciseList.innerHTML = '';
-    DOM.noExercisesHelper.style.display = 'flex';
-    DOM.saveWorkoutBtn.innerHTML = '<i data-lucide="check"></i> 記録を保存する';
+    if (DOM.exerciseList) DOM.exerciseList.innerHTML = '';
+    if (DOM.noExercisesHelper) DOM.noExercisesHelper.style.display = 'flex';
+    if (DOM.saveWorkoutBtn) DOM.saveWorkoutBtn.innerHTML = '<i data-lucide="check"></i> 記録を保存する';
     
-    // Change form card header text
-    DOM.workoutForm.querySelector('.form-header-row h2').textContent = '新規ワークアウトの記録';
+    const titleHeader = DOM.workoutForm ? DOM.workoutForm.querySelector('.form-header-row h2') : null;
+    if (titleHeader) titleHeader.textContent = '新規ワークアウトの記録';
     
-    // Pre-populate with one empty exercise for user convenience
     addExerciseBlock();
     
-    lucide.createIcons();
+    if (window.lucide) {
+        lucide.createIcons();
+    }
 }
 
 function addExerciseBlock(data = null) {
+    if (!DOM.exerciseList || !DOM.noExercisesHelper) return;
     DOM.noExercisesHelper.style.display = 'none';
     
     const exerciseIndex = DOM.exerciseList.children.length;
@@ -971,13 +813,8 @@ function addExerciseBlock(data = null) {
                     <option value="デッドリフト">
                     <option value="スクワット">
                     <option value="レッグプレス">
-                    <option value="レッグカール">
-                    <option value="レッグエクステンション">
                     <option value="ショルダープレス">
                     <option value="サイドレイズ">
-                    <option value="リアデルトフライ">
-                    <option value="バーベルカール">
-                    <option value="三頭筋プレスダウン">
                     <option value="クランチ">
                     <option value="プランク">
                 </datalist>
@@ -997,9 +834,7 @@ function addExerciseBlock(data = null) {
                         <th class="set-action"></th>
                     </tr>
                 </thead>
-                <tbody class="sets-tbody">
-                    <!-- Set rows go here -->
-                </tbody>
+                <tbody class="sets-tbody"></tbody>
             </table>
             <button type="button" class="add-set-row-btn">
                 <i data-lucide="plus"></i> セットを追加
@@ -1011,17 +846,14 @@ function addExerciseBlock(data = null) {
     const addSetBtn = exerciseBlock.querySelector('.add-set-row-btn');
     const removeExBtn = exerciseBlock.querySelector('.btn-remove-exercise');
     
-    // Add set event
     addSetBtn.addEventListener('click', () => {
         addSetRow(tbody);
     });
     
-    // Remove exercise event
     removeExBtn.addEventListener('click', () => {
         exerciseBlock.style.animation = 'slideIn 0.2s ease reverse';
         setTimeout(() => {
             exerciseBlock.remove();
-            // Re-index remaining exercises
             Array.from(DOM.exerciseList.children).forEach((child, idx) => {
                 child.setAttribute('data-index', idx);
             });
@@ -1031,18 +863,17 @@ function addExerciseBlock(data = null) {
         }, 200);
     });
     
-    // Append and add first set row
     DOM.exerciseList.appendChild(exerciseBlock);
     
     if (data && data.sets && data.sets.length > 0) {
         data.sets.forEach(s => addSetRow(tbody, s.weight, s.reps));
     } else {
-        // Pre-populate with 1 empty set
         addSetRow(tbody);
     }
     
-    // Initialize newly created icons
-    lucide.createIcons();
+    if (window.lucide) {
+        lucide.createIcons();
+    }
 }
 
 function addSetRow(tbody, weight = '', reps = '') {
@@ -1065,11 +896,9 @@ function addSetRow(tbody, weight = '', reps = '') {
         </td>
     `;
     
-    // Remove set row event
     row.querySelector('.btn-remove-set').addEventListener('click', () => {
         if (tbody.children.length > 1) {
             row.remove();
-            // Update set indices
             Array.from(tbody.children).forEach((r, idx) => {
                 r.querySelector('.set-num').textContent = idx + 1;
             });
@@ -1079,7 +908,9 @@ function addSetRow(tbody, weight = '', reps = '') {
     });
     
     tbody.appendChild(row);
-    lucide.createIcons();
+    if (window.lucide) {
+        lucide.createIcons();
+    }
 }
 
 function saveWorkout() {
@@ -1090,7 +921,6 @@ function saveWorkout() {
     const mood = DOM.workoutForm.querySelector('input[name="workout-mood"]:checked').value;
     const impression = DOM.workoutImpression.value.trim();
     
-    // Gather exercises
     const exerciseItems = DOM.exerciseList.querySelectorAll('.exercise-item');
     if (exerciseItems.length === 0) {
         showToast('種目を1つ以上追加してください');
@@ -1113,7 +943,6 @@ function saveWorkout() {
         setRows.forEach(row => {
             const weightVal = row.querySelector('.set-weight').value;
             const repsVal = row.querySelector('.set-reps').value;
-            
             const weight = parseFloat(weightVal);
             const reps = parseInt(repsVal);
             
@@ -1121,7 +950,6 @@ function saveWorkout() {
                 hasValidationError = true;
                 return;
             }
-            
             sets.push({ weight, reps });
         });
         
@@ -1129,7 +957,6 @@ function saveWorkout() {
             hasValidationError = true;
             return;
         }
-        
         exercises.push({ name, sets });
     });
     
@@ -1138,12 +965,11 @@ function saveWorkout() {
         return;
     }
     
-    // Create / Update Workout object
     const workoutData = {
         id: state.editingWorkoutId || 'workout-' + Date.now(),
         date,
         time,
-        title,
+        title: title || '無題のワークアウト',
         category,
         mood,
         impression,
@@ -1151,22 +977,19 @@ function saveWorkout() {
     };
     
     if (state.editingWorkoutId) {
-        // Edit existing
         const idx = state.workouts.findIndex(w => w.id === state.editingWorkoutId);
         if (idx !== -1) {
             state.workouts[idx] = workoutData;
             showToast('ワークアウト記録を更新しました！');
         }
     } else {
-        // Create new
-        state.workouts.unshift(workoutData); // Add to beginning of array
+        state.workouts.unshift(workoutData);
         showToast('ワークアウト記録を保存しました！');
     }
     
     saveData();
     state.editingWorkoutId = null;
     
-    // Navigate back to history / dashboard
     const historyNavItem = document.querySelector('[data-tab="history"]');
     if (historyNavItem) {
         historyNavItem.click();
@@ -1178,33 +1001,31 @@ function saveWorkout() {
 // ==========================================
 
 function initHistoryControls() {
-    DOM.searchInput.addEventListener('input', () => updateHistoryList());
-    DOM.filterCategory.addEventListener('change', () => updateHistoryList());
-    DOM.filterMood.addEventListener('change', () => updateHistoryList());
+    if (DOM.searchInput) DOM.searchInput.addEventListener('input', () => updateHistoryList());
+    if (DOM.filterCategory) DOM.filterCategory.addEventListener('change', () => updateHistoryList());
+    if (DOM.filterMood) DOM.filterMood.addEventListener('change', () => updateHistoryList());
     
-    DOM.progressionSelect.addEventListener('change', () => {
-        renderProgressionChart();
-    });
+    if (DOM.progressionSelect) {
+        DOM.progressionSelect.addEventListener('change', () => {
+            renderProgressionChart();
+        });
+    }
 }
 
 function updateHistoryList() {
+    if (!DOM.historyContainer || !DOM.historyCount) return;
     const searchQuery = DOM.searchInput.value.toLowerCase().trim();
     const catFilter = DOM.filterCategory.value;
     const moodFilter = DOM.filterMood.value;
     
-    // Filter workouts
     const filtered = state.workouts.filter(w => {
-        // Search filter matches title, impression, or exercise names
         const matchesSearch = searchQuery === '' || 
-            w.title.toLowerCase().includes(searchQuery) ||
-            w.impression.toLowerCase().includes(searchQuery) ||
-            w.date.includes(searchQuery) ||
-            w.exercises.some(ex => ex.name.toLowerCase().includes(searchQuery));
+            (w.title && w.title.toLowerCase().includes(searchQuery)) ||
+            (w.impression && w.impression.toLowerCase().includes(searchQuery)) ||
+            (w.date && w.date.includes(searchQuery)) ||
+            (w.exercises && w.exercises.some(ex => ex.name && ex.name.toLowerCase().includes(searchQuery)));
             
-        // Category filter
         const matchesCategory = catFilter === 'all' || w.category === catFilter;
-        
-        // Mood filter
         const matchesMood = moodFilter === 'all' || w.mood === moodFilter;
         
         return matchesSearch && matchesCategory && matchesMood;
@@ -1220,31 +1041,28 @@ function updateHistoryList() {
                 <p>該当するワークアウト履歴が見つかりません。</p>
             </div>
         `;
-        lucide.createIcons();
+        if (window.lucide) lucide.createIcons();
         return;
     }
     
-    // Sort filtered workouts descending by date
+    // Sort chronologically descending
     filtered.sort((a, b) => new Date(b.date) - new Date(a.date));
     
-    // Generate history list cards
     filtered.forEach(w => {
         const card = createHistoryCard(w);
         DOM.historyContainer.appendChild(card);
     });
     
-    // Update exercises list in select dropdown for progression chart
     updateProgressionSelect();
-    
-    // Initialize icons in card list
-    lucide.createIcons();
+    if (window.lucide) {
+        lucide.createIcons();
+    }
 }
 
 function createHistoryCard(workout) {
     const card = document.createElement('div');
     card.classList.add('card', 'workout-history-card');
     
-    // Map category to CSS class
     const categoryClassMap = {
         '胸 (Chest)': 'chest',
         '背中 (Back)': 'back',
@@ -1258,7 +1076,6 @@ function createHistoryCard(workout) {
     const cClass = categoryClassMap[workout.category] || 'other';
     card.classList.add(cClass);
     
-    // Mood emoji map
     const moodEmojiMap = {
         'fire': '🔥',
         'strong': '💪',
@@ -1268,30 +1085,28 @@ function createHistoryCard(workout) {
     };
     const emoji = moodEmojiMap[workout.mood] || '😊';
     
-    // Build exercises boxes
     let exercisesHtml = '';
-    workout.exercises.forEach(ex => {
-        let setsListHtml = '';
-        ex.sets.forEach((s, idx) => {
-            // Est 1RM
-            const est1RM = s.reps > 1 ? Math.round(s.weight * (1 + s.reps / 30)) : s.weight;
-            setsListHtml += `
-                <div class="history-set-item">
-                    <span>Set ${idx + 1}</span>
-                    <span class="history-set-detail">${s.weight} kg × ${s.reps} 回 <span class="text-muted">(1RM ~${est1RM}kg)</span></span>
+    if (workout.exercises) {
+        workout.exercises.forEach(ex => {
+            let setsListHtml = '';
+            ex.sets.forEach((s, idx) => {
+                const est1RM = s.reps > 1 ? Math.round(s.weight * (1 + s.reps / 30)) : s.weight;
+                setsListHtml += `
+                    <div class="history-set-item">
+                        <span>Set ${idx + 1}</span>
+                        <span class="history-set-detail">${s.weight} kg × ${s.reps} 回 <span class="text-muted">(1RM ~${est1RM}kg)</span></span>
+                    </div>
+                `;
+            });
+            
+            exercisesHtml += `
+                <div class="history-exercise-box">
+                    <div class="history-exercise-name">${ex.name}</div>
+                    <div class="history-sets-list">${setsListHtml}</div>
                 </div>
             `;
         });
-        
-        exercisesHtml += `
-            <div class="history-exercise-box">
-                <div class="history-exercise-name">${ex.name}</div>
-                <div class="history-sets-list">
-                    ${setsListHtml}
-                </div>
-            </div>
-        `;
-    });
+    }
     
     const formattedDate = formatDateJp(workout.date);
     
@@ -1331,13 +1146,12 @@ function createHistoryCard(workout) {
         </div>
     `;
     
-    // Wire up actions
     card.querySelector('.btn-edit-history').addEventListener('click', () => {
         editWorkout(workout.id);
     });
     
     card.querySelector('.btn-delete-history').addEventListener('click', () => {
-        showConfirmModal('記録の削除', `「${workout.title} (${formattedDate})」の記録を削除しますか？この操作は戻せません。`, () => {
+        showConfirmModal('記録の削除', `「${workout.title} (${formattedDate})」の記録を削除しますか？`, () => {
             deleteWorkout(workout.id);
         });
     });
@@ -1345,49 +1159,45 @@ function createHistoryCard(workout) {
     return card;
 }
 
-function formatDateJp(dateStr) {
-    const parts = dateStr.split('-');
-    if (parts.length === 3) {
-        return `${parts[0]}年${parseInt(parts[1])}月${parseInt(parts[2])}日`;
-    }
-    return dateStr;
-}
-
 function editWorkout(id) {
     const workout = state.workouts.find(w => w.id === id);
     if (!workout) return;
     
-    // Set edit target
     state.editingWorkoutId = id;
     
-    // Navigate to form tab
     const formNavItem = document.querySelector('[data-tab="log-workout"]');
     if (formNavItem) formNavItem.click();
     
-    // Update headers and submit button text
-    DOM.workoutForm.querySelector('.form-header-row h2').textContent = 'ワークアウト記録の編集';
-    DOM.saveWorkoutBtn.innerHTML = '<i data-lucide="save"></i> 編集を保存する';
+    if (DOM.workoutForm) {
+        DOM.workoutForm.querySelector('.form-header-row h2').textContent = 'ワークアウト記録の編集';
+    }
+    if (DOM.saveWorkoutBtn) {
+        DOM.saveWorkoutBtn.innerHTML = '<i data-lucide="save"></i> 編集を保存する';
+    }
     
-    // Populate simple fields
-    DOM.workoutDate.value = workout.date;
-    DOM.workoutTime.value = workout.time || '12:00';
-    DOM.workoutTitle.value = workout.title;
-    DOM.workoutCategory.value = workout.category;
-    DOM.workoutImpression.value = workout.impression;
+    if (DOM.workoutDate) DOM.workoutDate.value = workout.date;
+    if (DOM.workoutTime) DOM.workoutTime.value = workout.time || '12:00';
+    if (DOM.workoutTitle) DOM.workoutTitle.value = workout.title || '';
+    if (DOM.workoutCategory) DOM.workoutCategory.value = workout.category;
+    if (DOM.workoutImpression) DOM.workoutImpression.value = workout.impression || '';
     
-    // Check correct mood radio
-    const moodRadio = DOM.workoutForm.querySelector(`input[name="workout-mood"][value="${workout.mood}"]`);
+    const moodRadio = DOM.workoutForm ? DOM.workoutForm.querySelector(`input[name="workout-mood"][value="${workout.mood}"]`) : null;
     if (moodRadio) moodRadio.checked = true;
     
-    // Popuate exercise builder list
-    DOM.exerciseList.innerHTML = '';
-    DOM.noExercisesHelper.style.display = 'none';
+    if (DOM.exerciseList) {
+        DOM.exerciseList.innerHTML = '';
+        DOM.noExercisesHelper.style.display = 'none';
+        
+        if (workout.exercises) {
+            workout.exercises.forEach(ex => {
+                addExerciseBlock(ex);
+            });
+        }
+    }
     
-    workout.exercises.forEach(ex => {
-        addExerciseBlock(ex);
-    });
-    
-    lucide.createIcons();
+    if (window.lucide) {
+        lucide.createIcons();
+    }
 }
 
 function deleteWorkout(id) {
@@ -1396,20 +1206,34 @@ function deleteWorkout(id) {
         state.workouts.splice(idx, 1);
         saveData();
         showToast('ワークアウト記録を削除しました');
+        updateDashboard(); // Sync total workouts and calendar count
         updateHistoryList();
     }
 }
 
-// 1RM progression chart updates
+function formatDateJp(dateStr) {
+    if (!dateStr) return '日付未設定';
+    try {
+        const date = new Date(dateStr + 'T00:00:00');
+        if (isNaN(date.getTime())) return dateStr;
+        const days = ['日', '月', '火', '水', '木', '金', '土'];
+        return `${date.getFullYear()}年${date.getMonth() + 1}月${date.getDate()}日 (${days[date.getDay()]})`;
+    } catch (e) {
+        return dateStr;
+    }
+}
+
 function updateProgressionSelect() {
-    // Extract unique exercise names
+    if (!DOM.progressionSelect) return;
     const exerciseNamesSet = new Set();
     state.workouts.forEach(w => {
-        w.exercises.forEach(ex => {
-            if (ex.name.trim() !== '') {
-                exerciseNamesSet.add(ex.name.trim());
-            }
-        });
+        if (w.exercises) {
+            w.exercises.forEach(ex => {
+                if (ex.name && ex.name.trim() !== '') {
+                    exerciseNamesSet.add(ex.name.trim());
+                }
+            });
+        }
     });
     
     const exerciseNames = [...exerciseNamesSet].sort();
@@ -1430,7 +1254,6 @@ function updateProgressionSelect() {
         DOM.progressionSelect.appendChild(option);
     });
     
-    // Restore selection if still valid, otherwise default to first
     if (exerciseNames.includes(oldVal)) {
         DOM.progressionSelect.value = oldVal;
     } else {
@@ -1442,24 +1265,24 @@ function updateProgressionSelect() {
 
 function renderProgressionChart() {
     const theme = getChartThemeColors();
+    if (!DOM.progressionSelect || !DOM.noProgressionData) return;
     const exerciseName = DOM.progressionSelect.value;
     
     if (!exerciseName) {
         DOM.noProgressionData.style.display = 'block';
         DOM.noProgressionData.textContent = 'データがありません。';
         if (state.charts.progression) {
-            state.charts.progression.destroy();
+            try { state.charts.progression.destroy(); } catch(e){}
             state.charts.progression = null;
         }
         return;
     }
     
-    // Gather progression points
     const points = [];
     state.workouts.forEach(w => {
-        const matchedEx = w.exercises.find(ex => ex.name.trim() === exerciseName);
+        if (!w.exercises) return;
+        const matchedEx = w.exercises.find(ex => ex.name && ex.name.trim() === exerciseName);
         if (matchedEx) {
-            // Find max weight and max est 1RM in this workout for this exercise
             let maxWeight = 0;
             let maxEst1RM = 0;
             
@@ -1475,19 +1298,18 @@ function renderProgressionChart() {
             points.push({
                 date: w.date,
                 maxWeight: maxWeight,
-                est1RM: Math.round(maxEst1RM * 10) / 10 // round 1 decimal
+                est1RM: Math.round(maxEst1RM * 10) / 10
             });
         }
     });
     
-    // Sort points chronologically
     points.sort((a, b) => new Date(a.date) - new Date(b.date));
     
     if (points.length < 2) {
         DOM.noProgressionData.style.display = 'block';
         DOM.noProgressionData.textContent = `重量推移を表示するには、「${exerciseName}」を2回以上記録してください（現在: ${points.length}回）`;
         if (state.charts.progression) {
-            state.charts.progression.destroy();
+            try { state.charts.progression.destroy(); } catch(e){}
             state.charts.progression = null;
         }
         return;
@@ -1495,10 +1317,12 @@ function renderProgressionChart() {
     
     DOM.noProgressionData.style.display = 'none';
     
-    const ctx = document.getElementById('progressionChart').getContext('2d');
+    const canvas = document.getElementById('progressionChart');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
     
     if (state.charts.progression) {
-        state.charts.progression.destroy();
+        try { state.charts.progression.destroy(); } catch(e){}
     }
     
     const dates = points.map(p => formatDateJp(p.date));
@@ -1513,26 +1337,26 @@ function renderProgressionChart() {
                 {
                     label: '推定 1RM (MAX)',
                     data: est1RMs,
-                    borderColor: '#ec4899',
-                    backgroundColor: 'rgba(236, 72, 153, 0.1)',
-                    borderWidth: 2,
+                    borderColor: '#86ac41',
+                    backgroundColor: 'rgba(134, 172, 65, 0.1)',
+                    borderWidth: 2.5,
                     tension: 0.25,
                     fill: true,
-                    pointBackgroundColor: '#ec4899',
+                    pointBackgroundColor: '#86ac41',
                     pointRadius: 4,
                     pointHoverRadius: 6
                 },
                 {
-                    label: '最大重量 (Max Weight)',
+                    label: '最大重量',
                     data: maxWeights,
-                    borderColor: '#3b82f6',
+                    borderColor: '#7da3a1',
                     backgroundColor: 'transparent',
                     borderWidth: 2,
-                    borderDash: [5, 5],
-                    tension: 0.2,
-                    pointBackgroundColor: '#3b82f6',
-                    pointRadius: 4,
-                    pointHoverRadius: 6
+                    borderDash: [3, 3],
+                    tension: 0.25,
+                    fill: false,
+                    pointBackgroundColor: '#7da3a1',
+                    pointRadius: 3
                 }
             ]
         },
@@ -1541,15 +1365,7 @@ function renderProgressionChart() {
             maintainAspectRatio: false,
             plugins: {
                 legend: {
-                    position: 'top',
-                    labels: {
-                        color: theme.text,
-                        font: { family: 'Inter', size: 11 }
-                    }
-                },
-                tooltip: {
-                    mode: 'index',
-                    intersect: false
+                    labels: { color: theme.text, font: { size: 10 } }
                 }
             },
             scales: {
@@ -1559,12 +1375,7 @@ function renderProgressionChart() {
                 },
                 y: {
                     grid: { color: theme.grid },
-                    ticks: {
-                        color: theme.text,
-                        callback: function(value) {
-                            return value + ' kg';
-                        }
-                    },
+                    ticks: { color: theme.text, font: { size: 9 } },
                     beginAtZero: false
                 }
             }
@@ -1583,7 +1394,7 @@ function initSettingsControls() {
 
     if (DOM.saveMaintenanceBtn) {
         DOM.saveMaintenanceBtn.addEventListener('click', () => {
-            const val = parseInt(DOM.maintenanceInput.value) || 2000;
+            const val = parseInt(DOM.maintenanceInput.value) || DEFAULT_MAINTENANCE_CALORIES;
             state.maintenanceCalories = val;
             saveData();
             showToast('メンテナンスカロリーを保存しました！');
@@ -1591,108 +1402,181 @@ function initSettingsControls() {
         });
     }
 
-    DOM.exportBtn.addEventListener('click', () => {
-        exportWorkouts();
-    });
+    if (DOM.exportBtn) {
+        DOM.exportBtn.addEventListener('click', () => {
+            exportWorkouts();
+        });
+    }
     
-    DOM.importTriggerBtn.addEventListener('click', () => {
-        DOM.importFileInput.click();
-    });
+    if (DOM.importTriggerBtn) {
+        DOM.importTriggerBtn.addEventListener('click', () => {
+            DOM.importFileInput.click();
+        });
+    }
     
-    DOM.importFileInput.addEventListener('change', (e) => {
-        importWorkouts(e);
-    });
+    if (DOM.importFileInput) {
+        DOM.importFileInput.addEventListener('change', (e) => {
+            importWorkouts(e);
+        });
+    }
     
-    DOM.clearAllBtn.addEventListener('click', () => {
-        showConfirmModal(
-            'データの初期化',
-            '本当にすべてのワークアウトデータを削除しますか？この操作を実行すると、元に戻すことはできません。',
-            () => {
-                clearAllWorkouts();
-            }
-        );
-    });
+    if (DOM.clearAllBtn) {
+        DOM.clearAllBtn.addEventListener('click', () => {
+            showConfirmModal(
+                'データの初期化',
+                '本当にすべてのワークアウトデータを削除しますか？この操作を実行すると、元に戻すことはできません。',
+                () => {
+                    clearAllWorkouts();
+                }
+            );
+        });
+    }
 }
 
 function exportWorkouts() {
-    if (state.workouts.length === 0) {
-        showToast('エクスポートするデータがありません。');
-        return;
-    }
+    const backupData = {
+        version: '1.2.0',
+        workouts: state.workouts,
+        weightLogs: state.weightLogs,
+        cardioLogs: state.cardioLogs,
+        maintenanceCalories: state.maintenanceCalories
+    };
     
-    const dataStr = JSON.stringify(state.workouts, null, 2);
+    const dataStr = JSON.stringify(backupData, null, 2);
     const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
     
-    const exportFileDefaultName = `fitflow_workouts_backup_${getLocalDateString()}.json`;
+    const filename = `fitflow_backup_${getLocalDateString()}.json`;
     
-    const linkElement = document.createElement('a');
-    linkElement.setAttribute('href', dataUri);
-    linkElement.setAttribute('download', exportFileDefaultName);
-    linkElement.click();
+    const link = document.createElement('a');
+    link.setAttribute('href', dataUri);
+    link.setAttribute('download', filename);
+    link.click();
     
-    showToast('JSONデータをエクスポートしました');
+    showToast('バックアップデータをエクスポートしました');
 }
 
 function importWorkouts(event) {
-    const fileReader = new FileReader();
     const file = event.target.files[0];
-    
     if (!file) return;
     
-    fileReader.onload = function(e) {
+    const reader = new FileReader();
+    reader.onload = function(e) {
         try {
-            const parsedData = JSON.parse(e.target.result);
+            const parsed = JSON.parse(e.target.result);
+            let importedWorkouts = [];
+            let importedWeights = [];
+            let importedCardio = [];
+            let importedMaint = DEFAULT_MAINTENANCE_CALORIES;
             
-            // Basic structural validation
-            if (Array.isArray(parsedData)) {
-                // Confirm merging or replacing
-                showConfirmModal(
-                    'データのインポート',
-                    `ファイルを読み込みました（${parsedData.length}件のワークアウト）。既存のデータとマージして保存しますか？（同IDのデータは上書きされます）`,
-                    () => {
-                        mergeImportedData(parsedData);
-                    }
-                );
+            if (Array.isArray(parsed)) {
+                // Legacy workouts backup format
+                importedWorkouts = parsed;
+            } else if (parsed && typeof parsed === 'object') {
+                // Full state backup format
+                importedWorkouts = parsed.workouts || [];
+                importedWeights = parsed.weightLogs || [];
+                importedCardio = parsed.cardioLogs || [];
+                importedMaint = parsed.maintenanceCalories || DEFAULT_MAINTENANCE_CALORIES;
             } else {
-                showToast('無効なファイル形式です。ワークアウト配列である必要があります。');
+                showToast('無効なファイル形式です。');
+                return;
             }
+            
+            // Validate incoming workouts structure
+            if (!validateWorkoutsSchema(importedWorkouts)) {
+                showToast('インポートデータのフォーマットが不正です。');
+                return;
+            }
+            
+            showConfirmModal(
+                'データの復元',
+                `ファイルを読み込みました（ワークアウト: ${importedWorkouts.length}件, 体重ログ: ${importedWeights.length}件）。既存データにマージしますか？`,
+                () => {
+                    mergeImportedData(importedWorkouts, importedWeights, importedCardio, importedMaint);
+                }
+            );
         } catch (err) {
             console.error('Failed to parse JSON file', err);
             showToast('JSONファイルの解析に失敗しました。');
         }
-        
-        // Reset input value so same file can be selected again
         DOM.importFileInput.value = '';
     };
-    
-    fileReader.readAsText(file);
+    reader.readAsText(file);
 }
 
-function mergeImportedData(importedList) {
+// Rigorous JSON Schema Validation for Imported Data
+function validateWorkoutsSchema(data) {
+    if (!Array.isArray(data)) return false;
+    for (const w of data) {
+        if (!w || typeof w !== 'object') return false;
+        if (typeof w.id !== 'string' || !w.id) return false;
+        if (typeof w.date !== 'string' || !w.date) return false;
+        if (typeof w.title !== 'string') return false;
+        if (typeof w.category !== 'string') return false;
+        if (typeof w.mood !== 'string') return false;
+        if (typeof w.impression !== 'string') return false;
+        if (!Array.isArray(w.exercises)) return false;
+        
+        for (const ex of w.exercises) {
+            if (!ex || typeof ex !== 'object') return false;
+            if (typeof ex.name !== 'string' || !ex.name) return false;
+            if (!Array.isArray(ex.sets)) return false;
+            for (const s of ex.sets) {
+                if (!s || typeof s !== 'object') return false;
+                // Support both float/int, check isNaN
+                const weight = parseFloat(s.weight);
+                const reps = parseInt(s.reps);
+                if (isNaN(weight) || isNaN(reps)) return false;
+            }
+        }
+    }
+    return true;
+}
+
+function mergeImportedData(workouts, weights, cardio, maintenance) {
+    // 1. Merge workouts by ID
     const workoutsMap = {};
-    
-    // Index current workouts
-    state.workouts.forEach(w => {
-        workoutsMap[w.id] = w;
-    });
-    
-    // Overwrite/Add imported workouts
-    importedList.forEach(w => {
+    state.workouts.forEach(w => workoutsMap[w.id] = w);
+    workouts.forEach(w => {
         if (w.id && w.date && w.title && Array.isArray(w.exercises)) {
             workoutsMap[w.id] = w;
         }
     });
-    
-    // Map map back to list
     state.workouts = Object.values(workoutsMap);
-    
-    // Sort descending by date
     state.workouts.sort((a, b) => new Date(b.date) - new Date(a.date));
     
-    saveData();
-    showToast('データをインポートしました！');
+    // 2. Merge weights by date
+    const weightsMap = {};
+    state.weightLogs.forEach(w => weightsMap[w.date] = w.weight);
+    weights.forEach(w => {
+        if (w.date && typeof w.weight === 'number') {
+            weightsMap[w.date] = w.weight;
+        }
+    });
+    state.weightLogs = Object.entries(weightsMap).map(([date, weight]) => ({ date, weight }));
+    state.weightLogs.sort((a, b) => new Date(a.date) - new Date(b.date));
     
-    // Refresh dashboard and history views
+    // 3. Merge cardio
+    const cardioKeys = new Set(state.cardioLogs.map(c => `${c.date}_${c.distance}`));
+    cardio.forEach(c => {
+        if (c.date && typeof c.distance === 'number') {
+            const key = `${c.date}_${c.distance}`;
+            if (!cardioKeys.has(key)) {
+                state.cardioLogs.push(c);
+            }
+        }
+    });
+    state.cardioLogs.sort((a, b) => new Date(a.date) - new Date(b.date));
+    
+    // 4. Update maintenance
+    if (typeof maintenance === 'number' && maintenance > 0) {
+        state.maintenanceCalories = maintenance;
+        if (DOM.maintenanceInput) DOM.maintenanceInput.value = maintenance;
+    }
+    
+    saveData();
+    showToast('バックアップデータをマージ・復元しました！');
+    
     updateDashboard();
     updateHistoryList();
 }
@@ -1701,11 +1585,10 @@ function clearAllWorkouts() {
     state.workouts = [];
     state.weightLogs = [];
     state.cardioLogs = [];
-    state.maintenanceCalories = 2000;
+    state.maintenanceCalories = DEFAULT_MAINTENANCE_CALORIES;
     saveData();
-    showToast('すべてのデータを削除しました。');
+    showToast('すべてのデータを初期化しました。');
     
-    // Reset view
     updateDashboard();
     updateHistoryList();
 }
@@ -1715,6 +1598,7 @@ function clearAllWorkouts() {
 // ==========================================
 
 function saveWeight() {
+    if (!DOM.logWeightVal) return;
     const weight = parseFloat(DOM.logWeightVal.value);
     if (isNaN(weight) || weight <= 0) {
         showToast('有効な体重を入力してください');
@@ -1723,7 +1607,6 @@ function saveWeight() {
     
     const date = getLocalDateString();
     
-    // Check if entry for date already exists
     const existingIndex = state.weightLogs.findIndex(w => w.date === date);
     if (existingIndex !== -1) {
         state.weightLogs[existingIndex].weight = weight;
@@ -1731,7 +1614,6 @@ function saveWeight() {
         state.weightLogs.push({ date, weight });
     }
     
-    // Sort chronologically
     state.weightLogs.sort((a, b) => new Date(a.date) - new Date(b.date));
     
     saveData();
@@ -1742,13 +1624,14 @@ function saveWeight() {
 
 function getLatestWeight() {
     if (state.weightLogs && state.weightLogs.length > 0) {
-        const sorted = [...state.weightLogs].sort((a, b) => new Date(b.date) - new Date(a.date));
-        return sorted[0].weight;
+        // Last element since it's sorted chronologically in load/save
+        return state.weightLogs[state.weightLogs.length - 1].weight;
     }
-    return 70; // Fallback
+    return DEFAULT_WEIGHT_KG;
 }
 
 function updateCardioHint() {
+    if (!DOM.logCardioDist || !DOM.cardioCalcHint) return;
     const dist = parseFloat(DOM.logCardioDist.value) || 0;
     const latestWeight = getLatestWeight();
     const kcal = Math.round(dist * latestWeight);
@@ -1756,6 +1639,7 @@ function updateCardioHint() {
 }
 
 function saveCardio() {
+    if (!DOM.logCardioDist || !DOM.logCardioDate) return;
     const dist = parseFloat(DOM.logCardioDist.value);
     const dateStr = DOM.logCardioDate.value;
     
@@ -1771,19 +1655,16 @@ function saveCardio() {
     const latestWeight = getLatestWeight();
     const calories = Math.round(dist * latestWeight);
     
-    // Save to logs
     state.cardioLogs.push({
         date: dateStr,
         distance: dist,
         calories: calories
     });
     
-    // Sort chronologically
     state.cardioLogs.sort((a, b) => new Date(a.date) - new Date(b.date));
     
     saveData();
     
-    // Reset form fields
     DOM.logCardioDist.value = '';
     DOM.logCardioDate.value = getLocalDateString();
     updateCardioHint();
@@ -1795,14 +1676,14 @@ function saveCardio() {
 function renderWeightChart() {
     const theme = getChartThemeColors();
     const canvas = document.getElementById('weightChart');
-    if (!canvas) return;
+    if (!canvas || !DOM.noWeightData) return;
     
     const ctx = canvas.getContext('2d');
     
     if (state.weightLogs.length === 0) {
         DOM.noWeightData.style.display = 'block';
         if (state.charts.weight) {
-            state.charts.weight.destroy();
+            try { state.charts.weight.destroy(); } catch(e){}
             state.charts.weight = null;
         }
         return;
@@ -1810,8 +1691,7 @@ function renderWeightChart() {
     
     DOM.noWeightData.style.display = 'none';
     
-    const sortedLogs = [...state.weightLogs].sort((a, b) => new Date(a.date) - new Date(b.date));
-    const recentLogs = sortedLogs.slice(-10);
+    const recentLogs = state.weightLogs.slice(-MAX_RECENT_WEIGHT_LOGS);
     
     const labels = recentLogs.map(l => {
         const parts = l.date.split('-');
@@ -1820,7 +1700,7 @@ function renderWeightChart() {
     const weights = recentLogs.map(l => l.weight);
     
     if (state.charts.weight) {
-        state.charts.weight.destroy();
+        try { state.charts.weight.destroy(); } catch(e){}
     }
     
     state.charts.weight = new Chart(ctx, {
@@ -1863,7 +1743,7 @@ function renderWeightChart() {
 function renderCalorieChart() {
     const theme = getChartThemeColors();
     const canvas = document.getElementById('calorieComparisonChart');
-    if (!canvas) return;
+    if (!canvas || !DOM.noCalorieData) return;
     
     const ctx = canvas.getContext('2d');
     
@@ -1871,7 +1751,8 @@ function renderCalorieChart() {
     const datesYmd = [];
     const today = new Date();
     
-    for (let i = 6; i >= 0; i--) {
+    // Generate dates window
+    for (let i = CARDIO_DAYS_WINDOW - 1; i >= 0; i--) {
         const d = new Date();
         d.setDate(today.getDate() - i);
         const ymd = getLocalDateString(d);
@@ -1894,7 +1775,7 @@ function renderCalorieChart() {
     const maintenanceLimit = datesYmd.map(() => state.maintenanceCalories);
     
     if (state.charts.calorieComparison) {
-        state.charts.calorieComparison.destroy();
+        try { state.charts.calorieComparison.destroy(); } catch(e){}
     }
     
     state.charts.calorieComparison = new Chart(ctx, {
