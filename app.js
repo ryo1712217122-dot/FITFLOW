@@ -134,6 +134,17 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
     
+    // iOS Safari用ピンチズーム・ダブルタップ拡大制限
+    document.addEventListener('touchstart', (e) => {
+        if (e.touches.length > 1) {
+            e.preventDefault();
+        }
+    }, { passive: false });
+    
+    document.addEventListener('gesturestart', (e) => {
+        e.preventDefault();
+    });
+
     // Initialize Lucide Icons
     if (window.lucide) {
         lucide.createIcons();
@@ -823,8 +834,10 @@ function resetWorkoutForm() {
 }
 
 function addExerciseBlock(data = null) {
-    if (!DOM.exerciseList || !DOM.noExercisesHelper) return;
-    DOM.noExercisesHelper.style.display = 'none';
+    if (!DOM.exerciseList) return;
+    if (DOM.noExercisesHelper) {
+        DOM.noExercisesHelper.style.display = 'none';
+    }
     
     const exerciseIndex = DOM.exerciseList.children.length;
     const exerciseBlock = document.createElement('div');
@@ -875,7 +888,9 @@ function addExerciseBlock(data = null) {
                 child.setAttribute('data-index', idx);
             });
             if (DOM.exerciseList.children.length === 0) {
-                DOM.noExercisesHelper.style.display = 'flex';
+                if (DOM.noExercisesHelper) {
+                    DOM.noExercisesHelper.style.display = 'flex';
+                }
             }
         }, 200);
     });
@@ -1198,7 +1213,9 @@ function editWorkout(id) {
     
     if (DOM.exerciseList) {
         DOM.exerciseList.innerHTML = '';
-        DOM.noExercisesHelper.style.display = 'none';
+        if (DOM.noExercisesHelper) {
+            DOM.noExercisesHelper.style.display = 'none';
+        }
         
         if (workout.exercises) {
             workout.exercises.forEach(ex => {

@@ -1411,7 +1411,9 @@ textarea:focus {
     .dashboard-grid,
     .form-grid,
     .filter-grid,
-    .settings-grid {
+    .settings-grid,
+    .form-row-2col,
+    .form-row-3col {
         grid-template-columns: 1fr;
     }
 
