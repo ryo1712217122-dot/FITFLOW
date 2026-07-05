@@ -1413,3 +1413,64 @@ textarea:focus {
         gap: 1rem;
     }
 }
+
+/* Quick Log Restructure Layout */
+.quick-log-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 1.5rem;
+}
+
+.side-loggers-column {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.log-card {
+    height: fit-content;
+}
+
+.margin-top-1 {
+    margin-top: 1rem !important;
+}
+
+.btn-full {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.exercise-details-panel {
+    background-color: var(--bg-wrapper);
+    border: 1px dashed var(--border-color);
+    border-radius: var(--radius-sm);
+    padding: 0.85rem;
+}
+
+.exercise-details-summary {
+    cursor: pointer;
+    font-weight: 600;
+    color: var(--color-primary);
+    outline: none;
+    user-select: none;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.exercise-details-summary::marker {
+    color: var(--color-primary);
+}
+
+.exercise-details-content {
+    margin-top: 0.75rem;
+}
+
+@media (max-width: 900px) {
+    .quick-log-grid {
+        grid-template-columns: 1fr;
+        gap: 1.25rem;
+    }
+}

@@ -29,21 +29,21 @@
             </div>
             
             <nav class="nav-menu">
-                <a href="#dashboard" class="nav-item active" data-tab="dashboard">
-                    <i data-lucide="layout-dashboard"></i>
-                    <span>ダッシュボード</span>
-                </a>
-                <a href="#log-workout" class="nav-item" data-tab="log-workout">
+                <a href="#quick-log" class="nav-item active" data-tab="quick-log">
                     <i data-lucide="plus-circle"></i>
-                    <span>ワークアウト記録</span>
+                    <span>記録する</span>
+                </a>
+                <a href="#analytics" class="nav-item" data-tab="analytics">
+                    <i data-lucide="trending-up"></i>
+                    <span>分析と統計</span>
                 </a>
                 <a href="#history" class="nav-item" data-tab="history">
                     <i data-lucide="history"></i>
-                    <span>履歴と分析</span>
+                    <span>履歴リスト</span>
                 </a>
                 <a href="#settings" class="nav-item" data-tab="settings">
                     <i data-lucide="settings"></i>
-                    <span>データ・設定</span>
+                    <span>同期と設定</span>
                 </a>
             </nav>
             
@@ -78,10 +78,158 @@
                 </div>
             </header>
 
-            <!-- Dashboard Tab -->
-            <section id="dashboard" class="tab-content active">
+            <!-- Quick Log Tab -->
+            <section id="quick-log" class="tab-content active">
+                <div class="quick-log-grid">
+                    <!-- Gym Visit Logger Form -->
+                    <form id="workout-form" class="card log-card main-logger col-span-2">
+                        <div class="form-header-row">
+                            <h2>ジムに行った記録</h2>
+                            <button type="submit" class="btn btn-primary" id="save-workout-btn">
+                                <i data-lucide="check"></i> 記録を保存
+                            </button>
+                        </div>
+                        <div class="card-body">
+                            <div class="form-row-2col">
+                                <div class="form-group">
+                                    <label for="workout-date">日付 <span class="required">*</span></label>
+                                    <div class="input-icon-wrapper">
+                                        <i data-lucide="calendar" class="input-icon"></i>
+                                        <input type="date" id="workout-date" required>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label for="workout-time">時刻 <span class="required">*</span></label>
+                                    <div class="input-icon-wrapper">
+                                        <i data-lucide="clock" class="input-icon"></i>
+                                        <input type="time" id="workout-time" required>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="form-row-2col margin-top-1">
+                                <div class="form-group">
+                                    <label for="workout-title">タイトル（例: 胸トレ、全身など）</label>
+                                    <input type="text" id="workout-title" placeholder="ジムでのトレーニング" value="ジムでのトレーニング">
+                                </div>
+                                <div class="form-group">
+                                    <label for="workout-category">部位カテゴリー <span class="required">*</span></label>
+                                    <select id="workout-category" required>
+                                        <option value="胸 (Chest)">胸 (Chest)</option>
+                                        <option value="背中 (Back)">背中 (Back)</option>
+                                        <option value="肩 (Shoulders)">肩 (Shoulders)</option>
+                                        <option value="腕 (Arms)">腕 (Arms)</option>
+                                        <option value="脚 (Legs)">脚 (Legs)</option>
+                                        <option value="腹筋 (Core)">腹筋 (Core)</option>
+                                        <option value="有酸素 (Cardio)">有酸素 (Cardio)</option>
+                                        <option value="その他 (Other)" selected>その他 (Other)</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="form-group margin-top-1">
+                                <label>今日の調子</label>
+                                <div class="mood-selector">
+                                    <label class="mood-option">
+                                        <input type="radio" name="workout-mood" value="fire" checked>
+                                        <span class="mood-emoji">🔥</span>
+                                        <span class="mood-label">絶好調</span>
+                                    </label>
+                                    <label class="mood-option">
+                                        <input type="radio" name="workout-mood" value="strong">
+                                        <span class="mood-emoji">💪</span>
+                                        <span class="mood-label">良い</span>
+                                    </label>
+                                    <label class="mood-option">
+                                        <input type="radio" name="workout-mood" value="good">
+                                        <span class="mood-emoji">😊</span>
+                                        <span class="mood-label">普通</span>
+                                    </label>
+                                    <label class="mood-option">
+                                        <input type="radio" name="workout-mood" value="tired">
+                                        <span class="mood-emoji">🥱</span>
+                                        <span class="mood-label">眠い/疲労</span>
+                                    </label>
+                                    <label class="mood-option">
+                                        <input type="radio" name="workout-mood" value="exhausted">
+                                        <span class="mood-emoji">☠️</span>
+                                        <span class="mood-label">限界</span>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div class="form-group margin-top-1">
+                                <label for="workout-impression">トレーニングメモ・感想</label>
+                                <textarea id="workout-impression" rows="2" placeholder="調子や気づいたことなど..."></textarea>
+                            </div>
+
+                            <!-- Collapsible detailed exercises builder -->
+                            <details class="exercise-details-panel margin-top-1">
+                                <summary class="exercise-details-summary">
+                                    <span class="summary-title"><i data-lucide="list-plus"></i> 行った種目の詳細を記録する (任意)</span>
+                                </summary>
+                                <div class="exercise-details-content">
+                                    <div id="exercise-list" class="exercise-list">
+                                        <!-- Dynamic items -->
+                                    </div>
+                                    <button type="button" class="btn btn-secondary btn-full margin-top-1" id="add-exercise-btn">
+                                        <i data-lucide="plus"></i> 筋トレ種目を追加
+                                    </button>
+                                </div>
+                            </details>
+                        </div>
+                    </form>
+
+                    <!-- Weight and Cardio Loggers Side-column -->
+                    <div class="side-loggers-column">
+                        <!-- Weight Logger Card -->
+                        <form id="weight-form" class="card log-card">
+                            <div class="card-header">
+                                <div class="header-title">
+                                    <i data-lucide="scale"></i>
+                                    <h3>体重の記録</h3>
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                <div class="form-group">
+                                    <label for="log-weight-val">今日の体重 (kg)</label>
+                                    <input type="number" step="0.1" id="log-weight-val" placeholder="0.0" required min="0" class="width-full">
+                                </div>
+                                <button type="submit" class="btn btn-primary btn-full margin-top-1">体重を記録する</button>
+                            </div>
+                        </form>
+
+                        <!-- Cardio Logger Card -->
+                        <form id="cardio-form" class="card log-card margin-top-1">
+                            <div class="card-header">
+                                <div class="header-title">
+                                    <i data-lucide="flame"></i>
+                                    <h3>有酸素（ラン）の記録</h3>
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                <div class="form-group">
+                                    <label for="log-cardio-date">記録日</label>
+                                    <input type="date" id="log-cardio-date" required class="width-full">
+                                </div>
+                                <div class="form-group margin-top-1">
+                                    <label for="log-cardio-dist">走行距離 (km)</label>
+                                    <input type="number" step="0.01" id="log-cardio-dist" placeholder="0.00" required min="0" class="width-full">
+                                </div>
+                                <div class="form-hint" id="cardio-calc-hint">
+                                    ※消費目安: 0 kcal (最新体重: -- kg)
+                                </div>
+                                <button type="submit" class="btn btn-primary btn-full margin-top-1">走った距離を記録</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Analytics Tab -->
+            <section id="analytics" class="tab-content">
                 <div class="dashboard-grid">
-                    <!-- Summary Stats Card -->
+                    <!-- Stats summary cards -->
                     <div class="card stat-card total-workouts">
                         <div class="card-icon"><i data-lucide="trophy"></i></div>
                         <div class="card-info">
@@ -109,7 +257,47 @@
                         </div>
                     </div>
 
-                    <!-- Heatmap Calendar Card -->
+                    <!-- Calorie Balance comparison chart (TDEE vs active) -->
+                    <div class="card calorie-balance-card col-span-2">
+                        <div class="card-header">
+                            <div class="header-title">
+                                <i data-lucide="activity"></i>
+                                <h3>カロリーバランス（過去7日間）</h3>
+                            </div>
+                        </div>
+                        <div class="calorie-analytics-wrapper">
+                            <div class="calorie-stats-column">
+                                <div class="calorie-summary-tile">
+                                    <span class="tile-label">本日の消費</span>
+                                    <span class="tile-value" id="today-burned-kcal">0 <span class="unit">kcal</span></span>
+                                </div>
+                                <div class="calorie-summary-tile">
+                                    <span class="tile-label">メンテナンス目安</span>
+                                    <span class="tile-value" id="current-maintenance-kcal">2000 <span class="unit">kcal</span></span>
+                                </div>
+                            </div>
+                            <div class="chart-container calorie-chart-container">
+                                <canvas id="calorieComparisonChart"></canvas>
+                                <div id="no-calorie-data" class="no-data-msg">データがありません</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Weight progress chart -->
+                    <div class="card weight-progress-card">
+                        <div class="card-header">
+                            <div class="header-title">
+                                <i data-lucide="trending-up"></i>
+                                <h3>体重推移 (最近10件)</h3>
+                            </div>
+                        </div>
+                        <div class="chart-container weight-chart-container">
+                            <canvas id="weightChart"></canvas>
+                            <div id="no-weight-data" class="no-data-msg">データがありません</div>
+                        </div>
+                    </div>
+
+                    <!-- Training Calendar Card -->
                     <div class="card calendar-card col-span-2">
                         <div class="card-header">
                             <div class="header-title">
@@ -136,74 +324,6 @@
                         </div>
                     </div>
 
-                    <!-- Weight Logger & Chart Card -->
-                    <div class="card weight-card">
-                        <div class="card-header flex-header">
-                            <div class="header-title">
-                                <i data-lucide="scale"></i>
-                                <h3>体重記録</h3>
-                            </div>
-                        </div>
-                        
-                        <form id="weight-form" class="dashboard-mini-form">
-                            <div class="form-row-2col">
-                                <input type="number" step="0.1" id="log-weight-val" placeholder="体重(kg)" required min="0">
-                                <button type="submit" class="btn btn-primary btn-sm">記録</button>
-                            </div>
-                        </form>
-
-                        <div class="chart-container weight-chart-container">
-                            <canvas id="weightChart"></canvas>
-                            <div id="no-weight-data" class="no-data-msg">データがありません</div>
-                        </div>
-                    </div>
-
-                    <!-- Calorie Balance Card -->
-                    <div class="card calorie-balance-card col-span-2">
-                        <div class="card-header flex-header">
-                            <div class="header-title">
-                                <i data-lucide="activity"></i>
-                                <h3>カロリーバランス（過去7日間）</h3>
-                            </div>
-                        </div>
-
-                        <!-- Mini input form for Cardio -->
-                        <form id="cardio-form" class="dashboard-mini-form">
-                            <div class="form-row-3col">
-                                <div class="form-group-mini">
-                                    <input type="date" id="log-cardio-date" required>
-                                </div>
-                                <div class="form-group-mini">
-                                    <input type="number" step="0.01" id="log-cardio-dist" placeholder="走行距離 (km)" required min="0">
-                                </div>
-                                <div class="form-group-mini flex-end-btn">
-                                    <button type="submit" class="btn btn-primary btn-sm">距離を記録</button>
-                                </div>
-                            </div>
-                            <div class="form-hint" id="cardio-calc-hint">
-                                ※消費目安: 0 kcal (最新体重: -- kg)
-                            </div>
-                        </form>
-
-                        <div class="calorie-analytics-wrapper">
-                            <div class="calorie-stats-column">
-                                <div class="calorie-summary-tile">
-                                    <span class="tile-label">本日の消費</span>
-                                    <span class="tile-value" id="today-burned-kcal">0 <span class="unit">kcal</span></span>
-                                </div>
-                                <div class="calorie-summary-tile">
-                                    <span class="tile-label">メンテナンス目安</span>
-                                    <span class="tile-value" id="current-maintenance-kcal">2000 <span class="unit">kcal</span></span>
-                                </div>
-                            </div>
-                            
-                            <div class="chart-container calorie-chart-container">
-                                <canvas id="calorieComparisonChart"></canvas>
-                                <div id="no-calorie-data" class="no-data-msg">データがありません</div>
-                            </div>
-                        </div>
-                    </div>
-
                     <!-- Category Chart Card -->
                     <div class="card chart-card">
                         <div class="card-header">
@@ -219,147 +339,7 @@
                     </div>
                 </div>
             </section>
-
-            <!-- Log Workout Tab -->
-            <section id="log-workout" class="tab-content">
-                <div class="form-container">
-                    <form id="workout-form">
-                        <div class="form-header-row">
-                            <h2>新規ワークアウトの記録</h2>
-                            <button type="submit" class="btn btn-primary" id="save-workout-btn">
-                                <i data-lucide="check"></i> 記録を保存する
-                            </button>
-                        </div>
-
-                        <div class="form-grid">
-                            <!-- Basic details card -->
-                            <div class="card form-card">
-                                <div class="card-header">
-                                    <div class="header-title">
-                                        <i data-lucide="file-text"></i>
-                                        <h3>基本情報</h3>
-                                    </div>
-                                </div>
-                                <div class="card-body">
-                                    <div class="form-row-2col">
-                                        <div class="form-group">
-                                            <label for="workout-date">日付 <span class="required">*</span></label>
-                                            <div class="input-icon-wrapper">
-                                                <i data-lucide="calendar" class="input-icon"></i>
-                                                <input type="date" id="workout-date" required>
-                                            </div>
-                                        </div>
-                                        <div class="form-group">
-                                            <label for="workout-time">時刻 <span class="required">*</span></label>
-                                            <div class="input-icon-wrapper">
-                                                <i data-lucide="clock" class="input-icon"></i>
-                                                <input type="time" id="workout-time" required>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <div class="form-group">
-                                        <label for="workout-title">ワークアウト名 <span class="required">*</span></label>
-                                        <input type="text" id="workout-title" placeholder="例: 胸と三頭筋の日、脚トレなど" required list="recent-titles">
-                                        <datalist id="recent-titles">
-                                            <option value="胸と三頭筋の日">
-                                            <option value="背中と二頭筋の日">
-                                            <option value="肩と腹筋の日">
-                                            <option value="脚トレの日">
-                                            <option value="全身サーキット">
-                                            <option value="有酸素運動・カーディオ">
-                                        </datalist>
-                                    </div>
-
-                                    <div class="form-group">
-                                        <label for="workout-category">部位カテゴリー <span class="required">*</span></label>
-                                        <div class="input-icon-wrapper">
-                                            <i data-lucide="tag" class="input-icon"></i>
-                                            <select id="workout-category" required>
-                                                <option value="" disabled selected>選択してください</option>
-                                                <option value="胸 (Chest)">胸 (Chest)</option>
-                                                <option value="背中 (Back)">背中 (Back)</option>
-                                                <option value="肩 (Shoulders)">肩 (Shoulders)</option>
-                                                <option value="腕 (Arms)">腕 (Arms)</option>
-                                                <option value="脚 (Legs)">脚 (Legs)</option>
-                                                <option value="腹筋 (Core)">腹筋 (Core)</option>
-                                                <option value="有酸素 (Cardio)">有酸素 (Cardio)</option>
-                                                <option value="その他 (Other)">その他 (Other)</option>
-                                            </select>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Feelings & Notes Card -->
-                            <div class="card form-card">
-                                <div class="card-header">
-                                    <div class="header-title">
-                                        <i data-lucide="smile"></i>
-                                        <h3>コンディション・感想</h3>
-                                    </div>
-                                </div>
-                                <div class="card-body">
-                                    <div class="form-group">
-                                        <label>今日の調子・気分</label>
-                                        <div class="mood-selector">
-                                            <label class="mood-option">
-                                                <input type="radio" name="workout-mood" value="fire" checked>
-                                                <span class="mood-btn" title="絶好調 (🔥)">🔥</span>
-                                            </label>
-                                            <label class="mood-option">
-                                                <input type="radio" name="workout-mood" value="strong">
-                                                <span class="mood-btn" title="良い (💪)">💪</span>
-                                            </label>
-                                            <label class="mood-option">
-                                                <input type="radio" name="workout-mood" value="good">
-                                                <span class="mood-btn" title="普通 (😊)">😊</span>
-                                            </label>
-                                            <label class="mood-option">
-                                                <input type="radio" name="workout-mood" value="tired">
-                                                <span class="mood-btn" title="疲れた (🥱)">🥱</span>
-                                            </label>
-                                            <label class="mood-option">
-                                                <input type="radio" name="workout-mood" value="exhausted">
-                                                <span class="mood-btn" title="限界 (☠️)">☠️</span>
-                                            </label>
-                                        </div>
-                                    </div>
-
-                                    <div class="form-group">
-                                        <label for="workout-impression">感想・メモ</label>
-                                        <textarea id="workout-impression" rows="4" placeholder="例: ベンチプレスで自己ベスト更新！最後少し左肩に違和感あり。"></textarea>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Exercises Card -->
-                            <div class="card form-card col-span-2">
-                                <div class="card-header flex-header">
-                                    <div class="header-title">
-                                        <i data-lucide="dumbbell"></i>
-                                        <h3>実施した種目</h3>
-                                    </div>
-                                    <button type="button" class="btn btn-secondary btn-sm" id="add-exercise-btn">
-                                        <i data-lucide="plus"></i> 種目を追加
-                                    </button>
-                                </div>
-                                <div class="card-body">
-                                    <div id="exercise-list" class="exercise-builder-list">
-                                        <!-- Dynamically generated exercise elements -->
-                                    </div>
-                                    
-                                    <div id="no-exercises-helper" class="empty-state">
-                                        <i data-lucide="info"></i>
-                                        <p>種目が登録されていません。「種目を追加」ボタンを押して追加してください。</p>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </form>
-                </div>
-            </section>
-
+            
             <!-- History and Analytics Tab -->
             <section id="history" class="tab-content">
                 <!-- Search and Filters Panel -->

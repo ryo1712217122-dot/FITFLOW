@@ -358,11 +358,11 @@ function initNavigation() {
             });
 
             // Specific tab entry actions
-            if (tabId === 'dashboard') {
+            if (tabId === 'analytics') {
                 updateDashboard();
             } else if (tabId === 'history') {
                 updateHistoryList();
-            } else if (tabId === 'log-workout') {
+            } else if (tabId === 'quick-log') {
                 if (!state.editingWorkoutId) {
                     resetWorkoutForm();
                 }
@@ -930,19 +930,14 @@ function saveWorkout() {
     const mood = DOM.workoutForm.querySelector('input[name="workout-mood"]:checked').value;
     const impression = DOM.workoutImpression.value.trim();
     
-    const exerciseItems = DOM.exerciseList.querySelectorAll('.exercise-item');
-    if (exerciseItems.length === 0) {
-        showToast('種目を1つ以上追加してください');
-        return;
-    }
-    
+    const exerciseItems = DOM.exerciseList ? DOM.exerciseList.querySelectorAll('.exercise-item') : [];
     const exercises = [];
     let hasValidationError = false;
     
     exerciseItems.forEach(item => {
         const name = item.querySelector('.exercise-name').value.trim();
         if (!name) {
-            hasValidationError = true;
+            // 種目名が空の場合は、入力途中の不要な項目とみなしてスキップ（ジム記録自体は保存可能にする）
             return;
         }
         
@@ -970,7 +965,7 @@ function saveWorkout() {
     });
     
     if (hasValidationError) {
-        showToast('入力内容を確認してください（すべての項目に値を入力）');
+        showToast('入力内容を確認してください（すべてのセットに正しい値を入力）');
         return;
     }
     
@@ -1174,7 +1169,7 @@ function editWorkout(id) {
     
     state.editingWorkoutId = id;
     
-    const formNavItem = document.querySelector('[data-tab="log-workout"]');
+    const formNavItem = document.querySelector('[data-tab="quick-log"]');
     if (formNavItem) formNavItem.click();
     
     if (DOM.workoutForm) {
