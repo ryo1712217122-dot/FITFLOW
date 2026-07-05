@@ -437,7 +437,7 @@ function initDateTexts() {
     else greeting = 'こんばんは！今日もお疲れ様です🌙';
     
     if (DOM.greetingText) {
-        DOM.greetingText.textContent = greeting;
+        DOM.greetingText.innerHTML = `${greeting} <span class="app-version-badge">v1.2.1</span>`;
     }
 }
 
