@@ -835,20 +835,6 @@ function addExerciseBlock(data = null) {
         <div class="exercise-item-header">
             <div class="exercise-name-input-wrapper">
                 <input type="text" class="exercise-name" placeholder="種目名 (例: ベンチプレス)" required list="popular-exercises" value="${data ? data.name : ''}">
-                <datalist id="popular-exercises">
-                    <option value="ベンチプレス">
-                    <option value="ダンベルフライ">
-                    <option value="インクラインダンベルプレス">
-                    <option value="ラットプルダウン">
-                    <option value="懸垂 (チンニング)">
-                    <option value="デッドリフト">
-                    <option value="スクワット">
-                    <option value="レッグプレス">
-                    <option value="ショルダープレス">
-                    <option value="サイドレイズ">
-                    <option value="クランチ">
-                    <option value="プランク">
-                </datalist>
             </div>
             <button type="button" class="btn-icon btn-remove-exercise text-danger" title="種目を削除">
                 <i data-lucide="trash-2"></i>
