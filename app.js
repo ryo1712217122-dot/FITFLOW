@@ -123,6 +123,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Load initial views
     updateDashboard();
     updateHistoryList();
+    updateCardioHistoryList();
 
     // 起動時にサイレントにクラウドから同期
     autoSyncFromCloud();
@@ -395,6 +396,7 @@ function initNavigation() {
                 updateDashboard();
             } else if (tabId === 'history') {
                 updateHistoryList();
+                updateCardioHistoryList();
             } else if (tabId === 'quick-log') {
                 if (!state.editingWorkoutId) {
                     resetWorkoutForm();
@@ -448,7 +450,7 @@ function initDateTexts() {
     else greeting = 'こんばんは！今日もお疲れ様です🌙';
     
     if (DOM.greetingText) {
-        DOM.greetingText.innerHTML = `${greeting} <span class="app-version-badge">v1.3.0</span>`;
+        DOM.greetingText.innerHTML = `${greeting} <span class="app-version-badge">v1.3.1</span>`;
     }
 }
 
@@ -1098,6 +1100,33 @@ function initHistoryControls() {
             renderProgressionChart();
         });
     }
+
+    // Sub tabs events
+    const tabWorkouts = document.getElementById('history-tab-workouts');
+    const tabCardio = document.getElementById('history-tab-cardio');
+    const panelWorkouts = document.getElementById('history-workouts-panel');
+    const panelCardio = document.getElementById('history-cardio-panel');
+
+    if (tabWorkouts && tabCardio && panelWorkouts && panelCardio) {
+        tabWorkouts.addEventListener('click', () => {
+            tabWorkouts.classList.remove('btn-secondary');
+            tabWorkouts.classList.add('btn-primary');
+            tabCardio.classList.remove('btn-primary');
+            tabCardio.classList.add('btn-secondary');
+            panelWorkouts.style.display = 'block';
+            panelCardio.style.display = 'none';
+        });
+
+        tabCardio.addEventListener('click', () => {
+            tabCardio.classList.remove('btn-secondary');
+            tabCardio.classList.add('btn-primary');
+            tabWorkouts.classList.remove('btn-primary');
+            tabWorkouts.classList.add('btn-secondary');
+            panelWorkouts.style.display = 'none';
+            panelCardio.style.display = 'block';
+            updateCardioHistoryList();
+        });
+    }
 }
 
 function updateHistoryList() {
@@ -1745,6 +1774,7 @@ function mergeImportedData(workouts, weights, cardio, maintenance) {
     
     updateDashboard();
     updateHistoryList();
+    updateCardioHistoryList();
 }
 
 function clearAllWorkouts() {
@@ -1757,6 +1787,7 @@ function clearAllWorkouts() {
     
     updateDashboard();
     updateHistoryList();
+    updateCardioHistoryList();
 }
 
 // ==========================================
@@ -2108,6 +2139,7 @@ function autoSyncFromCloud() {
                 // Update views
                 updateDashboard();
                 updateHistoryList();
+                updateCardioHistoryList();
                 
                 showToast('☁️ クラウドデータを同期しました');
             } else {
@@ -2246,4 +2278,94 @@ function normalizeTime(timeStr) {
         }
     }
     return str;
+}
+
+function updateCardioHistoryList() {
+    const container = document.getElementById('cardio-history-container');
+    const countSpan = document.getElementById('cardio-history-count');
+    if (!container || !countSpan) return;
+    
+    // Sort cardio logs by date descending
+    state.cardioLogs.sort((a, b) => new Date(b.date) - new Date(a.date));
+    
+    countSpan.textContent = state.cardioLogs.length;
+    container.innerHTML = '';
+    
+    if (state.cardioLogs.length === 0) {
+        container.innerHTML = `
+            <div class="card empty-state">
+                <i data-lucide="flame"></i>
+                <p>有酸素ランニングの履歴はありません。</p>
+            </div>
+        `;
+        if (window.lucide) lucide.createIcons();
+        return;
+    }
+    
+    state.cardioLogs.forEach((c, idx) => {
+        const card = document.createElement('div');
+        card.classList.add('card');
+        card.classList.add('history-card');
+        card.classList.add('cardio');
+        
+        const formattedDate = formatDateJp(c.date);
+        
+        card.innerHTML = `
+            <div class="history-card-header">
+                <div class="history-title-area">
+                    <div class="history-title-row">
+                        <span class="history-mood-badge">🏃</span>
+                        <h4>ランニング記録</h4>
+                        <span class="category-tag" style="background-color: #86ac41; color: #fff;">有酸素</span>
+                    </div>
+                    <div class="history-date-row">
+                        <i data-lucide="calendar"></i>
+                        <span>${formattedDate}</span>
+                    </div>
+                </div>
+                <div class="history-actions">
+                    <button class="btn-icon text-danger btn-delete-cardio" data-index="${idx}" title="削除する">
+                        <i data-lucide="trash-2"></i>
+                    </button>
+                </div>
+            </div>
+            
+            <div style="margin-top: 1rem; display: flex; gap: 2rem;">
+                <div>
+                    <span class="text-muted" style="font-size: 0.85rem; display: block;">走行距離</span>
+                    <span style="font-weight: 700; font-size: 1.2rem; color: var(--color-primary);">${c.distance.toFixed(2)} <span style="font-size: 0.85rem; font-weight: normal;">km</span></span>
+                </div>
+                <div>
+                    <span class="text-muted" style="font-size: 0.85rem; display: block;">消費エネルギー</span>
+                    <span style="font-weight: 700; font-size: 1.2rem; color: #86ac41;">${Math.round(c.calories)} <span style="font-size: 0.85rem; font-weight: normal;">kcal</span></span>
+                </div>
+            </div>
+        `;
+        
+        card.querySelector('.btn-delete-cardio').addEventListener('click', () => {
+            showConfirmModal(
+                '記録の削除',
+                `このランニング記録（${formattedDate} - ${c.distance}km）を削除しますか？`,
+                () => {
+                    deleteCardioLog(idx);
+                }
+            );
+        });
+        
+        container.appendChild(card);
+    });
+    
+    if (window.lucide) {
+        lucide.createIcons();
+    }
+}
+
+function deleteCardioLog(index) {
+    if (index >= 0 && index < state.cardioLogs.length) {
+        state.cardioLogs.splice(index, 1);
+        saveDataAndSync();
+        showToast('有酸素記録を削除しました');
+        updateDashboard();
+        updateCardioHistoryList();
+    }
 }

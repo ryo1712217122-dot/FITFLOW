@@ -12,7 +12,7 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
-    <link rel="stylesheet" href="style.css?v=1.3.0">
+    <link rel="stylesheet" href="style.css?v=1.3.1">
 </head>
 <body>
     <div class="app-container">
@@ -24,7 +24,7 @@
                 </div>
                 <div class="brand-text">
                     <h1>FITFLOW</h1>
-                    <span class="app-version">v1.3.0</span>
+                    <span class="app-version">v1.3.1</span>
                 </div>
             </div>
             
@@ -368,70 +368,90 @@
             
             <!-- History and Analytics Tab -->
             <section id="history" class="tab-content">
-                <!-- Search and Filters Panel -->
-                <div class="card filter-card">
-                    <div class="filter-grid">
-                        <div class="form-group">
-                            <label for="search-input">キーワード検索</label>
-                            <div class="input-icon-wrapper">
-                                <i data-lucide="search" class="input-icon"></i>
-                                <input type="text" id="search-input" placeholder="種目名、タイトル、感想から検索...">
+                <!-- Sub navigation tabs for Workout vs Cardio -->
+                <div class="history-sub-tabs" style="display: flex; gap: 0.5rem; margin-bottom: 1.25rem;">
+                    <button class="btn btn-primary btn-sm" id="history-tab-workouts" type="button" style="padding: 0.5rem 1rem; border-radius: 8px;">筋トレ履歴</button>
+                    <button class="btn btn-secondary btn-sm" id="history-tab-cardio" type="button" style="padding: 0.5rem 1rem; border-radius: 8px;">有酸素（ラン）履歴</button>
+                </div>
+
+                <!-- 筋トレ履歴コンテンツ (Workout History Panel) -->
+                <div id="history-workouts-panel">
+                    <!-- Search and Filters Panel -->
+                    <div class="card filter-card">
+                        <div class="filter-grid">
+                            <div class="form-group">
+                                <label for="search-input">キーワード検索</label>
+                                <div class="input-icon-wrapper">
+                                    <i data-lucide="search" class="input-icon"></i>
+                                    <input type="text" id="search-input" placeholder="種目名、タイトル、感想から検索...">
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label for="filter-category">部位で絞り込み</label>
+                                <select id="filter-category">
+                                    <option value="all">すべての部位</option>
+                                    <option value="胸 (Chest)">胸 (Chest)</option>
+                                    <option value="背中 (Back)">背中 (Back)</option>
+                                    <option value="肩 (Shoulders)">肩 (Shoulders)</option>
+                                    <option value="腕 (Arms)">腕 (Arms)</option>
+                                    <option value="脚 (Legs)">脚 (Legs)</option>
+                                    <option value="腹筋 (Core)">腹筋 (Core)</option>
+                                    <option value="有酸素 (Cardio)">有酸素 (Cardio)</option>
+                                    <option value="その他 (Other)">その他 (Other)</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="filter-mood">調子で絞り込み</label>
+                                <select id="filter-mood">
+                                    <option value="all">すべての調子</option>
+                                    <option value="fire">🔥 絶好調</option>
+                                    <option value="strong">💪 良い</option>
+                                    <option value="good">😊 普通</option>
+                                    <option value="tired">🥱 疲れた</option>
+                                    <option value="exhausted">☠️ 限界</option>
+                                </select>
                             </div>
                         </div>
-                        <div class="form-group">
-                            <label for="filter-category">部位で絞り込み</label>
-                            <select id="filter-category">
-                                <option value="all">すべての部位</option>
-                                <option value="胸 (Chest)">胸 (Chest)</option>
-                                <option value="背中 (Back)">背中 (Back)</option>
-                                <option value="肩 (Shoulders)">肩 (Shoulders)</option>
-                                <option value="腕 (Arms)">腕 (Arms)</option>
-                                <option value="脚 (Legs)">脚 (Legs)</option>
-                                <option value="腹筋 (Core)">腹筋 (Core)</option>
-                                <option value="有酸素 (Cardio)">有酸素 (Cardio)</option>
-                                <option value="その他 (Other)">その他 (Other)</option>
-                            </select>
+                    </div>
+
+                    <!-- Progression Chart Section -->
+                    <div class="card progression-card">
+                        <div class="card-header flex-header">
+                            <div class="header-title">
+                                <i data-lucide="trending-up"></i>
+                                <h3>種目別の重量推移 (1RM推定)</h3>
+                            </div>
+                            <div class="select-wrapper">
+                                <select id="progression-exercise-select" class="btn-sm-select">
+                                    <option value="">データなし</option>
+                                </select>
+                            </div>
                         </div>
-                        <div class="form-group">
-                            <label for="filter-mood">調子で絞り込み</label>
-                            <select id="filter-mood">
-                                <option value="all">すべての調子</option>
-                                <option value="fire">🔥 絶好調</option>
-                                <option value="strong">💪 良い</option>
-                                <option value="good">😊 普通</option>
-                                <option value="tired">🥱 疲れた</option>
-                                <option value="exhausted">☠️ 限界</option>
-                            </select>
+                        <div class="chart-container progression-container">
+                            <canvas id="progressionChart"></canvas>
+                            <div id="no-progression-data" class="no-data-msg">重量推移を表示するには、同じ種目を2回以上記録してください。</div>
                         </div>
+                    </div>
+
+                    <!-- History list header -->
+                    <div class="history-list-header">
+                        <h3>履歴一覧 (<span id="history-count">0</span>件)</h3>
+                    </div>
+
+                    <div id="history-container" class="history-cards-container">
+                        <!-- History cards generated by JS -->
                     </div>
                 </div>
 
-                <!-- Progression Chart Section (Sleek Detail) -->
-                <div class="card progression-card">
-                    <div class="card-header flex-header">
-                        <div class="header-title">
-                            <i data-lucide="trending-up"></i>
-                            <h3>種目別の重量推移 (1RM推定)</h3>
-                        </div>
-                        <div class="select-wrapper">
-                            <select id="progression-exercise-select" class="btn-sm-select">
-                                <option value="">データなし</option>
-                            </select>
-                        </div>
+                <!-- 有酸素履歴コンテンツ (Cardio History Panel) -->
+                <div id="history-cardio-panel" style="display: none;">
+                    <div class="history-list-header">
+                        <h3>有酸素ラン履歴一覧 (<span id="cardio-history-count">0</span>件)</h3>
                     </div>
-                    <div class="chart-container progression-container">
-                        <canvas id="progressionChart"></canvas>
-                        <div id="no-progression-data" class="no-data-msg">重量推移を表示するには、同じ種目を2回以上記録してください。</div>
+
+                    <div id="cardio-history-container" class="history-cards-container">
+                        <!-- Cardio history cards generated by JS -->
                     </div>
-                </div>
-
-                <!-- History list -->
-                <div class="history-list-header">
-                    <h3>履歴一覧 (<span id="history-count">0</span>件)</h3>
-                </div>
-
-                <div id="history-container" class="history-cards-container">
-                    <!-- History cards generated by JS -->
                 </div>
             </section>
 
@@ -575,6 +595,6 @@
         </div>
     </div>
 
-    <script src="app.js?v=1.3.0"></script>
+    <script src="app.js?v=1.3.1"></script>
 </body>
 </html>
