@@ -90,41 +90,39 @@
                             </button>
                         </div>
                         <div class="card-body">
-                            <div class="form-row-2col">
-                                <div class="form-group">
-                                    <label for="workout-date">日付 <span class="required">*</span></label>
-                                    <div class="input-icon-wrapper">
-                                        <i data-lucide="calendar" class="input-icon"></i>
-                                        <input type="date" id="workout-date" required>
-                                    </div>
+                            <div class="form-group">
+                                <label for="workout-date">日付 <span class="required">*</span></label>
+                                <div class="input-icon-wrapper">
+                                    <i data-lucide="calendar" class="input-icon"></i>
+                                    <input type="date" id="workout-date" required>
                                 </div>
-                                <div class="form-group">
-                                    <label for="workout-time">時刻 <span class="required">*</span></label>
-                                    <div class="input-icon-wrapper">
-                                        <i data-lucide="clock" class="input-icon"></i>
-                                        <input type="time" id="workout-time" required>
-                                    </div>
+                            </div>
+                            
+                            <div class="form-group margin-top-1">
+                                <label for="workout-time">時刻 <span class="required">*</span></label>
+                                <div class="input-icon-wrapper">
+                                    <i data-lucide="clock" class="input-icon"></i>
+                                    <input type="time" id="workout-time" required>
                                 </div>
                             </div>
 
-                            <div class="form-row-2col margin-top-1">
-                                <div class="form-group">
-                                    <label for="workout-title">タイトル（例: 胸トレ、全身など）</label>
-                                    <input type="text" id="workout-title" placeholder="ジムでのトレーニング" value="ジムでのトレーニング">
-                                </div>
-                                <div class="form-group">
-                                    <label for="workout-category">部位カテゴリー <span class="required">*</span></label>
-                                    <select id="workout-category" required>
-                                        <option value="胸 (Chest)">胸 (Chest)</option>
-                                        <option value="背中 (Back)">背中 (Back)</option>
-                                        <option value="肩 (Shoulders)">肩 (Shoulders)</option>
-                                        <option value="腕 (Arms)">腕 (Arms)</option>
-                                        <option value="脚 (Legs)">脚 (Legs)</option>
-                                        <option value="腹筋 (Core)">腹筋 (Core)</option>
-                                        <option value="有酸素 (Cardio)">有酸素 (Cardio)</option>
-                                        <option value="その他 (Other)" selected>その他 (Other)</option>
-                                    </select>
-                                </div>
+                            <div class="form-group margin-top-1">
+                                <label for="workout-title">タイトル（例: 胸トレ、全身など）</label>
+                                <input type="text" id="workout-title" placeholder="ジムでのトレーニング" value="ジムでのトレーニング">
+                            </div>
+                            
+                            <div class="form-group margin-top-1">
+                                <label for="workout-category">部位カテゴリー <span class="required">*</span></label>
+                                <select id="workout-category" required>
+                                    <option value="胸 (Chest)">胸 (Chest)</option>
+                                    <option value="背中 (Back)">背中 (Back)</option>
+                                    <option value="肩 (Shoulders)">肩 (Shoulders)</option>
+                                    <option value="腕 (Arms)">腕 (Arms)</option>
+                                    <option value="脚 (Legs)">脚 (Legs)</option>
+                                    <option value="腹筋 (Core)">腹筋 (Core)</option>
+                                    <option value="有酸素 (Cardio)">有酸素 (Cardio)</option>
+                                    <option value="その他 (Other)" selected>その他 (Other)</option>
+                                </select>
                             </div>
 
                             <div class="form-group margin-top-1">
@@ -156,6 +154,23 @@
                             <div class="form-group margin-top-1">
                                 <label for="workout-impression">トレーニングメモ・感想</label>
                                 <textarea id="workout-impression" rows="2" placeholder="調子や気づいたことなど..."></textarea>
+                            </div>
+
+                            <!-- Optional Cardio run addition inside Gym Visit -->
+                            <div class="cardio-inside-workout-panel margin-top-1">
+                                <label class="checkbox-label" style="display: flex; align-items: center; gap: 0.5rem; font-weight: 600; cursor: pointer; user-select: none;">
+                                    <input type="checkbox" id="add-cardio-to-workout-chk" style="width: 18px; height: 18px; cursor: pointer;">
+                                    <span>🏃 このトレーニングと同時に有酸素（ラン）も記録する</span>
+                                </label>
+                                <div id="cardio-inside-inputs" style="display: none; margin-top: 0.75rem; padding-left: 1rem; border-left: 3px solid var(--color-primary);">
+                                    <div class="form-group">
+                                        <label for="workout-cardio-dist">走行距離 (km)</label>
+                                        <input type="number" step="0.01" id="workout-cardio-dist" placeholder="0.00" min="0" class="width-full">
+                                    </div>
+                                    <div class="form-hint" id="workout-cardio-calc-hint" style="margin-top: 0.5rem;">
+                                        ※消費目安: 0 kcal (最新体重: -- kg)
+                                    </div>
+                                </div>
                             </div>
 
                             <!-- Collapsible detailed exercises builder -->
@@ -433,13 +448,21 @@
                         </div>
                         <div class="card-body">
                             <p class="settings-desc">ご自身の1日のメンテナンスカロリー（体重維持に必要なエネルギー消費量）を設定し、消費カロリーと比較します。</p>
-                            <div class="form-group">
+<div class="form-group">
                                 <label for="maintenance-input">メンテナンスカロリー (kcal)</label>
                                 <input type="number" id="maintenance-input" min="0" value="2000" class="width-full">
                             </div>
-                            <button class="btn btn-secondary" id="save-maintenance-btn">
-                                <i data-lucide="save"></i> 設定を保存
-                            </button>
+                            <div class="settings-actions">
+                                <button class="btn btn-secondary" id="save-maintenance-btn">
+                                    <i data-lucide="save"></i> 設定を保存
+                                </button>
+                                <button class="btn btn-primary" id="auto-calc-maintenance-btn" type="button">
+                                    <i data-lucide="calculator"></i> 体重と筋トレ実績から自動計算
+                                </button>
+                            </div>
+                            <p class="form-hint" style="margin-top: 0.5rem;">
+                                ※直近30日間の筋トレ実績（頻度）と最新の体重に基づき、流動的に適切なメンテナンスカロリーを自動で再計算します。
+                            </p>
                         </div>
                     </div>
 

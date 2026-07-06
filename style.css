@@ -1445,6 +1445,19 @@ textarea:focus {
         grid-template-columns: 1fr;
         gap: 1rem;
     }
+
+    .settings-actions {
+        flex-direction: column;
+    }
+
+    .settings-actions .btn,
+    .settings-actions .import-wrapper {
+        width: 100%;
+    }
+
+    .settings-actions .btn {
+        justify-content: center;
+    }
 }
 
 /* Quick Log Restructure Layout */

@@ -814,6 +814,33 @@ function initFormControls() {
             DOM.logCardioDate.value = getLocalDateString();
         }
     }
+
+    // Workout form: Simultaneous Cardio Logging panel toggling & calculations
+    const addCardioChk = document.getElementById('add-cardio-to-workout-chk');
+    const cardioInsideInputs = document.getElementById('cardio-inside-inputs');
+    const workoutCardioDist = document.getElementById('workout-cardio-dist');
+    const workoutCardioCalcHint = document.getElementById('workout-cardio-calc-hint');
+    
+    if (addCardioChk && cardioInsideInputs) {
+        addCardioChk.addEventListener('change', () => {
+            cardioInsideInputs.style.display = addCardioChk.checked ? 'block' : 'none';
+            if (addCardioChk.checked) {
+                updateWorkoutCardioHint();
+            }
+        });
+    }
+    
+    if (workoutCardioDist) {
+        workoutCardioDist.addEventListener('input', updateWorkoutCardioHint);
+    }
+    
+    function updateWorkoutCardioHint() {
+        if (!workoutCardioDist || !workoutCardioCalcHint) return;
+        const dist = parseFloat(workoutCardioDist.value) || 0;
+        const latestWeight = getLatestWeight();
+        const kcal = Math.round(dist * latestWeight);
+        workoutCardioCalcHint.textContent = `※消費目安: ${kcal} kcal (最新体重: ${latestWeight} kg)`;
+    }
 }
 
 function resetWorkoutForm() {
@@ -1020,6 +1047,32 @@ function saveWorkout() {
     } else {
         state.workouts.unshift(workoutData);
         showToast('ワークアウト記録を保存しました！');
+    }
+    // Simultaneous Cardio Logging check
+    const addCardioChk = document.getElementById('add-cardio-to-workout-chk');
+    if (addCardioChk && addCardioChk.checked) {
+        const cardioDistInput = document.getElementById('workout-cardio-dist');
+        if (cardioDistInput) {
+            const dist = parseFloat(cardioDistInput.value);
+            if (!isNaN(dist) && dist > 0) {
+                const latestWeight = getLatestWeight();
+                const calories = Math.round(dist * latestWeight);
+                
+                // Add to cardioLogs
+                state.cardioLogs.push({
+                    date: date,
+                    distance: dist,
+                    calories: calories
+                });
+                state.cardioLogs.sort((a, b) => new Date(a.date) - new Date(b.date));
+                
+                // Reset cardio inside fields
+                cardioDistInput.value = '';
+                addCardioChk.checked = false;
+                const cardioInsideInputs = document.getElementById('cardio-inside-inputs');
+                if (cardioInsideInputs) cardioInsideInputs.style.display = 'none';
+            }
+        }
     }
     
     saveDataAndSync();
@@ -1439,6 +1492,13 @@ function initSettingsControls() {
         });
     }
 
+    const autoCalcMaintBtn = document.getElementById('auto-calc-maintenance-btn');
+    if (autoCalcMaintBtn) {
+        autoCalcMaintBtn.addEventListener('click', () => {
+            calculateFluidMaintenance();
+        });
+    }
+
     if (DOM.sheetsUrlInput) {
         DOM.sheetsUrlInput.value = state.sheetsUrl;
     }
@@ -1492,6 +1552,51 @@ function initSettingsControls() {
             );
         });
     }
+}
+
+function calculateFluidMaintenance() {
+    const latestWeight = getLatestWeight();
+    
+    // Count workouts in the last 30 days
+    const today = new Date();
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(today.getDate() - 30);
+    
+    const workoutsLast30Days = state.workouts.filter(w => {
+        if (!w.date) return false;
+        const wDate = new Date(w.date + 'T00:00:00');
+        return wDate >= thirtyDaysAgo && wDate <= today;
+    }).length;
+    
+    // 1. Basal Metabolic Rate (BMR) = 23 * Weight (kg)
+    const bmr = 23 * latestWeight;
+    
+    // 2. Physical Activity Level (PAL) multiplier based on workout frequency in last 30 days
+    let pal = 1.2; // Sedentary
+    let freqDesc = 'ほとんど運動なし (週0回未満)';
+    
+    if (workoutsLast30Days >= 12) { // 3+ times a week
+        pal = 1.725; // Very active
+        freqDesc = '活発な運動 (週3回以上)';
+    } else if (workoutsLast30Days >= 8) { // 2 times a week
+        pal = 1.55; // Moderately active
+        freqDesc = '適度な運動 (週2回程度)';
+    } else if (workoutsLast30Days >= 4) { // 1 time a week
+        pal = 1.375; // Lightly active
+        freqDesc = '軽い運動 (週1回程度)';
+    }
+    
+    const calculatedCalories = Math.round(bmr * pal);
+    
+    // Apply to input and state
+    if (DOM.maintenanceInput) {
+        DOM.maintenanceInput.value = calculatedCalories;
+    }
+    state.maintenanceCalories = calculatedCalories;
+    saveDataAndSync();
+    
+    showToast(`メンテナンスカロリーを再計算しました：${calculatedCalories} kcal (${freqDesc}, 最新体重: ${latestWeight.toFixed(1)}kg)`);
+    updateDashboard();
 }
 
 function exportWorkouts() {
