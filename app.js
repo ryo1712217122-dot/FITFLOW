@@ -39,6 +39,7 @@ let state = {
     maintenanceCalories: DEFAULT_MAINTENANCE_CALORIES,
     sheetsUrl: '',
     planSettings: null,
+    foodLogs: [],
     charts: {
         category: null,
         progression: null,
@@ -279,6 +280,7 @@ document.addEventListener('DOMContentLoaded', () => {
     updateDashboard();
     updateHistoryList();
     updateCardioHistoryList();
+    updateFoodHistoryList();
     renderPlanTab();
     renderPlanSidebarWidget();
 
@@ -399,6 +401,19 @@ function loadData() {
         state.planSettings = Object.assign({}, DEFAULT_PLAN_SETTINGS);
     }
     
+    // 7. Food Logs
+    const foodData = localStorage.getItem('fitflow_food_logs');
+    if (foodData) {
+        try {
+            state.foodLogs = JSON.parse(foodData);
+        } catch (e) {
+            console.error('Error parsing food logs', e);
+            state.foodLogs = [];
+        }
+    } else {
+        state.foodLogs = [];
+    }
+    
     saveData();
 }
 
@@ -409,6 +424,7 @@ function saveData() {
     localStorage.setItem('fitflow_maintenance', state.maintenanceCalories.toString());
     localStorage.setItem('fitflow_sheets_url', state.sheetsUrl);
     localStorage.setItem('fitflow_plan_settings', JSON.stringify(state.planSettings));
+    localStorage.setItem('fitflow_food_logs', JSON.stringify(state.foodLogs));
 }
 
 function saveDataAndSync() {
@@ -568,6 +584,7 @@ function initNavigation() {
             } else if (tabId === 'history') {
                 updateHistoryList();
                 updateCardioHistoryList();
+                updateFoodHistoryList();
             } else if (tabId === 'quick-log') {
                 if (!state.editingWorkoutId) {
                     resetWorkoutForm();
@@ -661,7 +678,7 @@ function initDateTexts() {
     else greeting = 'こんばんは！今日もお疲れ様です🌙';
     
     if (DOM.greetingText) {
-        DOM.greetingText.innerHTML = `${greeting} <span class="app-version-badge">v1.4.2</span>`;
+        DOM.greetingText.innerHTML = `${greeting} <span class="app-version-badge">v1.5.0</span>`;
     }
 }
 
@@ -852,6 +869,14 @@ function renderCalendar() {
         workoutsByDate[w.date].push(w);
     });
     
+    // Group food logs by date
+    const foodByDate = {};
+    if (state.foodLogs) {
+        state.foodLogs.forEach(f => {
+            foodByDate[f.date] = f;
+        });
+    }
+    
     // Render actual days
     for (let day = 1; day <= totalDays; day++) {
         const dayCell = document.createElement('div');
@@ -885,6 +910,28 @@ function renderCalendar() {
                 }
                 if (historyNavItem) historyNavItem.click();
             });
+        }
+        
+        const dayFood = foodByDate[dateStr];
+        if (dayFood) {
+            const emojis = [];
+            if (dayFood.milktea) emojis.push('🍵');
+            if (dayFood.ramen) emojis.push('🍜');
+            if (dayFood.drinking) emojis.push('🍺');
+            if (emojis.length > 0) {
+                const foodIndicator = document.createElement('span');
+                foodIndicator.style.position = 'absolute';
+                foodIndicator.style.top = '2px';
+                foodIndicator.style.right = '2px';
+                foodIndicator.style.fontSize = '0.65rem';
+                foodIndicator.style.lineHeight = '1';
+                foodIndicator.textContent = emojis.join('');
+                dayCell.appendChild(foodIndicator);
+                
+                const itemsText = emojis.join(' ');
+                const existingTitle = dayCell.getAttribute('title') || '';
+                dayCell.setAttribute('title', (existingTitle ? existingTitle + ' | ' : '') + `飲食: ${itemsText}`);
+            }
         }
         
         DOM.calendarDays.appendChild(dayCell);
@@ -1037,6 +1084,13 @@ function initFormControls() {
 function resetWorkoutForm() {
     state.editingWorkoutId = null;
     if (DOM.workoutForm) DOM.workoutForm.reset();
+    
+    const milkteaChk = document.getElementById('food-milktea-chk');
+    const ramenChk = document.getElementById('food-ramen-chk');
+    const drinkingChk = document.getElementById('food-drinking-chk');
+    if (milkteaChk) milkteaChk.checked = false;
+    if (ramenChk) ramenChk.checked = false;
+    if (drinkingChk) drinkingChk.checked = false;
     
     const now = new Date();
     if (DOM.workoutDate) DOM.workoutDate.value = getLocalDateString(now);
@@ -1333,9 +1387,41 @@ function saveWorkout() {
         workoutSaved = true;
     }
     
-    // 4. Validate that at least one type of data is recorded
-    if (!weightSaved && !cardioSaved && !workoutSaved) {
-        showToast('体重、有酸素、または筋トレのいずれかを入力・選択してください');
+    // 4. Read optional special foods
+    let foodSaved = false;
+    const milkteaChk = document.getElementById('food-milktea-chk');
+    const ramenChk = document.getElementById('food-ramen-chk');
+    const drinkingChk = document.getElementById('food-drinking-chk');
+    
+    const hasSpecialFood = (milkteaChk && milkteaChk.checked) || 
+                           (ramenChk && ramenChk.checked) || 
+                           (drinkingChk && drinkingChk.checked);
+                           
+    const foodIndex = state.foodLogs.findIndex(f => f.date === date);
+    if (hasSpecialFood) {
+        const foodRecord = {
+            date,
+            milktea: milkteaChk && milkteaChk.checked,
+            ramen: ramenChk && ramenChk.checked,
+            drinking: drinkingChk && drinkingChk.checked
+        };
+        if (foodIndex !== -1) {
+            state.foodLogs[foodIndex] = foodRecord;
+        } else {
+            state.foodLogs.push(foodRecord);
+        }
+        state.foodLogs.sort((a, b) => new Date(a.date) - new Date(b.date));
+        foodSaved = true;
+    } else {
+        if (foodIndex !== -1) {
+            state.foodLogs.splice(foodIndex, 1);
+            foodSaved = true;
+        }
+    }
+    
+    // 5. Validate that at least one type of data is recorded
+    if (!weightSaved && !cardioSaved && !workoutSaved && !foodSaved) {
+        showToast('体重、有酸素、特別な飲食、または筋トレのいずれかを入力・選択してください');
         return;
     }
     
@@ -1346,6 +1432,7 @@ function saveWorkout() {
     const savedParts = [];
     if (weightSaved) savedParts.push('体重');
     if (cardioSaved) savedParts.push('有酸素');
+    if (foodSaved && hasSpecialFood) savedParts.push('特別な飲食');
     if (workoutSaved) savedParts.push(state.editingWorkoutId ? '筋トレ更新' : '筋トレ');
     showToast(`${savedParts.join('・')}を記録しました！`);
     
@@ -1357,6 +1444,7 @@ function saveWorkout() {
     updateDashboard();
     updateHistoryList();
     updateCardioHistoryList();
+    updateFoodHistoryList();
     
     // Move to history tab
     const historyNavItem = document.querySelector('[data-tab="history"]');
@@ -1383,27 +1471,39 @@ function initHistoryControls() {
     // Sub tabs events
     const tabWorkouts = document.getElementById('history-tab-workouts');
     const tabCardio = document.getElementById('history-tab-cardio');
+    const tabFood = document.getElementById('history-tab-food');
     const panelWorkouts = document.getElementById('history-workouts-panel');
     const panelCardio = document.getElementById('history-cardio-panel');
+    const panelFood = document.getElementById('history-food-panel');
 
-    if (tabWorkouts && tabCardio && panelWorkouts && panelCardio) {
+    if (tabWorkouts && tabCardio && tabFood && panelWorkouts && panelCardio && panelFood) {
+        const switchSubTab = (activeTab, activePanel) => {
+            [tabWorkouts, tabCardio, tabFood].forEach(t => {
+                t.classList.remove('btn-primary');
+                t.classList.add('btn-secondary');
+            });
+            [panelWorkouts, panelCardio, panelFood].forEach(p => {
+                p.style.display = 'none';
+            });
+            
+            activeTab.classList.remove('btn-secondary');
+            activeTab.classList.add('btn-primary');
+            activePanel.style.display = 'block';
+        };
+
         tabWorkouts.addEventListener('click', () => {
-            tabWorkouts.classList.remove('btn-secondary');
-            tabWorkouts.classList.add('btn-primary');
-            tabCardio.classList.remove('btn-primary');
-            tabCardio.classList.add('btn-secondary');
-            panelWorkouts.style.display = 'block';
-            panelCardio.style.display = 'none';
+            switchSubTab(tabWorkouts, panelWorkouts);
+            updateHistoryList();
         });
 
         tabCardio.addEventListener('click', () => {
-            tabCardio.classList.remove('btn-secondary');
-            tabCardio.classList.add('btn-primary');
-            tabWorkouts.classList.remove('btn-primary');
-            tabWorkouts.classList.add('btn-secondary');
-            panelWorkouts.style.display = 'none';
-            panelCardio.style.display = 'block';
+            switchSubTab(tabCardio, panelCardio);
             updateCardioHistoryList();
+        });
+
+        tabFood.addEventListener('click', () => {
+            switchSubTab(tabFood, panelFood);
+            updateFoodHistoryList();
         });
     }
 }
@@ -1577,6 +1677,16 @@ function editWorkout(id) {
     
     if (DOM.workoutDate) DOM.workoutDate.value = workout.date;
     if (DOM.workoutTime) DOM.workoutTime.value = workout.time || '12:00';
+    
+    // Populate special food checkboxes for this date
+    const foodRecord = state.foodLogs ? state.foodLogs.find(f => f.date === workout.date) : null;
+    const milkteaChk = document.getElementById('food-milktea-chk');
+    const ramenChk = document.getElementById('food-ramen-chk');
+    const drinkingChk = document.getElementById('food-drinking-chk');
+    if (milkteaChk) milkteaChk.checked = foodRecord ? !!foodRecord.milktea : false;
+    if (ramenChk) ramenChk.checked = foodRecord ? !!foodRecord.ramen : false;
+    if (drinkingChk) drinkingChk.checked = foodRecord ? !!foodRecord.drinking : false;
+    
     if (DOM.workoutTitle) DOM.workoutTitle.value = workout.title || '';
     if (DOM.workoutCategory) DOM.workoutCategory.value = workout.category;
     if (DOM.workoutImpression) DOM.workoutImpression.value = workout.impression || '';
@@ -3128,5 +3238,82 @@ function renderPlanSidebarWidget() {
     
     if (window.lucide) {
         lucide.createIcons();
+    }
+}
+
+function updateFoodHistoryList() {
+    const container = document.getElementById('food-history-container');
+    const countEl = document.getElementById('food-history-count');
+    if (!container) return;
+    
+    container.innerHTML = '';
+    const logs = state.foodLogs || [];
+    
+    if (countEl) countEl.textContent = logs.length;
+    
+    if (logs.length === 0) {
+        container.innerHTML = '<div class="no-data-msg">特別な飲食の記録はありません</div>';
+        return;
+    }
+    
+    const sortedLogs = [...logs].sort((a, b) => new Date(b.date) - new Date(a.date));
+    
+    sortedLogs.forEach((log) => {
+        const origIndex = state.foodLogs.findIndex(f => f.date === log.date);
+        
+        const card = document.createElement('div');
+        card.className = 'card history-card';
+        card.style.animation = 'slideIn 0.25s ease';
+        
+        const itemsList = [];
+        if (log.milktea) itemsList.push('<span class="badge" style="background: rgba(134,172,65,0.1); color: var(--color-primary); border: 1px solid var(--color-primary); padding: 0.25rem 0.5rem; border-radius: 12px; font-size: 0.75rem;">🍵 紅茶・お菓子</span>');
+        if (log.ramen) itemsList.push('<span class="badge" style="background: rgba(224,90,71,0.1); color: var(--color-danger); border: 1px solid var(--color-danger); padding: 0.25rem 0.5rem; border-radius: 12px; font-size: 0.75rem;">🍜 ラーメン</span>');
+        if (log.drinking) itemsList.push('<span class="badge" style="background: rgba(217,160,91,0.1); color: var(--color-warning); border: 1px solid var(--color-warning); padding: 0.25rem 0.5rem; border-radius: 12px; font-size: 0.75rem;">🍺 飲み会</span>');
+        
+        const dateObj = new Date(log.date);
+        const dayOfWeekStr = ['日', '月', '火', '水', '木', '金', '土'][dateObj.getDay()];
+        
+        card.innerHTML = `
+            <div class="card-header flex-header" style="padding: 1rem 1.25rem; border-bottom: none;">
+                <div style="display: flex; flex-direction: column; gap: 0.25rem;">
+                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                        <span style="font-weight: 700; font-size: 1rem;">特別な飲食</span>
+                        <span style="font-size: 0.75rem; color: var(--text-muted);">${log.date} (${dayOfWeekStr})</span>
+                    </div>
+                    <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.5rem;">
+                        ${itemsList.join('')}
+                    </div>
+                </div>
+                <button type="button" class="btn-icon text-danger btn-delete-food" title="削除" style="width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: rgba(224,90,71,0.05); cursor: pointer; border: none;">
+                    <i data-lucide="trash-2" style="width: 1rem; height: 1rem;"></i>
+                </button>
+            </div>
+        `;
+        
+        card.querySelector('.btn-delete-food').addEventListener('click', () => {
+            showConfirmModal(
+                '特別な飲食記録の削除',
+                `${log.date} の特別な飲食の記録を削除してもよろしいですか？`,
+                () => {
+                    deleteFoodLog(origIndex);
+                }
+            );
+        });
+        
+        container.appendChild(card);
+    });
+    
+    if (window.lucide) {
+        lucide.createIcons();
+    }
+}
+
+function deleteFoodLog(index) {
+    if (index >= 0 && index < state.foodLogs.length) {
+        state.foodLogs.splice(index, 1);
+        saveDataAndSync();
+        showToast('特別な飲食の記録を削除しました');
+        updateDashboard();
+        updateFoodHistoryList();
     }
 }
