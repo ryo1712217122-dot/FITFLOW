@@ -661,7 +661,7 @@ function initDateTexts() {
     else greeting = 'こんばんは！今日もお疲れ様です🌙';
     
     if (DOM.greetingText) {
-        DOM.greetingText.innerHTML = `${greeting} <span class="app-version-badge">v1.4.1</span>`;
+        DOM.greetingText.innerHTML = `${greeting} <span class="app-version-badge">v1.4.2</span>`;
     }
 }
 
@@ -1082,6 +1082,10 @@ function addExerciseBlock(data = null) {
             <div class="exercise-name-input-wrapper">
                 <input type="text" class="exercise-name" placeholder="種目名 (例: ベンチプレス)" required list="popular-exercises" value="${data ? data.name : ''}">
             </div>
+            <div class="exercise-sets-counter" style="display: flex; align-items: center; gap: 0.25rem;">
+                <label style="font-size: 0.8rem; color: var(--text-secondary); margin: 0; white-space: nowrap;">セット数:</label>
+                <input type="number" class="exercise-sets-input" min="1" max="20" value="${data && data.sets ? data.sets.length : 1}" style="width: 50px; padding: 0.35rem 0.25rem; font-size: 0.85rem; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-surface-hover); text-align: center; color: var(--text-primary);">
+            </div>
             <button type="button" class="btn-icon btn-remove-exercise text-danger" title="種目を削除">
                 <i data-lucide="trash-2"></i>
             </button>
@@ -1108,10 +1112,38 @@ function addExerciseBlock(data = null) {
     const tbody = exerciseBlock.querySelector('.sets-tbody');
     const addSetBtn = exerciseBlock.querySelector('.add-set-row-btn');
     const removeExBtn = exerciseBlock.querySelector('.btn-remove-exercise');
+    const setsInput = exerciseBlock.querySelector('.exercise-sets-input');
     
     addSetBtn.addEventListener('click', () => {
         addSetRow(tbody);
+        if (setsInput) setsInput.value = tbody.children.length;
     });
+    
+    if (setsInput) {
+        setsInput.addEventListener('input', () => {
+            let val = parseInt(setsInput.value);
+            if (isNaN(val) || val < 1) return; // Wait for complete input
+            const currentSetsCount = tbody.children.length;
+            if (val > currentSetsCount) {
+                for (let i = 0; i < val - currentSetsCount; i++) {
+                    addSetRow(tbody);
+                }
+            } else if (val < currentSetsCount) {
+                for (let i = 0; i < currentSetsCount - val; i++) {
+                    if (tbody.lastElementChild) {
+                        tbody.lastElementChild.remove();
+                    }
+                }
+            }
+        });
+        
+        setsInput.addEventListener('blur', () => {
+            let val = parseInt(setsInput.value);
+            if (isNaN(val) || val < 1) {
+                setsInput.value = tbody.children.length;
+            }
+        });
+    }
     
     removeExBtn.addEventListener('click', () => {
         exerciseBlock.style.animation = 'slideIn 0.2s ease reverse';
@@ -1167,6 +1199,12 @@ function addSetRow(tbody, weight = '', reps = '') {
             Array.from(tbody.children).forEach((r, idx) => {
                 r.querySelector('.set-num').textContent = idx + 1;
             });
+            // Update sets count input in the parent exercise block
+            const exBlock = tbody.closest('.exercise-item');
+            if (exBlock) {
+                const sInput = exBlock.querySelector('.exercise-sets-input');
+                if (sInput) sInput.value = tbody.children.length;
+            }
         } else {
             showToast('最低1セットは必要です');
         }
