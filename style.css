@@ -654,6 +654,22 @@ body:not(.light-theme) .light-icon { display: none; }
     color: var(--color-danger);
 }
 
+.food-kcal-input {
+    width: 64px;
+    padding: 0.3rem 0.5rem;
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+    background: var(--bg-surface);
+    color: var(--text-primary);
+    font-size: 0.8rem;
+    text-align: right;
+}
+
+.food-kcal-input:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
 input[type="text"],
 input[type="date"],
 input[type="time"],
@@ -770,10 +786,19 @@ textarea:focus {
 
 .exercise-name-input-wrapper {
     position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
 }
 
-.exercise-name-input-wrapper input {
+.exercise-name-input-wrapper input,
+.exercise-name-input-wrapper select {
     width: 100%;
+}
+
+.exercise-name-picker {
+    font-size: 0.85rem;
+    padding: 0.5rem 0.75rem;
 }
 
 .sets-table-wrapper {

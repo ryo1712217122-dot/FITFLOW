@@ -8,6 +8,15 @@ const DEFAULT_WEIGHT_KG = 70.0;
 const TARGET_MONTHLY_WORKOUTS = 12;
 const MAX_RECENT_WEIGHT_LOGS = 10;
 const CARDIO_DAYS_WINDOW = 7;
+// タイトル・部位カテゴリーの入力欄はフォームから撤去したため、新規記録には固定のデフォルト値を使う
+const DEFAULT_WORKOUT_CATEGORY = 'その他 (Other)';
+
+// 特別な飲食チップの定義 (チェック有無 + 任意のkcal数値をこの並びで扱う)
+const FOOD_ITEMS = [
+    { key: 'milktea', chkId: 'food-milktea-chk', kcalId: 'food-milktea-kcal', calKey: 'milkteaCalories', label: '🍵 紅茶・お菓子' },
+    { key: 'ramen', chkId: 'food-ramen-chk', kcalId: 'food-ramen-kcal', calKey: 'ramenCalories', label: '🍜 ラーメン' },
+    { key: 'drinking', chkId: 'food-drinking-chk', kcalId: 'food-drinking-kcal', calKey: 'drinkingCalories', label: '🍺 飲み会' }
+];
 
 const DEFAULT_PLAN_SETTINGS = {
     intakeNormal: 1750,
@@ -217,19 +226,21 @@ const DOM = {
     workoutForm: document.getElementById('workout-form'),
     workoutDate: document.getElementById('workout-date'),
     workoutTime: document.getElementById('workout-time'),
-    workoutTitle: document.getElementById('workout-title'),
-    workoutCategory: document.getElementById('workout-category'),
     workoutImpression: document.getElementById('workout-impression'),
     exerciseList: document.getElementById('exercise-list'),
     addExerciseBtn: document.getElementById('add-exercise-btn'),
     saveWorkoutBtn: document.getElementById('save-workout-btn'),
 
-    // Quick log extra fields (weight / cardio, part of the unified workout-form)
-    logWeightVal: document.getElementById('log-weight-val'),
+    // Quick log extra fields (cardio, part of the unified workout-form)
     logCardioDist: document.getElementById('log-cardio-dist'),
     cardioCalcHint: document.getElementById('cardio-calc-hint'),
     todayBurnedKcal: document.getElementById('today-burned-kcal'),
     currentMaintenanceKcal: document.getElementById('current-maintenance-kcal'),
+
+    // Weight Quick Logger (体重単独記録フォーム)
+    weightQuickForm: document.getElementById('weight-quick-form'),
+    weightQuickDate: document.getElementById('weight-quick-date'),
+    weightQuickVal: document.getElementById('weight-quick-val'),
 
     // History
     searchInput: document.getElementById('search-input'),
@@ -326,6 +337,13 @@ function escapeHtml(str) {
         .replace(/'/g, '&#39;');
 }
 
+// index.html の #popular-exercises datalist をよく使う種目リストの唯一の情報源として再利用する
+function getPopularExerciseNames() {
+    const datalist = document.getElementById('popular-exercises');
+    if (!datalist) return [];
+    return Array.from(datalist.options).map(opt => opt.value);
+}
+
 // ==========================================
 // DATA MANAGEMENT (LocalStorage)
 // ==========================================
@@ -341,10 +359,10 @@ function loadData() {
             state.workouts = [];
         }
     } else {
-        state.workouts = getMockWorkouts();
+        state.workouts = [];
     }
-    
-    // Ensure all mock workouts have a time property if they don't
+
+    // Ensure legacy workouts missing a time property get a reasonable default
     state.workouts.forEach((w, idx) => {
         if (!w.time) {
             const times = ['10:00', '19:00', '18:30', '20:00', '08:00'];
@@ -362,7 +380,7 @@ function loadData() {
             state.weightLogs = [];
         }
     } else {
-        state.weightLogs = getMockWeightLogs();
+        state.weightLogs = [];
     }
 
     // Ensure weight logs are sorted chronologically
@@ -378,7 +396,7 @@ function loadData() {
             state.cardioLogs = [];
         }
     } else {
-        state.cardioLogs = getMockCardioLogs();
+        state.cardioLogs = [];
     }
 
     // Ensure cardio logs are sorted chronologically
@@ -438,129 +456,6 @@ function saveDataAndSync() {
     saveData();
     localStorage.setItem(DIRTY_KEY, 'true');
     scheduleSync(true);
-}
-
-function getMockWeightLogs() {
-    const list = [];
-    const today = new Date();
-    const daysAgo = (num) => {
-        const d = new Date();
-        d.setDate(today.getDate() - num);
-        return getLocalDateString(d);
-    };
-    
-    list.push({ date: daysAgo(6), weight: 73.2 });
-    list.push({ date: daysAgo(4), weight: 72.8 });
-    list.push({ date: daysAgo(2), weight: 72.5 });
-    list.push({ date: daysAgo(0), weight: 72.4 });
-    return list;
-}
-
-function getMockCardioLogs() {
-    const list = [];
-    const today = new Date();
-    const daysAgo = (num) => {
-        const d = new Date();
-        d.setDate(today.getDate() - num);
-        return getLocalDateString(d);
-    };
-    
-    list.push({ date: daysAgo(5), distance: 4.5, calories: 326 });
-    list.push({ date: daysAgo(3), distance: 6.0, calories: 436 });
-    list.push({ date: daysAgo(0), distance: 5.0, calories: 362 });
-    return list;
-}
-
-// Generate structured mock data for demo
-function getMockWorkouts() {
-    const list = [];
-    const today = new Date();
-    const daysAgo = (num) => {
-        const d = new Date();
-        d.setDate(today.getDate() - num);
-        return getLocalDateString(d);
-    };
-    
-    list.push({
-        id: 'mock-1',
-        date: daysAgo(0),
-        time: '19:30',
-        title: '胸と三頭筋の日',
-        category: '胸 (Chest)',
-        mood: 'fire',
-        impression: 'ベンチプレス80kgで10レップ成功！調子がとても良かったです。最後はダンベルフライで追い込めました。',
-        exercises: [
-            {
-                name: 'ベンチプレス',
-                sets: [
-                    { weight: 60, reps: 10 },
-                    { weight: 70, reps: 8 },
-                    { weight: 80, reps: 10 }
-                ]
-            },
-            {
-                name: 'インクラインダンベルプレス',
-                sets: [
-                    { weight: 24, reps: 12 },
-                    { weight: 24, reps: 10 }
-                ]
-            }
-        ]
-    });
-    
-    list.push({
-        id: 'mock-2',
-        date: daysAgo(2),
-        time: '18:15',
-        title: '背中と二頭筋の日',
-        category: '背中 (Back)',
-        mood: 'strong',
-        impression: 'デッドリフトを安全に120kg引けました。ラットプルダウンは広背筋を意識。',
-        exercises: [
-            {
-                name: 'デッドリフト',
-                sets: [
-                    { weight: 100, reps: 8 },
-                    { weight: 120, reps: 6 }
-                ]
-            },
-            {
-                name: 'ラットプルダウン',
-                sets: [
-                    { weight: 50, reps: 12 },
-                    { weight: 57, reps: 10 }
-                ]
-            }
-        ]
-    });
-
-    list.push({
-        id: 'mock-3',
-        date: daysAgo(4),
-        time: '20:00',
-        title: '肩と脚の日',
-        category: '肩 (Shoulders)',
-        mood: 'good',
-        impression: 'ショルダープレスをメインに実施。脚はスクワットで下半身を強化。',
-        exercises: [
-            {
-                name: 'ショルダープレス',
-                sets: [
-                    { weight: 20, reps: 12 },
-                    { weight: 22, reps: 10 }
-                ]
-            },
-            {
-                name: 'バーベルスクワット',
-                sets: [
-                    { weight: 80, reps: 10 },
-                    { weight: 90, reps: 8 }
-                ]
-            }
-        ]
-    });
-
-    return list;
 }
 
 // ==========================================
@@ -685,7 +580,7 @@ function initDateTexts() {
     else greeting = 'こんばんは！今日もお疲れ様です🌙';
     
     if (DOM.greetingText) {
-        DOM.greetingText.innerHTML = `${greeting} <span class="app-version-badge">v1.5.1</span>`;
+        DOM.greetingText.innerHTML = `${greeting} <span class="app-version-badge">v1.6.0</span>`;
     }
 }
 
@@ -1075,8 +970,13 @@ function initFormControls() {
     if (DOM.logCardioDist) {
         DOM.logCardioDist.addEventListener('input', updateCardioHint);
     }
-    if (DOM.logWeightVal) {
-        DOM.logWeightVal.addEventListener('input', updateCardioHint);
+
+    if (DOM.weightQuickForm) {
+        if (DOM.weightQuickDate) DOM.weightQuickDate.value = getLocalDateString();
+        DOM.weightQuickForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            saveWeightOnly();
+        });
     }
 
     const recordGymWorkoutChk = document.getElementById('record-gym-workout-chk');
@@ -1086,19 +986,34 @@ function initFormControls() {
             gymWorkoutFieldsContainer.style.display = recordGymWorkoutChk.checked ? 'block' : 'none';
         });
     }
+
+    // 特別な飲食チェックのON/OFFに合わせてkcal入力欄を有効化・無効化する
+    FOOD_ITEMS.forEach(item => {
+        const chk = document.getElementById(item.chkId);
+        const kcalInput = document.getElementById(item.kcalId);
+        if (chk && kcalInput) {
+            chk.addEventListener('change', () => {
+                kcalInput.disabled = !chk.checked;
+                if (!chk.checked) kcalInput.value = '';
+            });
+        }
+    });
 }
 
 function resetWorkoutForm() {
     state.editingWorkoutId = null;
     if (DOM.workoutForm) DOM.workoutForm.reset();
     
-    const milkteaChk = document.getElementById('food-milktea-chk');
-    const ramenChk = document.getElementById('food-ramen-chk');
-    const drinkingChk = document.getElementById('food-drinking-chk');
-    if (milkteaChk) milkteaChk.checked = false;
-    if (ramenChk) ramenChk.checked = false;
-    if (drinkingChk) drinkingChk.checked = false;
-    
+    FOOD_ITEMS.forEach(item => {
+        const chk = document.getElementById(item.chkId);
+        const kcalInput = document.getElementById(item.kcalId);
+        if (chk) chk.checked = false;
+        if (kcalInput) {
+            kcalInput.value = '';
+            kcalInput.disabled = true;
+        }
+    });
+
     const now = new Date();
     if (DOM.workoutDate) DOM.workoutDate.value = getLocalDateString(now);
 
@@ -1134,10 +1049,18 @@ function addExerciseBlock(data = null) {
     exerciseBlock.classList.add('exercise-item');
     exerciseBlock.setAttribute('data-index', exerciseIndex);
     
+    const popularExerciseOptionsHtml = getPopularExerciseNames()
+        .map(name => `<option value="${escapeHtml(name)}">${escapeHtml(name)}</option>`)
+        .join('');
+
     exerciseBlock.innerHTML = `
         <div class="exercise-item-header">
             <div class="exercise-name-input-wrapper">
-                <input type="text" class="exercise-name" placeholder="種目名 (例: ベンチプレス)" required list="popular-exercises" value="${data ? data.name : ''}">
+                <select class="exercise-name-picker">
+                    <option value="">よく使う種目から選択...</option>
+                    ${popularExerciseOptionsHtml}
+                </select>
+                <input type="text" class="exercise-name" placeholder="種目名（一覧にない場合は自由入力）" required list="popular-exercises" value="${data ? data.name : ''}">
             </div>
             <div class="exercise-sets-counter" style="display: flex; align-items: center; gap: 0.25rem;">
                 <label style="font-size: 0.8rem; color: var(--text-secondary); margin: 0; white-space: nowrap;">セット数:</label>
@@ -1170,7 +1093,18 @@ function addExerciseBlock(data = null) {
     const addSetBtn = exerciseBlock.querySelector('.add-set-row-btn');
     const removeExBtn = exerciseBlock.querySelector('.btn-remove-exercise');
     const setsInput = exerciseBlock.querySelector('.exercise-sets-input');
-    
+    const namePicker = exerciseBlock.querySelector('.exercise-name-picker');
+    const nameInput = exerciseBlock.querySelector('.exercise-name');
+
+    if (namePicker && nameInput) {
+        namePicker.addEventListener('change', () => {
+            if (namePicker.value) {
+                nameInput.value = namePicker.value;
+            }
+            namePicker.value = '';
+        });
+    }
+
     addSetBtn.addEventListener('click', () => {
         addSetRow(tbody);
         if (setsInput) setsInput.value = tbody.children.length;
@@ -1271,31 +1205,8 @@ function addSetRow(tbody, weight = '', reps = '') {
 function saveWorkout() {
     const date = DOM.workoutDate.value;
     const time = DOM.workoutTime.value;
-    
-    // 1. Read optional weight value
-    let weightSaved = false;
-    let weightVal = null;
-    if (DOM.logWeightVal) {
-        const weightText = DOM.logWeightVal.value.trim();
-        if (weightText !== '') {
-            const weight = parseFloat(weightText);
-            if (isNaN(weight) || weight <= 0) {
-                showToast('有効な体重を入力してください');
-                return;
-            }
-            weightVal = weight;
-            const existingIndex = state.weightLogs.findIndex(w => w.date === date);
-            if (existingIndex !== -1) {
-                state.weightLogs[existingIndex].weight = weight;
-            } else {
-                state.weightLogs.push({ date, weight });
-            }
-            state.weightLogs.sort((a, b) => new Date(a.date) - new Date(b.date));
-            weightSaved = true;
-        }
-    }
-    
-    // 2. Read optional cardio running distance
+
+    // 1. Read optional cardio running distance
     let cardioSaved = false;
     if (DOM.logCardioDist) {
         const cardioText = DOM.logCardioDist.value.trim();
@@ -1305,9 +1216,8 @@ function saveWorkout() {
                 showToast('有効な走行距離を入力してください');
                 return;
             }
-            const latestWeight = weightVal || getLatestWeight();
-            const calories = Math.round(dist * latestWeight);
-            
+            const calories = Math.round(dist * getLatestWeight());
+
             state.cardioLogs.push({
                 date: date,
                 distance: dist,
@@ -1317,13 +1227,18 @@ function saveWorkout() {
             cardioSaved = true;
         }
     }
-    
-    // 3. Read gym workout if checked
+
+    // 2. Read gym workout if checked
     let workoutSaved = false;
     const recordGymWorkoutChk = document.getElementById('record-gym-workout-chk');
     if (recordGymWorkoutChk && recordGymWorkoutChk.checked) {
-        const title = DOM.workoutTitle.value.trim();
-        const category = DOM.workoutCategory.value;
+        // タイトル・部位カテゴリーの入力欄は撤去済み。
+        // 編集時は既存の値をそのまま維持し、新規作成時のみ固定のデフォルト値を使う
+        const existingWorkout = state.editingWorkoutId
+            ? state.workouts.find(w => w.id === state.editingWorkoutId)
+            : null;
+        const title = existingWorkout ? existingWorkout.title : '';
+        const category = existingWorkout ? existingWorkout.category : DEFAULT_WORKOUT_CATEGORY;
         const mood = DOM.workoutForm.querySelector('input[name="workout-mood"]:checked').value;
         const impression = DOM.workoutImpression.value.trim();
         
@@ -1385,24 +1300,28 @@ function saveWorkout() {
         workoutSaved = true;
     }
     
-    // 4. Read optional special foods
+    // 3. Read optional special foods (+ 任意のkcal数値)
     let foodSaved = false;
-    const milkteaChk = document.getElementById('food-milktea-chk');
-    const ramenChk = document.getElementById('food-ramen-chk');
-    const drinkingChk = document.getElementById('food-drinking-chk');
-    
-    const hasSpecialFood = (milkteaChk && milkteaChk.checked) || 
-                           (ramenChk && ramenChk.checked) || 
-                           (drinkingChk && drinkingChk.checked);
-                           
+    const hasSpecialFood = FOOD_ITEMS.some(item => {
+        const chk = document.getElementById(item.chkId);
+        return chk && chk.checked;
+    });
+
     const foodIndex = state.foodLogs.findIndex(f => f.date === date);
     if (hasSpecialFood) {
-        const foodRecord = {
-            date,
-            milktea: milkteaChk && milkteaChk.checked,
-            ramen: ramenChk && ramenChk.checked,
-            drinking: drinkingChk && drinkingChk.checked
-        };
+        const foodRecord = { date };
+        FOOD_ITEMS.forEach(item => {
+            const chk = document.getElementById(item.chkId);
+            const kcalInput = document.getElementById(item.kcalId);
+            const checked = !!(chk && chk.checked);
+            foodRecord[item.key] = checked;
+            let calories = null;
+            if (checked && kcalInput) {
+                const val = parseFloat(kcalInput.value);
+                calories = (!isNaN(val) && val > 0) ? val : null;
+            }
+            foodRecord[item.calKey] = calories;
+        });
         if (foodIndex !== -1) {
             state.foodLogs[foodIndex] = foodRecord;
         } else {
@@ -1417,18 +1336,17 @@ function saveWorkout() {
         }
     }
     
-    // 5. Validate that at least one type of data is recorded
-    if (!weightSaved && !cardioSaved && !workoutSaved && !foodSaved) {
-        showToast('体重、有酸素、特別な飲食、または筋トレのいずれかを入力・選択してください');
+    // 4. Validate that at least one type of data is recorded
+    if (!cardioSaved && !workoutSaved && !foodSaved) {
+        showToast('有酸素、特別な飲食、または筋トレのいずれかを入力・選択してください');
         return;
     }
-    
+
     // Save, Sync & Update Views
     saveDataAndSync();
-    
+
     // Show success message based on what was saved
     const savedParts = [];
-    if (weightSaved) savedParts.push('体重');
     if (cardioSaved) savedParts.push('有酸素');
     if (foodSaved && hasSpecialFood) savedParts.push('特別な飲食');
     if (workoutSaved) savedParts.push(state.editingWorkoutId ? '筋トレ更新' : '筋トレ');
@@ -1665,9 +1583,8 @@ function editWorkout(id) {
     const titleHeader = document.getElementById('logger-form-title');
     if (titleHeader) titleHeader.textContent = 'ワークアウト記録の編集';
 
-    // このワークアウトと無関係な体重・有酸素の入力欄はクリアしておく
+    // このワークアウトと無関係な有酸素の入力欄はクリアしておく
     // (入力中だった値がそのままこの編集の保存に紛れ込むのを防ぐ)
-    if (DOM.logWeightVal) DOM.logWeightVal.value = '';
     if (DOM.logCardioDist) DOM.logCardioDist.value = '';
     updateCardioHint();
 
@@ -1682,17 +1599,19 @@ function editWorkout(id) {
     if (DOM.workoutDate) DOM.workoutDate.value = workout.date;
     if (DOM.workoutTime) DOM.workoutTime.value = workout.time || '12:00';
     
-    // Populate special food checkboxes for this date
+    // Populate special food checkboxes (+ kcal) for this date
     const foodRecord = state.foodLogs ? state.foodLogs.find(f => f.date === workout.date) : null;
-    const milkteaChk = document.getElementById('food-milktea-chk');
-    const ramenChk = document.getElementById('food-ramen-chk');
-    const drinkingChk = document.getElementById('food-drinking-chk');
-    if (milkteaChk) milkteaChk.checked = foodRecord ? !!foodRecord.milktea : false;
-    if (ramenChk) ramenChk.checked = foodRecord ? !!foodRecord.ramen : false;
-    if (drinkingChk) drinkingChk.checked = foodRecord ? !!foodRecord.drinking : false;
+    FOOD_ITEMS.forEach(item => {
+        const chk = document.getElementById(item.chkId);
+        const kcalInput = document.getElementById(item.kcalId);
+        const checked = foodRecord ? !!foodRecord[item.key] : false;
+        if (chk) chk.checked = checked;
+        if (kcalInput) {
+            kcalInput.disabled = !checked;
+            kcalInput.value = (checked && foodRecord && foodRecord[item.calKey]) ? foodRecord[item.calKey] : '';
+        }
+    });
     
-    if (DOM.workoutTitle) DOM.workoutTitle.value = workout.title || '';
-    if (DOM.workoutCategory) DOM.workoutCategory.value = workout.category;
     if (DOM.workoutImpression) DOM.workoutImpression.value = workout.impression || '';
     
     const moodRadio = DOM.workoutForm ? DOM.workoutForm.querySelector(`input[name="workout-mood"][value="${workout.mood}"]`) : null;
@@ -1981,7 +1900,7 @@ function initSettingsControls() {
         DOM.clearAllBtn.addEventListener('click', () => {
             showConfirmModal(
                 'データの初期化',
-                '本当にすべてのワークアウトデータを削除しますか？この操作を実行すると、元に戻すことはできません。',
+                '本当にこの端末（ブラウザ）のすべてのデータを削除しますか？この操作は元に戻せません。なお、クラウド（スプレッドシート）側のバックアップはこの操作では変更されません。',
                 () => {
                     clearAllWorkouts();
                 }
@@ -2216,8 +2135,15 @@ function clearAllWorkouts() {
     state.foodLogs = [];
     state.maintenanceCalories = DEFAULT_MAINTENANCE_CALORIES;
     state.planSettings = Object.assign({}, DEFAULT_PLAN_SETTINGS);
-    saveDataAndSync();
-    showToast('すべてのデータを初期化しました。');
+
+    // 意図的に saveDataAndSync() ではなく saveData() のみを呼ぶ。
+    // ここでクラウドへ自動pushしてしまうと、誤操作による初期化がクラウド側の
+    // バックアップまで即座に空にしてしまい、復元手段を失うため。
+    // また DIRTY_KEY を明示的に false にしておくことで、次回起動時の自動同期が
+    // (dirty=trueの場合の)空pushではなく、クラウドからの復元方向に働くようにする。
+    saveData();
+    localStorage.setItem(DIRTY_KEY, 'false');
+    showToast('この端末のデータを初期化しました（クラウド側のバックアップは変更していません）。');
 
     updateDashboard();
     updateHistoryList();
@@ -2242,10 +2168,41 @@ function getLatestWeight() {
 function updateCardioHint() {
     if (!DOM.logCardioDist || !DOM.cardioCalcHint) return;
     const dist = parseFloat(DOM.logCardioDist.value) || 0;
-    const enteredWeight = DOM.logWeightVal ? parseFloat(DOM.logWeightVal.value) : 0;
-    const latestWeight = enteredWeight > 0 ? enteredWeight : getLatestWeight();
+    const latestWeight = getLatestWeight();
     const kcal = Math.round(dist * latestWeight);
     DOM.cardioCalcHint.textContent = `※消費目安: ${kcal} kcal (最新体重: ${latestWeight} kg)`;
+}
+
+// 体重だけを単独で記録する（メインの活動記録フォームとは独立）
+function saveWeightOnly() {
+    if (!DOM.weightQuickDate || !DOM.weightQuickVal) return;
+
+    const date = DOM.weightQuickDate.value;
+    const weightText = DOM.weightQuickVal.value.trim();
+    if (!date) {
+        showToast('日付を入力してください');
+        return;
+    }
+    const weight = parseFloat(weightText);
+    if (isNaN(weight) || weight <= 0) {
+        showToast('有効な体重を入力してください');
+        return;
+    }
+
+    const existingIndex = state.weightLogs.findIndex(w => w.date === date);
+    if (existingIndex !== -1) {
+        state.weightLogs[existingIndex].weight = weight;
+    } else {
+        state.weightLogs.push({ date, weight });
+    }
+    state.weightLogs.sort((a, b) => new Date(a.date) - new Date(b.date));
+
+    saveDataAndSync();
+    showToast('体重を記録しました！');
+
+    DOM.weightQuickVal.value = '';
+    updateCardioHint();
+    updateDashboard();
 }
 
 function renderWeightChart() {
@@ -3016,7 +2973,12 @@ function renderPlanTab(isEditing = false) {
                             </div>
                         </div>
 
-                        <h4 style="margin-bottom: 0.75rem; color: var(--color-secondary); font-size: 0.95rem; font-weight: 700;">消費カロリー予算（週平均 ${avgExpenditure} kcal/日）</h4>
+                        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem; gap: 0.75rem; flex-wrap: wrap;">
+                            <h4 style="margin: 0; color: var(--color-secondary); font-size: 0.95rem; font-weight: 700;">消費カロリー予算（週平均 ${avgExpenditure} kcal/日）</h4>
+                            <button class="btn btn-secondary btn-sm" id="btn-recalc-plan-burn" type="button" title="直近の筋トレ・有酸素の実績からベース消費とラン消費を再計算します">
+                                <i data-lucide="refresh-cw"></i> 実績から再計算
+                            </button>
+                        </div>
                         <div style="background: var(--bg-surface-hover); padding: 0.75rem 1rem; border-radius: 10px; font-size: 0.85rem;">
                             <div style="display: flex; justify-content: space-between; font-weight: 700; margin-bottom: 0.25rem;">
                                 <span>ベース消費（研究室・バイト含む）</span>
@@ -3032,11 +2994,14 @@ function renderPlanTab(isEditing = false) {
 
                 <!-- Roadmap Card -->
                 <div class="card">
-                    <div class="card-header">
+                    <div class="card-header flex-header">
                         <div class="header-title">
                             <i data-lucide="trending-down"></i>
                             <h3>体重減少目標ロードマップ</h3>
                         </div>
+                        <button class="btn btn-secondary btn-sm" id="btn-recalc-plan-roadmap" type="button" title="最新の体重と消費カロリー予算から、開始時・1ヶ月目・3ヶ月目の目標を再計算します">
+                            <i data-lucide="refresh-cw"></i> 実績から再計算
+                        </button>
                     </div>
                     <div class="card-body">
                         <p class="settings-desc">目標アンダーカロリー（約${deficit} kcal/日）による体重変化シミュレーションです。</p>
@@ -3111,6 +3076,20 @@ function renderPlanTab(isEditing = false) {
         document.getElementById('btn-trigger-plan-edit').addEventListener('click', () => {
             renderPlanTab(true);
         });
+
+        // Bind recalculate-from-actuals buttons
+        const recalcBurnBtn = document.getElementById('btn-recalc-plan-burn');
+        if (recalcBurnBtn) {
+            recalcBurnBtn.addEventListener('click', () => {
+                recalculatePlanExpenditure();
+            });
+        }
+        const recalcRoadmapBtn = document.getElementById('btn-recalc-plan-roadmap');
+        if (recalcRoadmapBtn) {
+            recalcRoadmapBtn.addEventListener('click', () => {
+                recalculatePlanRoadmap();
+            });
+        }
     }
     
     if (window.lucide) {
@@ -3144,7 +3123,112 @@ function savePlanSettings() {
     state.planSettings = s;
     saveData();
     showToast('最適化計画の変更を保存しました');
-    
+
+    renderPlanTab(false);
+    renderPlanSidebarWidget();
+}
+
+// 実績（体重・筋トレ頻度・有酸素ログ）から消費カロリー予算（ベース消費・ラン消費・週回数）を再計算する
+function recalculatePlanExpenditure() {
+    const s = state.planSettings || Object.assign({}, DEFAULT_PLAN_SETTINGS);
+    const latestWeight = getLatestWeight();
+
+    // 1. ベース消費: メンテナンスカロリー自動計算と同じBMR×活動係数モデル
+    //    (直近30日の筋トレ頻度からPALを決定。ランの消費分はここでは含めず、runBurn/runCount側で別途加算する)
+    const today = new Date();
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(today.getDate() - 30);
+    const workoutsLast30Days = state.workouts.filter(w => {
+        if (!w.date) return false;
+        const wDate = new Date(w.date + 'T00:00:00');
+        return wDate >= thirtyDaysAgo && wDate <= today;
+    }).length;
+
+    const bmr = 23 * latestWeight;
+    let pal = 1.2;
+    if (workoutsLast30Days >= 12) pal = 1.725;
+    else if (workoutsLast30Days >= 8) pal = 1.55;
+    else if (workoutsLast30Days >= 4) pal = 1.375;
+    const baseBurn = Math.round(bmr * pal);
+
+    // 2. ラン消費: 直近28日間の有酸素ログから、1回あたり平均消費kcalと週あたり平均回数を算出
+    const windowDays = 28;
+    const windowStart = new Date();
+    windowStart.setDate(today.getDate() - windowDays);
+    const recentCardio = state.cardioLogs.filter(c => {
+        if (!c.date) return false;
+        const cDate = new Date(c.date + 'T00:00:00');
+        return cDate >= windowStart && cDate <= today;
+    });
+
+    let runBurn = s.runBurn;
+    let runCount = s.runCount;
+    if (recentCardio.length > 0) {
+        const totalCalories = recentCardio.reduce((sum, c) => sum + (c.calories || 0), 0);
+        runBurn = Math.round(totalCalories / recentCardio.length);
+        runCount = Math.round((recentCardio.length / windowDays) * 7 * 10) / 10;
+    }
+
+    s.baseBurn = baseBurn;
+    s.runBurn = runBurn;
+    s.runCount = runCount;
+    state.planSettings = s;
+    saveData();
+
+    if (recentCardio.length > 0) {
+        showToast(`消費カロリー予算を実績から再計算しました（ベース消費: ${baseBurn}kcal, ラン: ${runBurn}kcal×週${runCount}回）`);
+    } else {
+        showToast(`ベース消費を実績から再計算しました（${baseBurn}kcal）。直近28日の有酸素記録がないためラン消費は変更していません`);
+    }
+
+    renderPlanTab(false);
+    renderPlanSidebarWidget();
+}
+
+// 実績（最新体重・現在の消費/摂取カロリー予算）から体重ロードマップ（開始時・1ヶ月目・3ヶ月目）を再計算する
+// 最終均衡点は長期的な収束目安のため自動計算の対象外とし、手動設定のまま維持する
+function recalculatePlanRoadmap() {
+    if (!state.weightLogs || state.weightLogs.length === 0) {
+        showToast('体重の記録がないため再計算できません。まず「記録する」タブで体重を記録してください');
+        return;
+    }
+
+    const s = state.planSettings || Object.assign({}, DEFAULT_PLAN_SETTINGS);
+    const latestWeight = getLatestWeight();
+
+    // renderPlanTab と同じ式で、現在の計画設定に基づく週平均の摂取・消費カロリーを算出
+    const totalDays = (parseInt(s.daysNormal) || 0) + (parseInt(s.daysMilkTea) || 0) + (parseInt(s.daysEvent) || 0);
+    const daysDenominator = totalDays > 0 ? totalDays : 7;
+    const avgIntake = Math.round(
+        ((parseInt(s.intakeNormal) || 0) * (parseInt(s.daysNormal) || 0) +
+         (parseInt(s.intakeMilkTea) || 0) * (parseInt(s.daysMilkTea) || 0) +
+         (parseInt(s.intakeEvent) || 0) * (parseInt(s.daysEvent) || 0)) / daysDenominator
+    );
+    const avgExpenditure = Math.round(
+        (parseFloat(s.baseBurn) || 0) + ((parseFloat(s.runBurn) || 0) * (parseFloat(s.runCount) || 0)) / 7
+    );
+    const deficit = avgExpenditure - avgIntake;
+
+    const KCAL_PER_KG = 7700;
+    let weight1Month = latestWeight;
+    let weight3Month = latestWeight;
+    if (deficit > 0) {
+        weight1Month = Math.round((latestWeight - (deficit * 30) / KCAL_PER_KG) * 10) / 10;
+        weight3Month = Math.round((latestWeight - (deficit * 90) / KCAL_PER_KG) * 10) / 10;
+    }
+
+    s.weightStart = latestWeight;
+    s.weight1Month = weight1Month;
+    s.weight3Month = weight3Month;
+    state.planSettings = s;
+    saveData();
+
+    if (deficit > 0) {
+        showToast(`体重ロードマップを実績から再計算しました（開始時: ${latestWeight.toFixed(1)}kg → 1ヶ月目 ${weight1Month}kg / 3ヶ月目 ${weight3Month}kg）`);
+    } else {
+        showToast(`開始時体重を${latestWeight.toFixed(1)}kgに更新しました。現在の計画はカロリー収支が赤字でないため、1ヶ月目・3ヶ月目の目標は変更していません`);
+    }
+
     renderPlanTab(false);
     renderPlanSidebarWidget();
 }
@@ -3255,20 +3339,32 @@ function updateFoodHistoryList() {
         card.className = 'card history-card';
         card.style.animation = 'slideIn 0.25s ease';
         
+        const badgeStyles = {
+            milktea: { bg: 'rgba(134,172,65,0.1)', color: 'var(--color-primary)' },
+            ramen: { bg: 'rgba(224,90,71,0.1)', color: 'var(--color-danger)' },
+            drinking: { bg: 'rgba(217,160,91,0.1)', color: 'var(--color-warning)' }
+        };
         const itemsList = [];
-        if (log.milktea) itemsList.push('<span class="badge" style="background: rgba(134,172,65,0.1); color: var(--color-primary); border: 1px solid var(--color-primary); padding: 0.25rem 0.5rem; border-radius: 12px; font-size: 0.75rem;">🍵 紅茶・お菓子</span>');
-        if (log.ramen) itemsList.push('<span class="badge" style="background: rgba(224,90,71,0.1); color: var(--color-danger); border: 1px solid var(--color-danger); padding: 0.25rem 0.5rem; border-radius: 12px; font-size: 0.75rem;">🍜 ラーメン</span>');
-        if (log.drinking) itemsList.push('<span class="badge" style="background: rgba(217,160,91,0.1); color: var(--color-warning); border: 1px solid var(--color-warning); padding: 0.25rem 0.5rem; border-radius: 12px; font-size: 0.75rem;">🍺 飲み会</span>');
-        
+        let totalKcal = 0;
+        FOOD_ITEMS.forEach(item => {
+            if (!log[item.key]) return;
+            const cal = log[item.calKey];
+            if (typeof cal === 'number' && cal > 0) totalKcal += cal;
+            const style = badgeStyles[item.key] || badgeStyles.milktea;
+            const kcalText = (typeof cal === 'number' && cal > 0) ? ` (${Math.round(cal)} kcal)` : '';
+            itemsList.push(`<span class="badge" style="background: ${style.bg}; color: ${style.color}; border: 1px solid ${style.color}; padding: 0.25rem 0.5rem; border-radius: 12px; font-size: 0.75rem;">${escapeHtml(item.label)}${kcalText}</span>`);
+        });
+
         const dateObj = new Date(log.date);
         const dayOfWeekStr = ['日', '月', '火', '水', '木', '金', '土'][dateObj.getDay()];
-        
+
         card.innerHTML = `
             <div class="card-header flex-header" style="padding: 1rem 1.25rem; border-bottom: none;">
                 <div style="display: flex; flex-direction: column; gap: 0.25rem;">
                     <div style="display: flex; align-items: center; gap: 0.5rem;">
                         <span style="font-weight: 700; font-size: 1rem;">特別な飲食</span>
                         <span style="font-size: 0.75rem; color: var(--text-muted);">${log.date} (${dayOfWeekStr})</span>
+                        ${totalKcal > 0 ? `<span style="font-size: 0.75rem; font-weight: 700; color: var(--text-secondary);">合計 ${Math.round(totalKcal)} kcal</span>` : ''}
                     </div>
                     <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.5rem;">
                         ${itemsList.join('')}

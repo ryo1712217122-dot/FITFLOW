@@ -24,7 +24,7 @@
                 </div>
                 <div class="brand-text">
                     <h1>FITFLOW</h1>
-                    <span class="app-version">v1.5.1</span>
+                    <span class="app-version">v1.6.0</span>
                 </div>
             </div>
             
@@ -65,7 +65,7 @@
             <!-- Top bar -->
             <header class="top-bar">
                 <div class="welcome">
-                    <h2 id="greeting-text">こんにちは！<span class="app-version-badge">v1.5.1</span></h2>
+                    <h2 id="greeting-text">こんにちは！<span class="app-version-badge">v1.6.0</span></h2>
                     <p id="date-text">2026年7月3日 金曜日</p>
                 </div>
                 <div class="header-right-controls">
@@ -89,9 +89,6 @@
                     <form id="workout-form" class="card log-card main-logger col-span-2">
                         <div class="form-header-row">
                             <h2 id="logger-form-title">今日の活動を一括記録</h2>
-                            <button type="submit" class="btn btn-primary" id="save-workout-btn">
-                                <i data-lucide="check"></i> 記録を保存
-                            </button>
                         </div>
                         <div class="card-body">
                             <!-- Basic Date and Time -->
@@ -113,17 +110,6 @@
 
                             <hr style="margin: 1.5rem 0; border: none; border-top: 1px solid var(--border-color);" />
 
-                            <!-- Weight Input -->
-                            <div class="form-group">
-                                <label for="log-weight-val">今日の体重 (kg) <span style="font-size: 0.8rem; font-weight: normal; color: var(--text-muted);">(任意)</span></label>
-                                <div class="input-icon-wrapper">
-                                    <i data-lucide="scale" class="input-icon"></i>
-                                    <input type="number" step="0.1" id="log-weight-val" placeholder="体重計の数値を入力してください...">
-                                </div>
-                            </div>
-
-                            <hr style="margin: 1.5rem 0; border: none; border-top: 1px solid var(--border-color);" />
-
                             <!-- Cardio Input -->
                             <div class="form-group">
                                 <label for="log-cardio-dist">今日の有酸素ランニング走行距離 (km) <span style="font-size: 0.8rem; font-weight: normal; color: var(--text-muted);">(任意)</span></label>
@@ -140,20 +126,29 @@
 
                             <!-- Special Foods/Drinks Checkbox Chips -->
                             <div class="form-group">
-                                <label style="font-weight: 600;">特別な飲食の記録 <span style="font-size: 0.8rem; font-weight: normal; color: var(--text-muted);">(任意)</span></label>
+                                <label style="font-weight: 600;">特別な飲食の記録 <span style="font-size: 0.8rem; font-weight: normal; color: var(--text-muted);">(任意・カロリーが分かれば入力)</span></label>
                                 <div style="display: flex; gap: 0.75rem; flex-wrap: wrap; margin-top: 0.5rem;">
-                                    <label style="display: flex; align-items: center; gap: 0.35rem; background: var(--bg-surface-hover); border: 1px solid var(--border-color); padding: 0.5rem 0.75rem; border-radius: 20px; cursor: pointer; user-select: none; font-size: 0.85rem;">
-                                        <input type="checkbox" id="food-milktea-chk" style="cursor: pointer; width: 16px; height: 16px;">
-                                        <span>🍵 紅茶・お菓子</span>
-                                    </label>
-                                    <label style="display: flex; align-items: center; gap: 0.35rem; background: var(--bg-surface-hover); border: 1px solid var(--border-color); padding: 0.5rem 0.75rem; border-radius: 20px; cursor: pointer; user-select: none; font-size: 0.85rem;">
-                                        <input type="checkbox" id="food-ramen-chk" style="cursor: pointer; width: 16px; height: 16px;">
-                                        <span>🍜 ラーメン</span>
-                                    </label>
-                                    <label style="display: flex; align-items: center; gap: 0.35rem; background: var(--bg-surface-hover); border: 1px solid var(--border-color); padding: 0.5rem 0.75rem; border-radius: 20px; cursor: pointer; user-select: none; font-size: 0.85rem;">
-                                        <input type="checkbox" id="food-drinking-chk" style="cursor: pointer; width: 16px; height: 16px;">
-                                        <span>🍺 飲み会</span>
-                                    </label>
+                                    <div class="food-chip-row" style="display: flex; align-items: center; gap: 0.5rem; background: var(--bg-surface-hover); border: 1px solid var(--border-color); padding: 0.5rem 0.75rem; border-radius: 20px; font-size: 0.85rem;">
+                                        <label style="display: flex; align-items: center; gap: 0.35rem; cursor: pointer; user-select: none; margin: 0;">
+                                            <input type="checkbox" id="food-milktea-chk" style="cursor: pointer; width: 16px; height: 16px;">
+                                            <span>🍵 紅茶・お菓子</span>
+                                        </label>
+                                        <input type="number" id="food-milktea-kcal" class="food-kcal-input" placeholder="kcal" min="0" step="1" disabled>
+                                    </div>
+                                    <div class="food-chip-row" style="display: flex; align-items: center; gap: 0.5rem; background: var(--bg-surface-hover); border: 1px solid var(--border-color); padding: 0.5rem 0.75rem; border-radius: 20px; font-size: 0.85rem;">
+                                        <label style="display: flex; align-items: center; gap: 0.35rem; cursor: pointer; user-select: none; margin: 0;">
+                                            <input type="checkbox" id="food-ramen-chk" style="cursor: pointer; width: 16px; height: 16px;">
+                                            <span>🍜 ラーメン</span>
+                                        </label>
+                                        <input type="number" id="food-ramen-kcal" class="food-kcal-input" placeholder="kcal" min="0" step="1" disabled>
+                                    </div>
+                                    <div class="food-chip-row" style="display: flex; align-items: center; gap: 0.5rem; background: var(--bg-surface-hover); border: 1px solid var(--border-color); padding: 0.5rem 0.75rem; border-radius: 20px; font-size: 0.85rem;">
+                                        <label style="display: flex; align-items: center; gap: 0.35rem; cursor: pointer; user-select: none; margin: 0;">
+                                            <input type="checkbox" id="food-drinking-chk" style="cursor: pointer; width: 16px; height: 16px;">
+                                            <span>🍺 飲み会</span>
+                                        </label>
+                                        <input type="number" id="food-drinking-kcal" class="food-kcal-input" placeholder="kcal" min="0" step="1" disabled>
+                                    </div>
                                 </div>
                             </div>
 
@@ -169,25 +164,6 @@
 
                             <div id="gym-workout-fields-container">
                                 <div class="form-group">
-                                    <label for="workout-title">タイトル（例: 胸トレ、全身など）</label>
-                                    <input type="text" id="workout-title" placeholder="ジムでのトレーニング" value="ジムでのトレーニング">
-                                </div>
-                                
-                                <div class="form-group margin-top-1">
-                                    <label for="workout-category">部位カテゴリー <span class="required">*</span></label>
-                                    <select id="workout-category">
-                                        <option value="胸 (Chest)">胸 (Chest)</option>
-                                        <option value="背中 (Back)">背中 (Back)</option>
-                                        <option value="肩 (Shoulders)">肩 (Shoulders)</option>
-                                        <option value="腕 (Arms)">腕 (Arms)</option>
-                                        <option value="脚 (Legs)">脚 (Legs)</option>
-                                        <option value="腹筋 (Core)">腹筋 (Core)</option>
-                                        <option value="有酸素 (Cardio)">有酸素 (Cardio)</option>
-                                        <option value="その他 (Other)" selected>その他 (Other)</option>
-                                    </select>
-                                </div>
-
-                                <div class="form-group margin-top-1">
                                     <label>今日の調子</label>
                                     <div class="mood-selector">
                                         <label class="mood-option">
@@ -233,12 +209,47 @@
                                     </div>
                                 </details>
                             </div>
+
+                            <button type="submit" class="btn btn-primary btn-full margin-top-1" id="save-workout-btn">
+                                <i data-lucide="check"></i> 記録を保存
+                            </button>
                         </div>
                     </form>
 
-                    <!-- Optimization Plan Sidebar Widget -->
-                    <div class="side-loggers-column" id="plan-sidebar-widget-container">
-                        <!-- Generated by JS -->
+                    <!-- Side column: weight quick logger + optimization plan widget -->
+                    <div class="side-loggers-column">
+                        <!-- Weight Quick Logger (体重だけを単独で記録するためのフォーム) -->
+                        <form id="weight-quick-form" class="card log-card">
+                            <div class="card-header">
+                                <div class="header-title">
+                                    <i data-lucide="scale"></i>
+                                    <h3>体重を記録</h3>
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                <div class="form-group">
+                                    <label for="weight-quick-date">日付 <span class="required">*</span></label>
+                                    <div class="input-icon-wrapper">
+                                        <i data-lucide="calendar" class="input-icon"></i>
+                                        <input type="date" id="weight-quick-date" required>
+                                    </div>
+                                </div>
+                                <div class="form-group margin-top-1">
+                                    <label for="weight-quick-val">体重 (kg) <span class="required">*</span></label>
+                                    <div class="input-icon-wrapper">
+                                        <i data-lucide="scale" class="input-icon"></i>
+                                        <input type="number" step="0.1" id="weight-quick-val" placeholder="体重計の数値を入力してください..." required>
+                                    </div>
+                                </div>
+                                <button type="submit" class="btn btn-primary btn-full margin-top-1">
+                                    <i data-lucide="check"></i> 体重を記録
+                                </button>
+                            </div>
+                        </form>
+
+                        <div id="plan-sidebar-widget-container">
+                            <!-- Generated by JS -->
+                        </div>
                     </div><!-- Global datalist for popular exercises list suggestions -->
                 <datalist id="popular-exercises">
                     <option value="ベンチプレス">
