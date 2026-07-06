@@ -2082,6 +2082,7 @@ function autoSyncFromCloud() {
     })
     .then(data => {
         if (data && !data.error) {
+            data = normalizeImportedData(data);
             const importedWorkouts = data.workouts || [];
             const importedWeights = data.weightLogs || [];
             const importedCardio = data.cardioLogs || [];
@@ -2109,6 +2110,8 @@ function autoSyncFromCloud() {
                 updateHistoryList();
                 
                 showToast('☁️ クラウドデータを同期しました');
+            } else {
+                console.warn("☁️ Cloud workouts failed schema validation.");
             }
         }
     })
@@ -2132,6 +2135,7 @@ function restoreFromSheets() {
     .then(res => res.json())
     .then(data => {
         if (data && !data.error) {
+            data = normalizeImportedData(data);
             const importedWorkouts = data.workouts || [];
             const importedWeights = data.weightLogs || [];
             const importedCardio = data.cardioLogs || [];
@@ -2158,4 +2162,88 @@ function restoreFromSheets() {
         console.error('Sheets restore error', err);
         showToast('復元に失敗しました。接続設定を確認してください');
     });
+}
+
+// Normalize spreadsheet ISO Dates/Times to fit app format (e.g. YYYY-MM-DD, HH:MM) without offset shifting
+function normalizeImportedData(data) {
+    if (!data) return data;
+    
+    // Normalize workouts
+    if (Array.isArray(data.workouts)) {
+        data.workouts = data.workouts.map(w => {
+            if (w) {
+                w.id = String(w.id || '');
+                w.title = String(w.title || '');
+                w.category = String(w.category || '');
+                w.mood = String(w.mood || '');
+                w.impression = String(w.impression || '');
+                w.date = normalizeDate(w.date);
+                w.time = normalizeTime(w.time);
+                
+                if (!Array.isArray(w.exercises)) {
+                    w.exercises = [];
+                }
+            }
+            return w;
+        });
+    }
+    
+    // Normalize weights
+    if (Array.isArray(data.weightLogs)) {
+        data.weightLogs = data.weightLogs.map(wl => {
+            if (wl) {
+                wl.date = normalizeDate(wl.date);
+                wl.weight = parseFloat(wl.weight) || 0;
+            }
+            return wl;
+        });
+    }
+    
+    // Normalize cardios
+    if (Array.isArray(data.cardioLogs)) {
+        data.cardioLogs = data.cardioLogs.map(c => {
+            if (c) {
+                c.date = normalizeDate(c.date);
+                c.distance = parseFloat(c.distance) || 0;
+                c.calories = parseFloat(c.calories) || 0;
+            }
+            return c;
+        });
+    }
+    
+    // Normalize maintenance
+    if (data.maintenanceCalories) {
+        data.maintenanceCalories = parseInt(data.maintenanceCalories) || DEFAULT_MAINTENANCE_CALORIES;
+    }
+    
+    return data;
+}
+
+function normalizeDate(dateStr) {
+    if (!dateStr) return '';
+    const str = String(dateStr);
+    if (str.includes('T') || str.includes('/') || str.includes('-')) {
+        const d = new Date(str);
+        if (!isNaN(d.getTime())) {
+            const y = d.getFullYear();
+            const m = String(d.getMonth() + 1).padStart(2, '0');
+            const day = String(d.getDate()).padStart(2, '0');
+            return `${y}-${m}-${day}`;
+        }
+    }
+    return str;
+}
+
+function normalizeTime(timeStr) {
+    if (!timeStr) return '';
+    const str = String(timeStr);
+    if (str.includes('T')) {
+        const d = new Date(str);
+        if (!isNaN(d.getTime())) {
+            const h = String(d.getHours()).padStart(2, '0');
+            const min = String(d.getMinutes()).padStart(2, '0');
+            return `${h}:${min}`;
+        }
+    }
+    return str;
 }
