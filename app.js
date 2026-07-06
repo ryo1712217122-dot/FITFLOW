@@ -287,6 +287,7 @@ document.addEventListener('DOMContentLoaded', () => {
     updateDashboard();
     updateHistoryList();
     updateCardioHistoryList();
+    updateWeightHistoryList();
     updateFoodHistoryList();
     renderPlanTab();
     renderPlanSidebarWidget();
@@ -486,6 +487,7 @@ function initNavigation() {
             } else if (tabId === 'history') {
                 updateHistoryList();
                 updateCardioHistoryList();
+                updateWeightHistoryList();
                 updateFoodHistoryList();
             } else if (tabId === 'quick-log') {
                 if (!state.editingWorkoutId) {
@@ -580,7 +582,7 @@ function initDateTexts() {
     else greeting = 'こんばんは！今日もお疲れ様です🌙';
     
     if (DOM.greetingText) {
-        DOM.greetingText.innerHTML = `${greeting} <span class="app-version-badge">v1.6.0</span>`;
+        DOM.greetingText.innerHTML = `${greeting} <span class="app-version-badge">v1.7.0</span>`;
     }
 }
 
@@ -1360,8 +1362,9 @@ function saveWorkout() {
     updateDashboard();
     updateHistoryList();
     updateCardioHistoryList();
+    updateWeightHistoryList();
     updateFoodHistoryList();
-    
+
     // Move to history tab
     const historyNavItem = document.querySelector('[data-tab="history"]');
     if (historyNavItem) {
@@ -1387,21 +1390,25 @@ function initHistoryControls() {
     // Sub tabs events
     const tabWorkouts = document.getElementById('history-tab-workouts');
     const tabCardio = document.getElementById('history-tab-cardio');
+    const tabWeight = document.getElementById('history-tab-weight');
     const tabFood = document.getElementById('history-tab-food');
     const panelWorkouts = document.getElementById('history-workouts-panel');
     const panelCardio = document.getElementById('history-cardio-panel');
+    const panelWeight = document.getElementById('history-weight-panel');
     const panelFood = document.getElementById('history-food-panel');
 
-    if (tabWorkouts && tabCardio && tabFood && panelWorkouts && panelCardio && panelFood) {
+    if (tabWorkouts && tabCardio && tabWeight && tabFood && panelWorkouts && panelCardio && panelWeight && panelFood) {
+        const allTabs = [tabWorkouts, tabCardio, tabWeight, tabFood];
+        const allPanels = [panelWorkouts, panelCardio, panelWeight, panelFood];
         const switchSubTab = (activeTab, activePanel) => {
-            [tabWorkouts, tabCardio, tabFood].forEach(t => {
+            allTabs.forEach(t => {
                 t.classList.remove('btn-primary');
                 t.classList.add('btn-secondary');
             });
-            [panelWorkouts, panelCardio, panelFood].forEach(p => {
+            allPanels.forEach(p => {
                 p.style.display = 'none';
             });
-            
+
             activeTab.classList.remove('btn-secondary');
             activeTab.classList.add('btn-primary');
             activePanel.style.display = 'block';
@@ -1415,6 +1422,11 @@ function initHistoryControls() {
         tabCardio.addEventListener('click', () => {
             switchSubTab(tabCardio, panelCardio);
             updateCardioHistoryList();
+        });
+
+        tabWeight.addEventListener('click', () => {
+            switchSubTab(tabWeight, panelWeight);
+            updateWeightHistoryList();
         });
 
         tabFood.addEventListener('click', () => {
@@ -2123,6 +2135,7 @@ function mergeImportedData(workouts, weights, cardio, maintenance, foodLogs = []
     updateDashboard();
     updateHistoryList();
     updateCardioHistoryList();
+    updateWeightHistoryList();
     updateFoodHistoryList();
     renderPlanTab();
     renderPlanSidebarWidget();
@@ -2148,6 +2161,7 @@ function clearAllWorkouts() {
     updateDashboard();
     updateHistoryList();
     updateCardioHistoryList();
+    updateWeightHistoryList();
     updateFoodHistoryList();
     renderPlanTab();
     renderPlanSidebarWidget();
@@ -2203,6 +2217,7 @@ function saveWeightOnly() {
     DOM.weightQuickVal.value = '';
     updateCardioHint();
     updateDashboard();
+    updateWeightHistoryList();
 }
 
 function renderWeightChart() {
@@ -2494,6 +2509,7 @@ function autoSyncFromCloud() {
             updateDashboard();
             updateHistoryList();
             updateCardioHistoryList();
+            updateWeightHistoryList();
             updateFoodHistoryList();
             renderPlanTab();
             renderPlanSidebarWidget();
@@ -2640,14 +2656,15 @@ function updateCardioHistoryList() {
     const container = document.getElementById('cardio-history-container');
     const countSpan = document.getElementById('cardio-history-count');
     if (!container || !countSpan) return;
-    
-    // Sort cardio logs by date descending
-    state.cardioLogs.sort((a, b) => new Date(b.date) - new Date(a.date));
-    
-    countSpan.textContent = state.cardioLogs.length;
+
+    // 表示用の並び替えは state.cardioLogs 自体を書き換えず、コピー配列に対して行う
+    // (直接ソートすると getLatestWeight() のような「末尾 = 最新」前提のロジックが壊れるため)
+    const sortedLogs = state.cardioLogs.slice().sort((a, b) => new Date(b.date) - new Date(a.date));
+
+    countSpan.textContent = sortedLogs.length;
     container.innerHTML = '';
-    
-    if (state.cardioLogs.length === 0) {
+
+    if (sortedLogs.length === 0) {
         container.innerHTML = `
             <div class="card empty-state">
                 <i data-lucide="flame"></i>
@@ -2657,15 +2674,15 @@ function updateCardioHistoryList() {
         if (window.lucide) lucide.createIcons();
         return;
     }
-    
-    state.cardioLogs.forEach((c, idx) => {
+
+    sortedLogs.forEach((c) => {
         const card = document.createElement('div');
         card.classList.add('card');
         card.classList.add('history-card');
         card.classList.add('cardio');
-        
+
         const formattedDate = formatDateJp(c.date);
-        
+
         card.innerHTML = `
             <div class="history-card-header">
                 <div class="history-title-area">
@@ -2680,12 +2697,12 @@ function updateCardioHistoryList() {
                     </div>
                 </div>
                 <div class="history-actions">
-                    <button class="btn-icon text-danger btn-delete-cardio" data-index="${idx}" title="削除する">
+                    <button class="btn-icon text-danger btn-delete-cardio" title="削除する">
                         <i data-lucide="trash-2"></i>
                     </button>
                 </div>
             </div>
-            
+
             <div style="margin-top: 1rem; display: flex; gap: 2rem;">
                 <div>
                     <span class="text-muted" style="font-size: 0.85rem; display: block;">走行距離</span>
@@ -2697,32 +2714,152 @@ function updateCardioHistoryList() {
                 </div>
             </div>
         `;
-        
+
         card.querySelector('.btn-delete-cardio').addEventListener('click', () => {
             showConfirmModal(
                 '記録の削除',
                 `このランニング記録（${formattedDate} - ${c.distance}km）を削除しますか？`,
                 () => {
-                    deleteCardioLog(idx);
+                    deleteCardioLog(c);
                 }
             );
         });
-        
+
         container.appendChild(card);
     });
-    
+
     if (window.lucide) {
         lucide.createIcons();
     }
 }
 
-function deleteCardioLog(index) {
-    if (index >= 0 && index < state.cardioLogs.length) {
+function deleteCardioLog(entry) {
+    const index = state.cardioLogs.indexOf(entry);
+    if (index >= 0) {
         state.cardioLogs.splice(index, 1);
         saveDataAndSync();
         showToast('有酸素記録を削除しました');
         updateDashboard();
         updateCardioHistoryList();
+    }
+}
+
+// 体重履歴一覧（誤って記録した値の確認・修正・削除ができる管理画面）
+function updateWeightHistoryList() {
+    const container = document.getElementById('weight-history-container');
+    const countSpan = document.getElementById('weight-history-count');
+    if (!container || !countSpan) return;
+
+    // 表示用の並び替えは state.weightLogs 自体を書き換えず、コピー配列に対して行う
+    // (直接ソートすると getLatestWeight() の「末尾 = 最新」前提が壊れ、ダッシュボードの最新体重がおかしくなる)
+    const sortedLogs = state.weightLogs.slice().sort((a, b) => new Date(b.date) - new Date(a.date));
+
+    countSpan.textContent = sortedLogs.length;
+    container.innerHTML = '';
+
+    if (sortedLogs.length === 0) {
+        container.innerHTML = `
+            <div class="card empty-state">
+                <i data-lucide="scale"></i>
+                <p>体重の記録はありません。</p>
+            </div>
+        `;
+        if (window.lucide) lucide.createIcons();
+        return;
+    }
+
+    sortedLogs.forEach((w) => {
+        const card = document.createElement('div');
+        card.classList.add('card', 'history-card', 'weight-history-card');
+
+        const formattedDate = formatDateJp(w.date);
+
+        card.innerHTML = `
+            <div class="history-card-header">
+                <div class="history-title-area">
+                    <div class="history-title-row">
+                        <span class="history-mood-badge">⚖️</span>
+                        <h4>体重記録</h4>
+                    </div>
+                    <div class="history-date-row">
+                        <i data-lucide="calendar"></i>
+                        <span>${formattedDate}</span>
+                    </div>
+                </div>
+                <div class="history-actions">
+                    <button class="btn-icon btn-edit-weight" title="修正する">
+                        <i data-lucide="pencil"></i>
+                    </button>
+                    <button class="btn-icon text-danger btn-delete-weight" title="削除する">
+                        <i data-lucide="trash-2"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div class="weight-history-value-row" style="margin-top: 1rem;">
+                <span class="text-muted" style="font-size: 0.85rem; display: block;">体重</span>
+                <span class="weight-value-display" style="font-weight: 700; font-size: 1.2rem; color: var(--color-primary);">${w.weight.toFixed(1)} <span style="font-size: 0.85rem; font-weight: normal;">kg</span></span>
+            </div>
+        `;
+
+        card.querySelector('.btn-edit-weight').addEventListener('click', () => {
+            const valueRow = card.querySelector('.weight-history-value-row');
+            valueRow.innerHTML = `
+                <span class="text-muted" style="font-size: 0.85rem; display: block;">体重を修正</span>
+                <div style="display: flex; align-items: center; gap: 0.5rem; margin-top: 0.25rem;">
+                    <input type="number" step="0.1" class="weight-edit-input" value="${w.weight}" style="max-width: 120px;">
+                    <button type="button" class="btn btn-primary btn-sm btn-save-weight-edit">保存</button>
+                </div>
+            `;
+            const input = valueRow.querySelector('.weight-edit-input');
+            input.focus();
+            valueRow.querySelector('.btn-save-weight-edit').addEventListener('click', () => {
+                const newWeight = parseFloat(input.value);
+                if (isNaN(newWeight) || newWeight <= 0) {
+                    showToast('有効な体重を入力してください');
+                    return;
+                }
+                editWeightLog(w, newWeight);
+            });
+        });
+
+        card.querySelector('.btn-delete-weight').addEventListener('click', () => {
+            showConfirmModal(
+                '記録の削除',
+                `この体重記録（${formattedDate} - ${w.weight}kg）を削除しますか？`,
+                () => {
+                    deleteWeightLog(w);
+                }
+            );
+        });
+
+        container.appendChild(card);
+    });
+
+    if (window.lucide) {
+        lucide.createIcons();
+    }
+}
+
+function editWeightLog(entry, newWeight) {
+    const index = state.weightLogs.indexOf(entry);
+    if (index >= 0) {
+        state.weightLogs[index].weight = newWeight;
+        saveDataAndSync();
+        showToast('体重記録を修正しました');
+        updateDashboard();
+        updateWeightHistoryList();
+    }
+}
+
+function deleteWeightLog(entry) {
+    const index = state.weightLogs.indexOf(entry);
+    if (index >= 0) {
+        state.weightLogs.splice(index, 1);
+        saveDataAndSync();
+        showToast('体重記録を削除しました');
+        updateDashboard();
+        updateWeightHistoryList();
     }
 }
 
