@@ -222,14 +222,10 @@ const DOM = {
     workoutImpression: document.getElementById('workout-impression'),
     exerciseList: document.getElementById('exercise-list'),
     addExerciseBtn: document.getElementById('add-exercise-btn'),
-    noExercisesHelper: document.getElementById('no-exercises-helper'),
     saveWorkoutBtn: document.getElementById('save-workout-btn'),
-    
-    // Dashboard mini forms
-    weightForm: document.getElementById('weight-form'),
+
+    // Quick log extra fields (weight / cardio, part of the unified workout-form)
     logWeightVal: document.getElementById('log-weight-val'),
-    cardioForm: document.getElementById('cardio-form'),
-    logCardioDate: document.getElementById('log-cardio-date'),
     logCardioDist: document.getElementById('log-cardio-dist'),
     cardioCalcHint: document.getElementById('cardio-calc-hint'),
     todayBurnedKcal: document.getElementById('today-burned-kcal'),
@@ -317,6 +313,17 @@ function getLocalDateString(date = new Date()) {
     const m = String(date.getMonth() + 1).padStart(2, '0');
     const d = String(date.getDate()).padStart(2, '0');
     return `${y}-${m}-${d}`;
+}
+
+// Escape free-text user input before inserting it via innerHTML
+function escapeHtml(str) {
+    if (str === null || str === undefined) return '';
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
 }
 
 // ==========================================
@@ -1094,13 +1101,12 @@ function resetWorkoutForm() {
     
     const now = new Date();
     if (DOM.workoutDate) DOM.workoutDate.value = getLocalDateString(now);
-    
+
     const hours = String(now.getHours()).padStart(2, '0');
     const minutes = String(now.getMinutes()).padStart(2, '0');
     if (DOM.workoutTime) DOM.workoutTime.value = `${hours}:${minutes}`;
-    
+
     if (DOM.exerciseList) DOM.exerciseList.innerHTML = '';
-    if (DOM.noExercisesHelper) DOM.noExercisesHelper.style.display = 'flex';
     if (DOM.saveWorkoutBtn) DOM.saveWorkoutBtn.innerHTML = '<i data-lucide="check"></i> 記録を保存する';
     
     const titleHeader = document.getElementById('logger-form-title');
@@ -1122,10 +1128,7 @@ function resetWorkoutForm() {
 
 function addExerciseBlock(data = null) {
     if (!DOM.exerciseList) return;
-    if (DOM.noExercisesHelper) {
-        DOM.noExercisesHelper.style.display = 'none';
-    }
-    
+
     const exerciseIndex = DOM.exerciseList.children.length;
     const exerciseBlock = document.createElement('div');
     exerciseBlock.classList.add('exercise-item');
@@ -1206,11 +1209,6 @@ function addExerciseBlock(data = null) {
             Array.from(DOM.exerciseList.children).forEach((child, idx) => {
                 child.setAttribute('data-index', idx);
             });
-            if (DOM.exerciseList.children.length === 0) {
-                if (DOM.noExercisesHelper) {
-                    DOM.noExercisesHelper.style.display = 'flex';
-                }
-            }
         }, 200);
     });
     
@@ -1597,7 +1595,7 @@ function createHistoryCard(workout) {
             
             exercisesHtml += `
                 <div class="history-exercise-box">
-                    <div class="history-exercise-name">${ex.name}</div>
+                    <div class="history-exercise-name">${escapeHtml(ex.name)}</div>
                     <div class="history-sets-list">${setsListHtml}</div>
                 </div>
             `;
@@ -1611,8 +1609,8 @@ function createHistoryCard(workout) {
             <div class="history-title-area">
                 <div class="history-title-row">
                     <span class="history-mood-badge" title="調子: ${workout.mood}">${emoji}</span>
-                    <h4>${workout.title}</h4>
-                    <span class="category-tag">${workout.category}</span>
+                    <h4>${escapeHtml(workout.title)}</h4>
+                    <span class="category-tag">${escapeHtml(workout.category)}</span>
                 </div>
                 <div class="history-date-row">
                     <i data-lucide="calendar"></i>
@@ -1629,7 +1627,7 @@ function createHistoryCard(workout) {
             </div>
         </div>
         
-        ${workout.impression ? `<div class="history-impression">${workout.impression.replace(/\n/g, '<br>')}</div>` : ''}
+        ${workout.impression ? `<div class="history-impression">${escapeHtml(workout.impression).replace(/\n/g, '<br>')}</div>` : ''}
         
         <div class="history-exercises-container">
             <div class="history-exercises-title">
@@ -1660,13 +1658,19 @@ function editWorkout(id) {
     if (!workout) return;
     
     state.editingWorkoutId = id;
-    
+
     const formNavItem = document.querySelector('[data-tab="quick-log"]');
     if (formNavItem) formNavItem.click();
-    
+
     const titleHeader = document.getElementById('logger-form-title');
     if (titleHeader) titleHeader.textContent = 'ワークアウト記録の編集';
-    
+
+    // このワークアウトと無関係な体重・有酸素の入力欄はクリアしておく
+    // (入力中だった値がそのままこの編集の保存に紛れ込むのを防ぐ)
+    if (DOM.logWeightVal) DOM.logWeightVal.value = '';
+    if (DOM.logCardioDist) DOM.logCardioDist.value = '';
+    updateCardioHint();
+
     const recordGymWorkoutChk = document.getElementById('record-gym-workout-chk');
     const gymWorkoutFieldsContainer = document.getElementById('gym-workout-fields-container');
     if (recordGymWorkoutChk) recordGymWorkoutChk.checked = true;
@@ -1696,10 +1700,7 @@ function editWorkout(id) {
     
     if (DOM.exerciseList) {
         DOM.exerciseList.innerHTML = '';
-        if (DOM.noExercisesHelper) {
-            DOM.noExercisesHelper.style.display = 'none';
-        }
-        
+
         if (workout.exercises) {
             workout.exercises.forEach(ex => {
                 addExerciseBlock(ex);
@@ -2036,11 +2037,13 @@ function calculateFluidMaintenance() {
 
 function exportWorkouts() {
     const backupData = {
-        version: '1.2.1',
+        version: '1.5.0',
         workouts: state.workouts,
         weightLogs: state.weightLogs,
         cardioLogs: state.cardioLogs,
-        maintenanceCalories: state.maintenanceCalories
+        maintenanceCalories: state.maintenanceCalories,
+        foodLogs: state.foodLogs,
+        planSettings: state.planSettings
     };
     
     const dataStr = JSON.stringify(backupData, null, 2);
@@ -2068,7 +2071,9 @@ function importWorkouts(event) {
             let importedWeights = [];
             let importedCardio = [];
             let importedMaint = DEFAULT_MAINTENANCE_CALORIES;
-            
+            let importedFood = [];
+            let importedPlan = null;
+
             if (Array.isArray(parsed)) {
                 // Legacy workouts backup format
                 importedWorkouts = parsed;
@@ -2078,22 +2083,24 @@ function importWorkouts(event) {
                 importedWeights = parsed.weightLogs || [];
                 importedCardio = parsed.cardioLogs || [];
                 importedMaint = parsed.maintenanceCalories || DEFAULT_MAINTENANCE_CALORIES;
+                importedFood = parsed.foodLogs || [];
+                importedPlan = parsed.planSettings || null;
             } else {
                 showToast('無効なファイル形式です。');
                 return;
             }
-            
+
             // Validate incoming workouts structure
             if (!validateWorkoutsSchema(importedWorkouts)) {
                 showToast('インポートデータのフォーマットが不正です。');
                 return;
             }
-            
+
             showConfirmModal(
                 'データの復元',
                 `ファイルを読み込みました（ワークアウト: ${importedWorkouts.length}件, 体重ログ: ${importedWeights.length}件）。既存データにマージしますか？`,
                 () => {
-                    mergeImportedData(importedWorkouts, importedWeights, importedCardio, importedMaint);
+                    mergeImportedData(importedWorkouts, importedWeights, importedCardio, importedMaint, importedFood, importedPlan);
                 }
             );
         } catch (err) {
@@ -2134,7 +2141,7 @@ function validateWorkoutsSchema(data) {
     return true;
 }
 
-function mergeImportedData(workouts, weights, cardio, maintenance) {
+function mergeImportedData(workouts, weights, cardio, maintenance, foodLogs = [], planSettings = null) {
     // 1. Merge workouts by ID
     const workoutsMap = {};
     state.workouts.forEach(w => workoutsMap[w.id] = w);
@@ -2174,13 +2181,30 @@ function mergeImportedData(workouts, weights, cardio, maintenance) {
         state.maintenanceCalories = maintenance;
         if (DOM.maintenanceInput) DOM.maintenanceInput.value = maintenance;
     }
-    
+
+    // 5. Merge food logs by date
+    const foodMap = {};
+    state.foodLogs.forEach(f => foodMap[f.date] = f);
+    (foodLogs || []).forEach(f => {
+        if (f && f.date) {
+            foodMap[f.date] = f;
+        }
+    });
+    state.foodLogs = Object.values(foodMap);
+    state.foodLogs.sort((a, b) => new Date(a.date) - new Date(b.date));
+
+    // 6. Merge plan settings (incoming values take precedence when provided)
+    if (planSettings && typeof planSettings === 'object') {
+        state.planSettings = Object.assign({}, DEFAULT_PLAN_SETTINGS, state.planSettings, planSettings);
+    }
+
     saveDataAndSync();
     showToast('バックアップデータをマージ・復元しました！');
-    
+
     updateDashboard();
     updateHistoryList();
     updateCardioHistoryList();
+    updateFoodHistoryList();
     renderPlanTab();
     renderPlanSidebarWidget();
 }
@@ -2189,43 +2213,23 @@ function clearAllWorkouts() {
     state.workouts = [];
     state.weightLogs = [];
     state.cardioLogs = [];
+    state.foodLogs = [];
     state.maintenanceCalories = DEFAULT_MAINTENANCE_CALORIES;
+    state.planSettings = Object.assign({}, DEFAULT_PLAN_SETTINGS);
     saveDataAndSync();
     showToast('すべてのデータを初期化しました。');
-    
+
     updateDashboard();
     updateHistoryList();
     updateCardioHistoryList();
+    updateFoodHistoryList();
+    renderPlanTab();
+    renderPlanSidebarWidget();
 }
 
 // ==========================================
 // WEIGHT & CARDIO & CALORIE LOGGING LOGIC
 // ==========================================
-
-function saveWeight() {
-    if (!DOM.logWeightVal) return;
-    const weight = parseFloat(DOM.logWeightVal.value);
-    if (isNaN(weight) || weight <= 0) {
-        showToast('有効な体重を入力してください');
-        return;
-    }
-    
-    const date = getLocalDateString();
-    
-    const existingIndex = state.weightLogs.findIndex(w => w.date === date);
-    if (existingIndex !== -1) {
-        state.weightLogs[existingIndex].weight = weight;
-    } else {
-        state.weightLogs.push({ date, weight });
-    }
-    
-    state.weightLogs.sort((a, b) => new Date(a.date) - new Date(b.date));
-    
-    saveDataAndSync();
-    DOM.logWeightVal.value = '';
-    showToast('体重を記録しました！');
-    updateDashboard();
-}
 
 function getLatestWeight() {
     if (state.weightLogs && state.weightLogs.length > 0) {
@@ -2242,41 +2246,6 @@ function updateCardioHint() {
     const latestWeight = enteredWeight > 0 ? enteredWeight : getLatestWeight();
     const kcal = Math.round(dist * latestWeight);
     DOM.cardioCalcHint.textContent = `※消費目安: ${kcal} kcal (最新体重: ${latestWeight} kg)`;
-}
-
-function saveCardio() {
-    if (!DOM.logCardioDist || !DOM.logCardioDate) return;
-    const dist = parseFloat(DOM.logCardioDist.value);
-    const dateStr = DOM.logCardioDate.value;
-    
-    if (isNaN(dist) || dist <= 0) {
-        showToast('有効な走行距離を入力してください');
-        return;
-    }
-    if (!dateStr) {
-        showToast('日付を入力してください');
-        return;
-    }
-    
-    const latestWeight = getLatestWeight();
-    const calories = Math.round(dist * latestWeight);
-    
-    state.cardioLogs.push({
-        date: dateStr,
-        distance: dist,
-        calories: calories
-    });
-    
-    state.cardioLogs.sort((a, b) => new Date(a.date) - new Date(b.date));
-    
-    saveDataAndSync();
-    
-    DOM.logCardioDist.value = '';
-    DOM.logCardioDate.value = getLocalDateString();
-    updateCardioHint();
-    
-    showToast('ランニング距離を記録しました！');
-    updateDashboard();
 }
 
 function renderWeightChart() {
@@ -2464,7 +2433,9 @@ function triggerSync(isSilent = false) {
         workouts: state.workouts,
         weightLogs: state.weightLogs,
         cardioLogs: state.cardioLogs,
-        maintenanceCalories: state.maintenanceCalories
+        maintenanceCalories: state.maintenanceCalories,
+        foodLogs: state.foodLogs,
+        planSettings: state.planSettings
     };
     
     fetch(state.sheetsUrl, {
@@ -2527,33 +2498,50 @@ function autoSyncFromCloud() {
             const importedWeights = data.weightLogs || [];
             const importedCardio = data.cardioLogs || [];
             const importedMaint = data.maintenanceCalories || DEFAULT_MAINTENANCE_CALORIES;
-            
-            if (validateWorkoutsSchema(importedWorkouts)) {
-                state.workouts = importedWorkouts;
-                state.weightLogs = importedWeights;
-                state.cardioLogs = importedCardio;
-                state.maintenanceCalories = importedMaint;
-                
-                // Sort
-                state.weightLogs.sort((a, b) => new Date(a.date) - new Date(b.date));
-                state.cardioLogs.sort((a, b) => new Date(a.date) - new Date(b.date));
-                
-                // Save locally but keep clean state
-                localStorage.setItem('fitflow_workouts', JSON.stringify(state.workouts));
-                localStorage.setItem('fitflow_weight_logs', JSON.stringify(state.weightLogs));
-                localStorage.setItem('fitflow_cardio_logs', JSON.stringify(state.cardioLogs));
-                localStorage.setItem('fitflow_maintenance', state.maintenanceCalories.toString());
-                localStorage.setItem(DIRTY_KEY, 'false');
-                
-                // Update views
-                updateDashboard();
-                updateHistoryList();
-                updateCardioHistoryList();
-                
-                showToast('☁️ クラウドデータを同期しました');
-            } else {
+            const importedFood = data.foodLogs || [];
+            const importedPlan = data.planSettings || null;
+
+            if (!validateWorkoutsSchema(importedWorkouts)) {
                 console.warn("☁️ Cloud workouts failed schema validation.");
+                return;
             }
+
+            // 安全策: クラウド側の件数がローカルより明らかに少ない場合、
+            // スプレッドシートの誤操作・破損の可能性があるため自動上書きせず、
+            // 「クラウドから復元」の確認ダイアログ経由での手動判断に委ねる
+            const localTotal = state.workouts.length + state.weightLogs.length + state.cardioLogs.length;
+            const remoteTotal = importedWorkouts.length + importedWeights.length + importedCardio.length;
+            if (localTotal > 0 && remoteTotal < localTotal) {
+                console.warn(`☁️ クラウドの件数(${remoteTotal})がローカル(${localTotal})より少ないため自動同期をスキップしました。`);
+                showToast('⚠️ クラウド側のデータ件数が減少しているため自動同期をスキップしました');
+                return;
+            }
+
+            state.workouts = importedWorkouts;
+            state.weightLogs = importedWeights;
+            state.cardioLogs = importedCardio;
+            state.maintenanceCalories = importedMaint;
+            state.foodLogs = importedFood;
+            if (importedPlan) state.planSettings = importedPlan;
+
+            // Sort
+            state.weightLogs.sort((a, b) => new Date(a.date) - new Date(b.date));
+            state.cardioLogs.sort((a, b) => new Date(a.date) - new Date(b.date));
+            state.foodLogs.sort((a, b) => new Date(a.date) - new Date(b.date));
+
+            // Save locally but keep clean state
+            saveData();
+            localStorage.setItem(DIRTY_KEY, 'false');
+
+            // Update views
+            updateDashboard();
+            updateHistoryList();
+            updateCardioHistoryList();
+            updateFoodHistoryList();
+            renderPlanTab();
+            renderPlanSidebarWidget();
+
+            showToast('☁️ クラウドデータを同期しました');
         }
     })
     .catch(err => {
@@ -2581,6 +2569,8 @@ function restoreFromSheets() {
             const importedWeights = data.weightLogs || [];
             const importedCardio = data.cardioLogs || [];
             const importedMaint = data.maintenanceCalories || DEFAULT_MAINTENANCE_CALORIES;
+            const importedFood = data.foodLogs || [];
+            const importedPlan = data.planSettings || null;
 
             if (!validateWorkoutsSchema(importedWorkouts)) {
                 showToast('受信したデータ形式が不正です');
@@ -2591,7 +2581,7 @@ function restoreFromSheets() {
                 'クラウドからの復元',
                 `スプレッドシートからデータを取得しました（ワークアウト: ${importedWorkouts.length}件, 体重ログ: ${importedWeights.length}件）。既存データにマージしますか？`,
                 () => {
-                    mergeImportedData(importedWorkouts, importedWeights, importedCardio, importedMaint);
+                    mergeImportedData(importedWorkouts, importedWeights, importedCardio, importedMaint, importedFood, importedPlan);
                     localStorage.setItem(DIRTY_KEY, 'false'); // Mark clean on manual merge override
                 }
             );
@@ -2940,11 +2930,11 @@ function renderPlanTab(isEditing = false) {
                     </div>
                     <div class="form-group">
                         <label style="font-weight: 700;">間食ルール（防衛ライン②）</label>
-                        <textarea id="edit-snack-rule" rows="2" class="width-full" style="resize: vertical;">${s.snackRule}</textarea>
+                        <textarea id="edit-snack-rule" rows="2" class="width-full" style="resize: vertical;">${escapeHtml(s.snackRule)}</textarea>
                     </div>
                     <div class="form-group">
                         <label style="font-weight: 700;">運動・筋トレ方針（防衛ライン③）</label>
-                        <textarea id="edit-workout-rule" rows="2" class="width-full" style="resize: vertical;">${s.workoutRule}</textarea>
+                        <textarea id="edit-workout-rule" rows="2" class="width-full" style="resize: vertical;">${escapeHtml(s.workoutRule)}</textarea>
                     </div>
                 </div>
             </div>
@@ -3102,7 +3092,7 @@ function renderPlanTab(isEditing = false) {
                                 <i data-lucide="ban" style="color: var(--color-danger); width: 1.15rem; height: 1.15rem;"></i>
                                 <strong style="color: var(--color-danger); font-size: 0.9rem;">② 間食コントロールと大盛り阻止</strong>
                             </div>
-                            <p style="font-size: 0.8rem; line-height: 1.5; color: var(--text-secondary); margin: 0;">${s.snackRule}</p>
+                            <p style="font-size: 0.8rem; line-height: 1.5; color: var(--text-secondary); margin: 0;">${escapeHtml(s.snackRule)}</p>
                         </div>
 
                         <div style="background: rgba(134, 172, 65, 0.05); border: 1px solid rgba(134, 172, 65, 0.15); padding: 1rem 1.25rem; border-radius: 12px;">
@@ -3110,7 +3100,7 @@ function renderPlanTab(isEditing = false) {
                                 <i data-lucide="dumbbell" style="color: var(--color-primary); width: 1.15rem; height: 1.15rem;"></i>
                                 <strong style="color: var(--color-primary); font-size: 0.9rem;">③ 運動・筋トレ方針</strong>
                             </div>
-                            <p style="font-size: 0.8rem; line-height: 1.5; color: var(--text-secondary); margin: 0;">${s.workoutRule}</p>
+                            <p style="font-size: 0.8rem; line-height: 1.5; color: var(--text-secondary); margin: 0;">${escapeHtml(s.workoutRule)}</p>
                         </div>
                     </div>
                 </div>
