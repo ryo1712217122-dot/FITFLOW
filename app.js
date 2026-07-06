@@ -685,7 +685,7 @@ function initDateTexts() {
     else greeting = 'こんばんは！今日もお疲れ様です🌙';
     
     if (DOM.greetingText) {
-        DOM.greetingText.innerHTML = `${greeting} <span class="app-version-badge">v1.5.0</span>`;
+        DOM.greetingText.innerHTML = `${greeting} <span class="app-version-badge">v1.5.1</span>`;
     }
 }
 
@@ -2037,7 +2037,7 @@ function calculateFluidMaintenance() {
 
 function exportWorkouts() {
     const backupData = {
-        version: '1.5.0',
+        version: '1.5.1',
         workouts: state.workouts,
         weightLogs: state.weightLogs,
         cardioLogs: state.cardioLogs,
