@@ -12,7 +12,7 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
-    <link rel="stylesheet" href="style.css?v=1.4.0">
+    <link rel="stylesheet" href="style.css?v=1.4.1">
 </head>
 <body>
     <div class="app-container">
@@ -24,7 +24,7 @@
                 </div>
                 <div class="brand-text">
                     <h1>FITFLOW</h1>
-                    <span class="app-version">v1.4.0</span>
+                    <span class="app-version">v1.4.1</span>
                 </div>
             </div>
             
@@ -65,7 +65,7 @@
             <!-- Top bar -->
             <header class="top-bar">
                 <div class="welcome">
-                    <h2 id="greeting-text">こんにちは！<span class="app-version-badge">v1.4.0</span></h2>
+                    <h2 id="greeting-text">こんにちは！<span class="app-version-badge">v1.4.1</span></h2>
                     <p id="date-text">2026年7月3日 金曜日</p>
                 </div>
                 <div class="header-right-controls">
@@ -216,74 +216,9 @@
                     </form>
 
                     <!-- Optimization Plan Sidebar Widget -->
-                    <div class="side-loggers-column">
-                        <div class="card" style="border: 1px solid var(--color-primary); background: rgba(134,172,65,0.03);">
-                            <div class="card-header" style="border-bottom: 1px solid var(--border-color); padding: 1rem 1.25rem;">
-                                <div class="header-title" style="display: flex; align-items: center; gap: 0.5rem;">
-                                    <i data-lucide="target" style="color: var(--color-primary); width: 1.25rem; height: 1.25rem;"></i>
-                                    <h3 style="font-size: 1rem; font-weight: 700; margin: 0; color: var(--color-primary);">🎯 最適化ライフスタイル計画</h3>
-                                </div>
-                            </div>
-                            <div class="card-body" style="padding: 1.25rem; font-size: 0.85rem; display: flex; flex-direction: column; gap: 1rem;">
-                                <div>
-                                    <strong style="display: block; margin-bottom: 0.25rem; color: var(--text-primary);">摂取カロリー予算（平均 2,040 kcal/日）</strong>
-                                    <div style="display: flex; flex-direction: column; gap: 0.25rem;">
-                                        <div style="display: flex; justify-content: space-between;">
-                                            <span>🌳 通常日 (週3)</span>
-                                            <span style="font-weight: 700;">1,750 kcal</span>
-                                        </div>
-                                        <div style="display: flex; justify-content: space-between;">
-                                            <span>🍵 紅茶日 (週2)</span>
-                                            <span style="font-weight: 700;">1,966 kcal</span>
-                                        </div>
-                                        <div style="display: flex; justify-content: space-between;">
-                                            <span>🍺 イベント日 (週2)</span>
-                                            <span style="font-weight: 700;">2,550 kcal</span>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div style="border-top: 1px solid var(--border-color); padding-top: 0.75rem;">
-                                    <strong style="display: block; margin-bottom: 0.25rem; color: var(--text-primary);">運動・睡眠予算</strong>
-                                    <div style="display: flex; flex-direction: column; gap: 0.25rem;">
-                                        <div style="display: flex; justify-content: space-between;">
-                                            <span>🏃 有酸素ラン (週2回)</span>
-                                            <span style="font-weight: 700;">4km / 回 (+338 kcal)</span>
-                                        </div>
-                                        <div style="display: flex; justify-content: space-between;">
-                                            <span>🏋️ 筋トレ (週1回集約)</span>
-                                            <span style="font-weight: 700;">全力 (レッグプレス200kg等)</span>
-                                        </div>
-                                        <div style="display: flex; justify-content: space-between;">
-                                            <span>🛌 睡眠時間 (目標)</span>
-                                            <span style="font-weight: 700; color: var(--color-warning);">最低 6.5 時間</span>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div style="border-top: 1px solid var(--border-color); padding-top: 0.75rem;">
-                                    <strong style="display: block; margin-bottom: 0.25rem; color: var(--text-primary);">体重減少目標</strong>
-                                    <div style="display: flex; flex-direction: column; gap: 0.25rem;">
-                                        <div style="display: flex; justify-content: space-between;">
-                                            <span>1ヶ月目（8月頭）</span>
-                                            <span style="font-weight: 700;">79.0 kg (-2.0kg)</span>
-                                        </div>
-                                        <div style="display: flex; justify-content: space-between;">
-                                            <span>3ヶ月目（10月頭）</span>
-                                            <span style="font-weight: 700; color: var(--color-primary);">75.5 kg (-5.5kg)</span>
-                                        </div>
-                                        <div style="display: flex; justify-content: space-between;">
-                                            <span>最終均衡点</span>
-                                            <span style="font-weight: 700; color: var(--color-secondary);">67.0 kg (-14.0kg)</span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Global datalist for popular exercises list suggestions -->
+                    <div class="side-loggers-column" id="plan-sidebar-widget-container">
+                        <!-- Generated by JS -->
+                    </div><!-- Global datalist for popular exercises list suggestions -->
                 <datalist id="popular-exercises">
                     <option value="ベンチプレス">
                     <option value="ダンベルフライ">
@@ -302,156 +237,8 @@
 
             <!-- Optimization Plan Tab -->
             <section id="plan" class="tab-content">
-                <div class="card header-card" style="background: var(--primary-gradient); color: #fff; margin-bottom: 1.5rem;">
-                    <div class="card-body" style="padding: 1.5rem; display: flex; align-items: center; gap: 1.5rem;">
-                        <div style="background: rgba(255,255,255,0.2); padding: 0.75rem; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
-                            <i data-lucide="target" style="width: 2.25rem; height: 2.25rem;"></i>
-                        </div>
-                        <div>
-                            <h2 style="margin: 0; font-size: 1.5rem; font-weight: 800; color: #fff;">最適化ライフスタイル計画</h2>
-                            <p style="margin: 0.25rem 0 0; opacity: 0.9; font-size: 0.85rem;">熱力学モデルと生活スケジュールに基づいた確実な減量ロードマップ</p>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="settings-grid">
-                    <!-- Calorie Target Card -->
-                    <div class="card">
-                        <div class="card-header">
-                            <div class="header-title">
-                                <i data-lucide="flame"></i>
-                                <h3>摂取・消費カロリー目標</h3>
-                            </div>
-                        </div>
-                        <div class="card-body">
-                            <h4 style="margin-bottom: 0.75rem; color: var(--color-primary); font-size: 0.95rem; font-weight: 700;">摂取カロリー予算（週平均 2,040 kcal/日）</h4>
-                            <div class="plan-sub-items" style="display: flex; flex-direction: column; gap: 0.75rem; margin-bottom: 1.5rem;">
-                                <div style="background: var(--bg-surface-hover); padding: 0.75rem 1rem; border-radius: 10px; border-left: 4px solid var(--text-muted);">
-                                    <div style="display: flex; justify-content: space-between; font-weight: 700; margin-bottom: 0.25rem; font-size: 0.9rem;">
-                                        <span>① 通常日（週3回）</span>
-                                        <span style="color: var(--color-primary);">1,750 kcal</span>
-                                    </div>
-                                    <div style="font-size: 0.8rem; color: var(--text-secondary); display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.5rem;">
-                                        <div>朝: 500 kcal</div>
-                                        <div>昼: 450 kcal</div>
-                                        <div>間食: 0 kcal</div>
-                                        <div>夕: 800 kcal</div>
-                                    </div>
-                                </div>
-                                <div style="background: var(--bg-surface-hover); padding: 0.75rem 1rem; border-radius: 10px; border-left: 4px solid var(--color-secondary);">
-                                    <div style="display: flex; justify-content: space-between; font-weight: 700; margin-bottom: 0.25rem; font-size: 0.9rem;">
-                                        <span>② ミルク紅茶日（週2回）</span>
-                                        <span style="color: var(--color-primary);">1,966 kcal</span>
-                                    </div>
-                                    <div style="font-size: 0.8rem; color: var(--text-secondary); display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.5rem;">
-                                        <div>朝: 500 kcal</div>
-                                        <div>昼: 450 kcal</div>
-                                        <div>間食: 216 kcal</div>
-                                        <div>夕: 800 kcal</div>
-                                    </div>
-                                </div>
-                                <div style="background: var(--bg-surface-hover); padding: 0.75rem 1rem; border-radius: 10px; border-left: 4px solid var(--color-primary);">
-                                    <div style="display: flex; justify-content: space-between; font-weight: 700; margin-bottom: 0.25rem; font-size: 0.9rem;">
-                                        <span>③ イベント日（週2回）</span>
-                                        <span style="color: var(--color-primary);">2,550 kcal</span>
-                                    </div>
-                                    <div style="font-size: 0.8rem; color: var(--text-secondary); display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.5rem;">
-                                        <div>朝: 500 kcal</div>
-                                        <div>昼: 280 kcal</div>
-                                        <div>間食: 0 kcal</div>
-                                        <div>夕: 1,770 kcal</div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <h4 style="margin-bottom: 0.75rem; color: var(--color-secondary); font-size: 0.95rem; font-weight: 700;">消費カロリー予算（週平均 2,547 kcal/日）</h4>
-                            <div style="background: var(--bg-surface-hover); padding: 0.75rem 1rem; border-radius: 10px; font-size: 0.85rem;">
-                                <div style="display: flex; justify-content: space-between; font-weight: 700; margin-bottom: 0.25rem;">
-                                    <span>ベース消費（研究室・バイト含む）</span>
-                                    <span>2,450 kcal/日</span>
-                                </div>
-                                <div style="display: flex; justify-content: space-between; font-weight: 700;">
-                                    <span>有酸素ラン（週2回 4km走）</span>
-                                    <span>+338 kcal/回</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Roadmap Card -->
-                    <div class="card">
-                        <div class="card-header">
-                            <div class="header-title">
-                                <i data-lucide="trending-down"></i>
-                                <h3>体重減少目標ロードマップ</h3>
-                            </div>
-                        </div>
-                        <div class="card-body">
-                            <p class="settings-desc">目標アンダーカロリー（約507 kcal/日）による3ヶ月および将来の体重変化シミュレーションです。</p>
-                            <div class="roadmap-timeline" style="display: flex; flex-direction: column; gap: 1.25rem; margin-top: 1rem; padding-left: 0.5rem;">
-                                <div style="position: relative; padding-left: 1.5rem; border-left: 2px solid var(--border-color);">
-                                    <div style="position: absolute; left: -6px; top: 4px; width: 10px; height: 10px; border-radius: 50%; background: var(--text-muted);"></div>
-                                    <strong style="font-size: 0.9rem;">開始時（2026年7月現在）</strong>
-                                    <div style="font-size: 1.15rem; font-weight: 800; color: var(--text-primary); margin-top: 0.15rem;">81.0 kg</div>
-                                </div>
-                                <div style="position: relative; padding-left: 1.5rem; border-left: 2px solid var(--color-primary);">
-                                    <div style="position: absolute; left: -6px; top: 4px; width: 10px; height: 10px; border-radius: 50%; background: var(--color-primary);"></div>
-                                    <strong style="font-size: 0.9rem;">1ヶ月目目標（2026年8月頭）</strong>
-                                    <div style="font-size: 1.15rem; font-weight: 800; color: var(--color-primary); margin-top: 0.15rem;">79.0 kg <span style="font-size: 0.8rem; font-weight: normal; color: var(--text-secondary);">(-2.0kg)</span></div>
-                                    <p style="font-size: 0.75rem; color: var(--text-secondary); margin: 0.15rem 0 0;">食生活の最適化移行期。水分と糖質が抜ける初期減少フェーズ。</p>
-                                </div>
-                                <div style="position: relative; padding-left: 1.5rem; border-left: 2px solid var(--color-primary);">
-                                    <div style="position: absolute; left: -6px; top: 4px; width: 10px; height: 10px; border-radius: 50%; background: var(--color-primary);"></div>
-                                    <strong style="font-size: 0.9rem;">3ヶ月目目標（2026年10月頭）</strong>
-                                    <div style="font-size: 1.15rem; font-weight: 800; color: var(--color-primary); margin-top: 0.15rem;">75.5 kg <span style="font-size: 0.8rem; font-weight: normal; color: var(--text-secondary);">(-5.5kg)</span></div>
-                                    <p style="font-size: 0.75rem; color: var(--text-secondary); margin: 0.15rem 0 0;">総減量幅5.5kg。膝への衝撃が劇的に減り、体が軽くなることを実感できます。</p>
-                                </div>
-                                <div style="position: relative; padding-left: 1.5rem; border-left: 2px solid var(--color-secondary);">
-                                    <div style="position: absolute; left: -6px; top: 4px; width: 10px; height: 10px; border-radius: 50%; background: var(--color-secondary);"></div>
-                                    <strong style="font-size: 0.9rem;">最終均衡点（長期継続時の収束値）</strong>
-                                    <div style="font-size: 1.15rem; font-weight: 800; color: var(--color-secondary); margin-top: 0.15rem;">67.0 kg <span style="font-size: 0.8rem; font-weight: normal; color: var(--text-secondary);">(-14.0kg)</span></div>
-                                    <p style="font-size: 0.75rem; color: var(--text-secondary); margin: 0.15rem 0 0;">運動・食事の入力と出力が動的平衡状態に達する標準健康体型。</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Guidelines Card -->
-                <div class="card" style="margin-top: 1.5rem;">
-                    <div class="card-header">
-                        <div class="header-title">
-                            <i data-lucide="shield-alert"></i>
-                            <h3>習慣遵守の防衛ライン（致命的コントロールポイント）</h3>
-                        </div>
-                    </div>
-                    <div class="card-body" style="padding: 1.25rem;">
-                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.25rem;">
-                            <div style="background: rgba(217, 160, 91, 0.05); border: 1px solid rgba(217, 160, 91, 0.15); padding: 1rem 1.25rem; border-radius: 12px;">
-                                <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
-                                    <i data-lucide="moon" style="color: var(--color-warning); width: 1.15rem; height: 1.15rem;"></i>
-                                    <strong style="color: var(--color-warning); font-size: 0.9rem;">① 睡眠時間は最低 6.5 時間を死守</strong>
-                                </div>
-                                <p style="font-size: 0.8rem; line-height: 1.5; color: var(--text-secondary); margin: 0;">5時間睡眠のままトレーニングすると、筋肉が分解され脂肪が蓄積しやすくなります。寝不足の日はトレーニングを中止し睡眠を最優先してください。</p>
-                            </div>
-
-                            <div style="background: rgba(224, 90, 71, 0.05); border: 1px solid rgba(224, 90, 71, 0.15); padding: 1rem 1.25rem; border-radius: 12px;">
-                                <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
-                                    <i data-lucide="ban" style="color: var(--color-danger); width: 1.15rem; height: 1.15rem;"></i>
-                                    <strong style="color: var(--color-danger); font-size: 0.9rem;">② 間食コントロールと大盛り阻止</strong>
-                                </div>
-                                <p style="font-size: 0.8rem; line-height: 1.5; color: var(--text-secondary); margin: 0;">間食は「明治おいしいミルク紅茶 450ml」を週2回まで。他の日は完全無糖。夜22時以降の白米大盛り化を阻止し、普通盛りでストップすること。</p>
-                            </div>
-
-                            <div style="background: rgba(134, 172, 65, 0.05); border: 1px solid rgba(134, 172, 65, 0.15); padding: 1rem 1.25rem; border-radius: 12px;">
-                                <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
-                                    <i data-lucide="dumbbell" style="color: var(--color-primary); width: 1.15rem; height: 1.15rem;"></i>
-                                    <strong style="color: var(--color-primary); font-size: 0.9rem;">③ 筋トレは週1回に集約して全力</strong>
-                                </div>
-                                <p style="font-size: 0.8rem; line-height: 1.5; color: var(--text-secondary); margin: 0;">ジム通いを週1回に圧縮し、余った時間を睡眠時間の補填（+1.5時間×2日）に回します。週1回全力（レッグプレス200kg等）で筋肉量は十分維持されます。</p>
-                            </div>
-                        </div>
-                    </div>
+                <div id="plan-container">
+                    <!-- Generated by JS -->
                 </div>
             </section>
 
@@ -829,6 +616,6 @@
         </div>
     </div>
 
-    <script src="app.js?v=1.4.0"></script>
+    <script src="app.js?v=1.4.1"></script>
 </body>
 </html>

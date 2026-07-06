@@ -9,6 +9,25 @@ const TARGET_MONTHLY_WORKOUTS = 12;
 const MAX_RECENT_WEIGHT_LOGS = 10;
 const CARDIO_DAYS_WINDOW = 7;
 
+const DEFAULT_PLAN_SETTINGS = {
+    intakeNormal: 1750,
+    intakeMilkTea: 1966,
+    intakeEvent: 2550,
+    daysNormal: 3,
+    daysMilkTea: 2,
+    daysEvent: 2,
+    baseBurn: 2450,
+    runBurn: 338,
+    runCount: 2,
+    weightStart: 81.0,
+    weight1Month: 79.0,
+    weight3Month: 75.5,
+    weightEquilibrium: 67.0,
+    sleepTarget: 6.5,
+    snackRule: '間食は「明治おいしいミルク紅茶 450ml」を週2回まで。他の日は完全無糖。夜22時以降の白米大盛り化を阻止し、普通盛りでストップすること。',
+    workoutRule: 'ジム通いを週1回に圧縮し、余った時間を睡眠時間の補填（+1.5時間×2日）に回します。週1回全力（レッグプレス200kg等）で筋肉量は十分維持されます。'
+};
+
 // Global state
 let state = {
     workouts: [],
@@ -19,6 +38,7 @@ let state = {
     cardioLogs: [],
     maintenanceCalories: DEFAULT_MAINTENANCE_CALORIES,
     sheetsUrl: '',
+    planSettings: null,
     charts: {
         category: null,
         progression: null,
@@ -259,6 +279,8 @@ document.addEventListener('DOMContentLoaded', () => {
     updateDashboard();
     updateHistoryList();
     updateCardioHistoryList();
+    renderPlanTab();
+    renderPlanSidebarWidget();
 
     // 起動時にサイレントにクラウドから同期
     autoSyncFromCloud();
@@ -364,6 +386,19 @@ function loadData() {
     // 5. Google Sheets Sync URL
     state.sheetsUrl = localStorage.getItem('fitflow_sheets_url') || 'https://script.google.com/macros/s/AKfycbzvGub8qkPOxTPDcoDbGfiT-U3tdky93ZRMr1SriYq8L4mfPENtZr5iAYyPSJ-xxaZ8/exec';
     
+    // 6. Plan Settings
+    const planData = localStorage.getItem('fitflow_plan_settings');
+    if (planData) {
+        try {
+            state.planSettings = JSON.parse(planData);
+        } catch (e) {
+            console.error('Error parsing plan settings', e);
+            state.planSettings = Object.assign({}, DEFAULT_PLAN_SETTINGS);
+        }
+    } else {
+        state.planSettings = Object.assign({}, DEFAULT_PLAN_SETTINGS);
+    }
+    
     saveData();
 }
 
@@ -373,6 +408,7 @@ function saveData() {
     localStorage.setItem('fitflow_cardio_logs', JSON.stringify(state.cardioLogs));
     localStorage.setItem('fitflow_maintenance', state.maintenanceCalories.toString());
     localStorage.setItem('fitflow_sheets_url', state.sheetsUrl);
+    localStorage.setItem('fitflow_plan_settings', JSON.stringify(state.planSettings));
 }
 
 function saveDataAndSync() {
@@ -625,7 +661,7 @@ function initDateTexts() {
     else greeting = 'こんばんは！今日もお疲れ様です🌙';
     
     if (DOM.greetingText) {
-        DOM.greetingText.innerHTML = `${greeting} <span class="app-version-badge">v1.4.0</span>`;
+        DOM.greetingText.innerHTML = `${greeting} <span class="app-version-badge">v1.4.1</span>`;
     }
 }
 
@@ -1997,6 +2033,8 @@ function mergeImportedData(workouts, weights, cardio, maintenance) {
     updateDashboard();
     updateHistoryList();
     updateCardioHistoryList();
+    renderPlanTab();
+    renderPlanSidebarWidget();
 }
 
 function clearAllWorkouts() {
@@ -2590,5 +2628,467 @@ function deleteCardioLog(index) {
         showToast('有酸素記録を削除しました');
         updateDashboard();
         updateCardioHistoryList();
+    }
+}
+
+function renderPlanTab(isEditing = false) {
+    const container = document.getElementById('plan-container');
+    if (!container) return;
+    
+    const s = state.planSettings || DEFAULT_PLAN_SETTINGS;
+    
+    // Calculations
+    const totalDays = (parseInt(s.daysNormal) || 0) + (parseInt(s.daysMilkTea) || 0) + (parseInt(s.daysEvent) || 0);
+    const daysDenominator = totalDays > 0 ? totalDays : 7;
+    const avgIntake = Math.round(
+        ((parseInt(s.intakeNormal) || 0) * (parseInt(s.daysNormal) || 0) +
+         (parseInt(s.intakeMilkTea) || 0) * (parseInt(s.daysMilkTea) || 0) +
+         (parseInt(s.intakeEvent) || 0) * (parseInt(s.daysEvent) || 0)) / daysDenominator
+    );
+    const avgExpenditure = Math.round(
+        (parseFloat(s.baseBurn) || 0) + ((parseFloat(s.runBurn) || 0) * (parseFloat(s.runCount) || 0)) / 7
+    );
+    const deficit = avgExpenditure - avgIntake;
+    
+    if (isEditing) {
+        container.innerHTML = `
+            <div class="card header-card" style="background: var(--primary-gradient); color: #fff; margin-bottom: 1.5rem;">
+                <div class="card-body" style="padding: 1.5rem; display: flex; align-items: center; justify-content: space-between; gap: 1.5rem;">
+                    <div style="display: flex; align-items: center; gap: 1.5rem;">
+                        <div style="background: rgba(255,255,255,0.2); padding: 0.75rem; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                            <i data-lucide="target" style="width: 2.25rem; height: 2.25rem;"></i>
+                        </div>
+                        <div>
+                            <h2 style="margin: 0; font-size: 1.5rem; font-weight: 800; color: #fff;">最適化計画の編集</h2>
+                            <p style="margin: 0.25rem 0 0; opacity: 0.9; font-size: 0.85rem;">計画パラメーターをカスタマイズします。</p>
+                        </div>
+                    </div>
+                    <div style="display: flex; gap: 0.5rem;">
+                        <button class="btn btn-secondary btn-sm" id="btn-cancel-plan-edit" type="button">キャンセル</button>
+                        <button class="btn btn-primary btn-sm" id="btn-save-plan-edit" type="button">設定を保存</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="settings-grid">
+                <!-- Calorie Target Edit Card -->
+                <div class="card">
+                    <div class="card-header">
+                        <div class="header-title">
+                            <i data-lucide="flame"></i>
+                            <h3>摂取・消費カロリー目標の設定</h3>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <h4 style="margin-bottom: 0.75rem; color: var(--color-primary); font-size: 0.95rem; font-weight: 700;">摂取カロリー目標設定</h4>
+                        <div style="display: flex; flex-direction: column; gap: 1rem; margin-bottom: 1.5rem;">
+                            <div style="background: var(--bg-surface-hover); padding: 1rem; border-radius: 10px; border-left: 4px solid var(--text-muted);">
+                                <strong style="font-size: 0.9rem; display: block; margin-bottom: 0.5rem;">① 通常日</strong>
+                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+                                    <div class="form-group">
+                                        <label style="font-size: 0.75rem;">目標カロリー (kcal)</label>
+                                        <input type="number" id="edit-intake-normal" value="${s.intakeNormal}" class="width-full">
+                                    </div>
+                                    <div class="form-group">
+                                        <label style="font-size: 0.75rem;">週の日数</label>
+                                        <input type="number" id="edit-days-normal" value="${s.daysNormal}" class="width-full">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div style="background: var(--bg-surface-hover); padding: 1rem; border-radius: 10px; border-left: 4px solid var(--color-secondary);">
+                                <strong style="font-size: 0.9rem; display: block; margin-bottom: 0.5rem;">② ミルク紅茶日</strong>
+                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+                                    <div class="form-group">
+                                        <label style="font-size: 0.75rem;">目標カロリー (kcal)</label>
+                                        <input type="number" id="edit-intake-milktea" value="${s.intakeMilkTea}" class="width-full">
+                                    </div>
+                                    <div class="form-group">
+                                        <label style="font-size: 0.75rem;">週の日数</label>
+                                        <input type="number" id="edit-days-milktea" value="${s.daysMilkTea}" class="width-full">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div style="background: var(--bg-surface-hover); padding: 1rem; border-radius: 10px; border-left: 4px solid var(--color-primary);">
+                                <strong style="font-size: 0.9rem; display: block; margin-bottom: 0.5rem;">③ イベント日（ラーメン/飲み会）</strong>
+                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+                                    <div class="form-group">
+                                        <label style="font-size: 0.75rem;">目標カロリー (kcal)</label>
+                                        <input type="number" id="edit-intake-event" value="${s.intakeEvent}" class="width-full">
+                                    </div>
+                                    <div class="form-group">
+                                        <label style="font-size: 0.75rem;">週の日数</label>
+                                        <input type="number" id="edit-days-event" value="${s.daysEvent}" class="width-full">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <h4 style="margin-bottom: 0.75rem; color: var(--color-secondary); font-size: 0.95rem; font-weight: 700;">消費カロリー目標設定</h4>
+                        <div style="background: var(--bg-surface-hover); padding: 1rem; border-radius: 10px; display: flex; flex-direction: column; gap: 0.75rem;">
+                            <div class="form-group">
+                                <label style="font-size: 0.75rem;">ベース消費 (kcal/日 - 研究室・バイト含む)</label>
+                                <input type="number" id="edit-base-burn" value="${s.baseBurn}" class="width-full">
+                            </div>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+                                <div class="form-group">
+                                    <label style="font-size: 0.75rem;">ラン1回の消費 (kcal)</label>
+                                    <input type="number" id="edit-run-burn" value="${s.runBurn}" class="width-full">
+                                </div>
+                                <div class="form-group">
+                                    <label style="font-size: 0.75rem;">週のラン回数</label>
+                                    <input type="number" id="edit-run-count" value="${s.runCount}" class="width-full">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Roadmap Edit Card -->
+                <div class="card">
+                    <div class="card-header">
+                        <div class="header-title">
+                            <i data-lucide="trending-down"></i>
+                            <h3>体重減少ロードマップの設定</h3>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <p class="settings-desc">ロードマップ上の各目標体重 (kg) を設定します。</p>
+                        <div style="display: flex; flex-direction: column; gap: 0.75rem; margin-top: 1rem;">
+                            <div class="form-group">
+                                <label style="font-size: 0.8rem;">開始時体重 (kg)</label>
+                                <input type="number" step="0.1" id="edit-weight-start" value="${s.weightStart}" class="width-full">
+                            </div>
+                            <div class="form-group">
+                                <label style="font-size: 0.8rem;">1ヶ月目目標 (kg)</label>
+                                <input type="number" step="0.1" id="edit-weight-1month" value="${s.weight1Month}" class="width-full">
+                            </div>
+                            <div class="form-group">
+                                <label style="font-size: 0.8rem;">3ヶ月目目標 (kg)</label>
+                                <input type="number" step="0.1" id="edit-weight-3month" value="${s.weight3Month}" class="width-full">
+                            </div>
+                            <div class="form-group">
+                                <label style="font-size: 0.8rem;">最終均衡点目標 (kg)</label>
+                                <input type="number" step="0.1" id="edit-weight-equilibrium" value="${s.weightEquilibrium}" class="width-full">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Guidelines Edit Card -->
+            <div class="card" style="margin-top: 1.5rem;">
+                <div class="card-header">
+                    <div class="header-title">
+                        <i data-lucide="shield-alert"></i>
+                        <h3>防衛ラインと習慣ルールの設定</h3>
+                    </div>
+                </div>
+                <div class="card-body" style="display: flex; flex-direction: column; gap: 1rem;">
+                    <div class="form-group">
+                        <label style="font-weight: 700;">睡眠目標時間 (時間)</label>
+                        <input type="number" step="0.1" id="edit-sleep-target" value="${s.sleepTarget}" class="width-full">
+                    </div>
+                    <div class="form-group">
+                        <label style="font-weight: 700;">間食ルール（防衛ライン②）</label>
+                        <textarea id="edit-snack-rule" rows="2" class="width-full" style="resize: vertical;">${s.snackRule}</textarea>
+                    </div>
+                    <div class="form-group">
+                        <label style="font-weight: 700;">運動・筋トレ方針（防衛ライン③）</label>
+                        <textarea id="edit-workout-rule" rows="2" class="width-full" style="resize: vertical;">${s.workoutRule}</textarea>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        // Bind button actions
+        document.getElementById('btn-cancel-plan-edit').addEventListener('click', () => {
+            renderPlanTab(false);
+        });
+        document.getElementById('btn-save-plan-edit').addEventListener('click', () => {
+            savePlanSettings();
+        });
+    } else {
+        container.innerHTML = `
+            <div class="card header-card" style="background: var(--primary-gradient); color: #fff; margin-bottom: 1.5rem;">
+                <div class="card-body" style="padding: 1.5rem; display: flex; align-items: center; justify-content: space-between; gap: 1.5rem;">
+                    <div style="display: flex; align-items: center; gap: 1.5rem;">
+                        <div style="background: rgba(255,255,255,0.2); padding: 0.75rem; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                            <i data-lucide="target" style="width: 2.25rem; height: 2.25rem;"></i>
+                        </div>
+                        <div>
+                            <h2 style="margin: 0; font-size: 1.5rem; font-weight: 800; color: #fff;">最適化ライフスタイル計画</h2>
+                            <p style="margin: 0.25rem 0 0; opacity: 0.9; font-size: 0.85rem;">熱力学モデルと生活スケジュールに基づいた確実な減量ロードマップ</p>
+                        </div>
+                    </div>
+                    <button class="btn btn-primary btn-sm" id="btn-trigger-plan-edit" type="button">
+                        <i data-lucide="edit"></i> 計画を編集
+                    </button>
+                </div>
+            </div>
+
+            <div class="settings-grid">
+                <!-- Calorie Target Card -->
+                <div class="card">
+                    <div class="card-header">
+                        <div class="header-title">
+                            <i data-lucide="flame"></i>
+                            <h3>摂取・消費カロリー目標</h3>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <h4 style="margin-bottom: 0.75rem; color: var(--color-primary); font-size: 0.95rem; font-weight: 700;">摂取カロリー予算（週平均 ${avgIntake} kcal/日）</h4>
+                        <div class="plan-sub-items" style="display: flex; flex-direction: column; gap: 0.75rem; margin-bottom: 1.5rem;">
+                            <div style="background: var(--bg-surface-hover); padding: 0.75rem 1rem; border-radius: 10px; border-left: 4px solid var(--text-muted);">
+                                <div style="display: flex; justify-content: space-between; font-weight: 700; margin-bottom: 0.25rem; font-size: 0.9rem;">
+                                    <span>① 通常日（週${s.daysNormal}回）</span>
+                                    <span style="color: var(--color-primary);">${s.intakeNormal} kcal</span>
+                                </div>
+                                <div style="font-size: 0.8rem; color: var(--text-secondary); display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.5rem;">
+                                    <div>朝: 500 kcal</div>
+                                    <div>昼: 450 kcal</div>
+                                    <div>間食: 0 kcal</div>
+                                    <div>夕: 800 kcal</div>
+                                </div>
+                            </div>
+                            <div style="background: var(--bg-surface-hover); padding: 0.75rem 1rem; border-radius: 10px; border-left: 4px solid var(--color-secondary);">
+                                <div style="display: flex; justify-content: space-between; font-weight: 700; margin-bottom: 0.25rem; font-size: 0.9rem;">
+                                    <span>② ミルク紅茶日（週${s.daysMilkTea}回）</span>
+                                    <span style="color: var(--color-primary);">${s.intakeMilkTea} kcal</span>
+                                </div>
+                                <div style="font-size: 0.8rem; color: var(--text-secondary); display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.5rem;">
+                                    <div>朝: 500 kcal</div>
+                                    <div>昼: 450 kcal</div>
+                                    <div>間食: 216 kcal</div>
+                                    <div>夕: 800 kcal</div>
+                                </div>
+                            </div>
+                            <div style="background: var(--bg-surface-hover); padding: 0.75rem 1rem; border-radius: 10px; border-left: 4px solid var(--color-primary);">
+                                <div style="display: flex; justify-content: space-between; font-weight: 700; margin-bottom: 0.25rem; font-size: 0.9rem;">
+                                    <span>③ イベント日（週${s.daysEvent}回）</span>
+                                    <span style="color: var(--color-primary);">${s.intakeEvent} kcal</span>
+                                </div>
+                                <div style="font-size: 0.8rem; color: var(--text-secondary); display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.5rem;">
+                                    <div>朝: 500 kcal</div>
+                                    <div>昼: 280 kcal</div>
+                                    <div>間食: 0 kcal</div>
+                                    <div>夕: 1,770 kcal</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <h4 style="margin-bottom: 0.75rem; color: var(--color-secondary); font-size: 0.95rem; font-weight: 700;">消費カロリー予算（週平均 ${avgExpenditure} kcal/日）</h4>
+                        <div style="background: var(--bg-surface-hover); padding: 0.75rem 1rem; border-radius: 10px; font-size: 0.85rem;">
+                            <div style="display: flex; justify-content: space-between; font-weight: 700; margin-bottom: 0.25rem;">
+                                <span>ベース消費（研究室・バイト含む）</span>
+                                <span>${s.baseBurn} kcal/日</span>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; font-weight: 700;">
+                                <span>有酸素ラン（週${s.runCount}回 4km走）</span>
+                                <span>+${s.runBurn} kcal/回 (平均 +${Math.round(s.runBurn * s.runCount / 7)} kcal/日)</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Roadmap Card -->
+                <div class="card">
+                    <div class="card-header">
+                        <div class="header-title">
+                            <i data-lucide="trending-down"></i>
+                            <h3>体重減少目標ロードマップ</h3>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <p class="settings-desc">目標アンダーカロリー（約${deficit} kcal/日）による体重変化シミュレーションです。</p>
+                        <div class="roadmap-timeline" style="display: flex; flex-direction: column; gap: 1.25rem; margin-top: 1rem; padding-left: 0.5rem;">
+                            <div style="position: relative; padding-left: 1.5rem; border-left: 2px solid var(--border-color);">
+                                <div style="position: absolute; left: -6px; top: 4px; width: 10px; height: 10px; border-radius: 50%; background: var(--text-muted);"></div>
+                                <strong style="font-size: 0.9rem;">開始時</strong>
+                                <div style="font-size: 1.15rem; font-weight: 800; color: var(--text-primary); margin-top: 0.15rem;">${s.weightStart} kg</div>
+                            </div>
+                            <div style="position: relative; padding-left: 1.5rem; border-left: 2px solid var(--color-primary);">
+                                <div style="position: absolute; left: -6px; top: 4px; width: 10px; height: 10px; border-radius: 50%; background: var(--color-primary);"></div>
+                                <strong style="font-size: 0.9rem;">1ヶ月目目標</strong>
+                                <div style="font-size: 1.15rem; font-weight: 800; color: var(--color-primary); margin-top: 0.15rem;">${s.weight1Month} kg <span style="font-size: 0.8rem; font-weight: normal; color: var(--text-secondary);">(-${(s.weightStart - s.weight1Month).toFixed(1)}kg)</span></div>
+                                <p style="font-size: 0.75rem; color: var(--text-secondary); margin: 0.15rem 0 0;">食生活の最適化移行期。水分と糖質が抜ける初期減少フェーズ。</p>
+                            </div>
+                            <div style="position: relative; padding-left: 1.5rem; border-left: 2px solid var(--color-primary);">
+                                <div style="position: absolute; left: -6px; top: 4px; width: 10px; height: 10px; border-radius: 50%; background: var(--color-primary);"></div>
+                                <strong style="font-size: 0.9rem;">3ヶ月目目標</strong>
+                                <div style="font-size: 1.15rem; font-weight: 800; color: var(--color-primary); margin-top: 0.15rem;">${s.weight3Month} kg <span style="font-size: 0.8rem; font-weight: normal; color: var(--text-secondary);">(-${(s.weightStart - s.weight3Month).toFixed(1)}kg)</span></div>
+                                <p style="font-size: 0.75rem; color: var(--text-secondary); margin: 0.15rem 0 0;">総減量幅 ${(s.weightStart - s.weight3Month).toFixed(1)}kg。膝への衝撃が劇的に減り、体が軽くなることを実感できます。</p>
+                            </div>
+                            <div style="position: relative; padding-left: 1.5rem; border-left: 2px solid var(--color-secondary);">
+                                <div style="position: absolute; left: -6px; top: 4px; width: 10px; height: 10px; border-radius: 50%; background: var(--color-secondary);"></div>
+                                <strong style="font-size: 0.9rem;">最終均衡点（長期継続時の収束値）</strong>
+                                <div style="font-size: 1.15rem; font-weight: 800; color: var(--color-secondary); margin-top: 0.15rem;">${s.weightEquilibrium} kg <span style="font-size: 0.8rem; font-weight: normal; color: var(--text-secondary);">(-${(s.weightStart - s.weightEquilibrium).toFixed(1)}kg)</span></div>
+                                <p style="font-size: 0.75rem; color: var(--text-secondary); margin: 0.15rem 0 0;">運動・食事の入力と出力が動的平衡状態に達する標準健康体型。</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Guidelines Card -->
+            <div class="card" style="margin-top: 1.5rem;">
+                <div class="card-header">
+                    <div class="header-title">
+                        <i data-lucide="shield-alert"></i>
+                        <h3>習慣遵守の防衛ライン（致命的コントロールポイント）</h3>
+                    </div>
+                </div>
+                <div class="card-body" style="padding: 1.25rem;">
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.25rem;">
+                        <div style="background: rgba(217, 160, 91, 0.05); border: 1px solid rgba(217, 160, 91, 0.15); padding: 1rem 1.25rem; border-radius: 12px;">
+                            <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+                                <i data-lucide="moon" style="color: var(--color-warning); width: 1.15rem; height: 1.15rem;"></i>
+                                <strong style="color: var(--color-warning); font-size: 0.9rem;">① 睡眠時間は最低 ${s.sleepTarget} 時間を死守</strong>
+                            </div>
+                            <p style="font-size: 0.8rem; line-height: 1.5; color: var(--text-secondary); margin: 0;">寝不足のままトレーニングすると、筋肉が分解され脂肪が蓄積しやすくなります。睡眠を最優先してください。</p>
+                        </div>
+
+                        <div style="background: rgba(224, 90, 71, 0.05); border: 1px solid rgba(224, 90, 71, 0.15); padding: 1rem 1.25rem; border-radius: 12px;">
+                            <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+                                <i data-lucide="ban" style="color: var(--color-danger); width: 1.15rem; height: 1.15rem;"></i>
+                                <strong style="color: var(--color-danger); font-size: 0.9rem;">② 間食コントロールと大盛り阻止</strong>
+                            </div>
+                            <p style="font-size: 0.8rem; line-height: 1.5; color: var(--text-secondary); margin: 0;">${s.snackRule}</p>
+                        </div>
+
+                        <div style="background: rgba(134, 172, 65, 0.05); border: 1px solid rgba(134, 172, 65, 0.15); padding: 1rem 1.25rem; border-radius: 12px;">
+                            <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+                                <i data-lucide="dumbbell" style="color: var(--color-primary); width: 1.15rem; height: 1.15rem;"></i>
+                                <strong style="color: var(--color-primary); font-size: 0.9rem;">③ 運動・筋トレ方針</strong>
+                            </div>
+                            <p style="font-size: 0.8rem; line-height: 1.5; color: var(--text-secondary); margin: 0;">${s.workoutRule}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        // Bind edit button action
+        document.getElementById('btn-trigger-plan-edit').addEventListener('click', () => {
+            renderPlanTab(true);
+        });
+    }
+    
+    if (window.lucide) {
+        lucide.createIcons();
+    }
+}
+
+function savePlanSettings() {
+    const s = state.planSettings || {};
+    
+    s.intakeNormal = parseInt(document.getElementById('edit-intake-normal').value) || 0;
+    s.daysNormal = parseInt(document.getElementById('edit-days-normal').value) || 0;
+    s.intakeMilkTea = parseInt(document.getElementById('edit-intake-milktea').value) || 0;
+    s.daysMilkTea = parseInt(document.getElementById('edit-days-milktea').value) || 0;
+    s.intakeEvent = parseInt(document.getElementById('edit-intake-event').value) || 0;
+    s.daysEvent = parseInt(document.getElementById('edit-days-event').value) || 0;
+    
+    s.baseBurn = parseInt(document.getElementById('edit-base-burn').value) || 0;
+    s.runBurn = parseInt(document.getElementById('edit-run-burn').value) || 0;
+    s.runCount = parseInt(document.getElementById('edit-run-count').value) || 0;
+    
+    s.weightStart = parseFloat(document.getElementById('edit-weight-start').value) || 0.0;
+    s.weight1Month = parseFloat(document.getElementById('edit-weight-1month').value) || 0.0;
+    s.weight3Month = parseFloat(document.getElementById('edit-weight-3month').value) || 0.0;
+    s.weightEquilibrium = parseFloat(document.getElementById('edit-weight-equilibrium').value) || 0.0;
+    
+    s.sleepTarget = parseFloat(document.getElementById('edit-sleep-target').value) || 0.0;
+    s.snackRule = document.getElementById('edit-snack-rule').value.trim();
+    s.workoutRule = document.getElementById('edit-workout-rule').value.trim();
+    
+    state.planSettings = s;
+    saveData();
+    showToast('最適化計画の変更を保存しました');
+    
+    renderPlanTab(false);
+    renderPlanSidebarWidget();
+}
+
+function renderPlanSidebarWidget() {
+    const container = document.getElementById('plan-sidebar-widget-container');
+    if (!container) return;
+    
+    const s = state.planSettings || DEFAULT_PLAN_SETTINGS;
+    
+    // Calculations
+    const totalDays = (parseInt(s.daysNormal) || 0) + (parseInt(s.daysMilkTea) || 0) + (parseInt(s.daysEvent) || 0);
+    const daysDenominator = totalDays > 0 ? totalDays : 7;
+    const avgIntake = Math.round(
+        ((parseInt(s.intakeNormal) || 0) * (parseInt(s.daysNormal) || 0) +
+         (parseInt(s.intakeMilkTea) || 0) * (parseInt(s.daysMilkTea) || 0) +
+         (parseInt(s.intakeEvent) || 0) * (parseInt(s.daysEvent) || 0)) / daysDenominator
+    );
+    
+    container.innerHTML = `
+        <div class="card" style="border: 1px solid var(--color-primary); background: rgba(134,172,65,0.03);">
+            <div class="card-header" style="border-bottom: 1px solid var(--border-color); padding: 1rem 1.25rem;">
+                <div class="header-title" style="display: flex; align-items: center; gap: 0.5rem;">
+                    <i data-lucide="target" style="color: var(--color-primary); width: 1.25rem; height: 1.25rem;"></i>
+                    <h3 style="font-size: 1rem; font-weight: 700; margin: 0; color: var(--color-primary);">🎯 最適化計画要約</h3>
+                </div>
+            </div>
+            <div class="card-body" style="padding: 1.25rem; font-size: 0.85rem; display: flex; flex-direction: column; gap: 1rem;">
+                <div>
+                    <strong style="display: block; margin-bottom: 0.25rem; color: var(--text-primary);">摂取カロリー（平均 ${avgIntake} kcal/日）</strong>
+                    <div style="display: flex; flex-direction: column; gap: 0.25rem;">
+                        <div style="display: flex; justify-content: space-between;">
+                            <span>🌳 通常日 (週${s.daysNormal})</span>
+                            <span style="font-weight: 700;">${s.intakeNormal} kcal</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between;">
+                            <span>🍵 紅茶日 (週${s.daysMilkTea})</span>
+                            <span style="font-weight: 700;">${s.intakeMilkTea} kcal</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between;">
+                            <span>🍺 イベント日 (週${s.daysEvent})</span>
+                            <span style="font-weight: 700;">${s.intakeEvent} kcal</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="border-top: 1px solid var(--border-color); padding-top: 0.75rem;">
+                    <strong style="display: block; margin-bottom: 0.25rem; color: var(--text-primary);">運動・睡眠予算</strong>
+                    <div style="display: flex; flex-direction: column; gap: 0.25rem;">
+                        <div style="display: flex; justify-content: space-between;">
+                            <span>🏃 有酸素ラン (週${s.runCount}回)</span>
+                            <span style="font-weight: 700;">4km / 回 (+${s.runBurn} kcal)</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between;">
+                            <span>🛌 睡眠時間 (目標)</span>
+                            <span style="font-weight: 700; color: var(--color-warning);">最低 ${s.sleepTarget} 時間</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="border-top: 1px solid var(--border-color); padding-top: 0.75rem;">
+                    <strong style="display: block; margin-bottom: 0.25rem; color: var(--text-primary);">体重減少目標</strong>
+                    <div style="display: flex; flex-direction: column; gap: 0.25rem;">
+                        <div style="display: flex; justify-content: space-between;">
+                            <span>1ヶ月目目標</span>
+                            <span style="font-weight: 700;">${s.weight1Month} kg</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between;">
+                            <span>3ヶ月目目標</span>
+                            <span style="font-weight: 700; color: var(--color-primary);">${s.weight3Month} kg</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between;">
+                            <span>最終均衡点</span>
+                            <span style="font-weight: 700; color: var(--color-secondary);">${s.weightEquilibrium} kg</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    if (window.lucide) {
+        lucide.createIcons();
     }
 }
