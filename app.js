@@ -525,6 +525,14 @@ function updateDashboard() {
     if (DOM.todayCalorieNum) DOM.todayCalorieNum.textContent = Math.round(todayCalories);
     if (DOM.todayCardioDist) DOM.todayCardioDist.textContent = `${todayDistance.toFixed(2)} km 走行`;
 
+    // Calorie Balance tiles update
+    if (DOM.todayBurnedKcal) {
+        DOM.todayBurnedKcal.innerHTML = `${Math.round(todayCalories)} <span class="unit">kcal</span>`;
+    }
+    if (DOM.currentMaintenanceKcal) {
+        DOM.currentMaintenanceKcal.innerHTML = `${state.maintenanceCalories} <span class="unit">kcal</span>`;
+    }
+
     // 4. Streaks
     const streak = calculateStreak(state.workouts);
     if (DOM.streakCount) DOM.streakCount.textContent = `${streak} 日`;
