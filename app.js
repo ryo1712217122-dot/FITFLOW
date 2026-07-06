@@ -27,6 +27,141 @@ let state = {
     }
 };
 
+const THEME_PALETTES = {
+    A: {
+        name: 'フォレスト・セージ',
+        dark: {
+            '--bg-base': '#141f23',
+            '--bg-surface': '#1e2d33',
+            '--bg-surface-hover': '#273941',
+            '--bg-sidebar': '#182429',
+            '--color-primary': '#86ac41',
+            '--color-secondary': '#7da3a1',
+            '--border-focus': '#86ac41',
+            '--text-primary': '#f0f4f3',
+            '--text-secondary': '#a8c0be',
+            '--text-muted': '#7da3a1',
+            '--border-color': 'rgba(125, 163, 161, 0.15)',
+            '--primary-gradient': 'linear-gradient(135deg, #86ac41 0%, #34675c 100%)',
+            '--secondary-gradient': 'linear-gradient(135deg, #7da3a1 0%, #324851 100%)',
+        },
+        light: {
+            '--bg-base': '#f4f8f6',
+            '--bg-surface': '#ffffff',
+            '--bg-surface-hover': '#e8f0eb',
+            '--bg-sidebar': '#1e2d33',
+            '--color-primary': '#34675c',
+            '--color-secondary': '#7da3a1',
+            '--border-focus': '#34675c',
+            '--text-primary': '#1f2d33',
+            '--text-secondary': '#4e656d',
+            '--text-muted': '#7da3a1',
+            '--border-color': 'rgba(50, 72, 81, 0.08)',
+            '--primary-gradient': 'linear-gradient(135deg, #34675c 0%, #1e2d33 100%)',
+            '--secondary-gradient': 'linear-gradient(135deg, #7da3a1 0%, #34675c 100%)',
+        }
+    },
+    B: {
+        name: 'ディープ・オーシャン',
+        dark: {
+            '--bg-base': '#0a1128',
+            '--bg-surface': '#101f42',
+            '--bg-surface-hover': '#1a2e5c',
+            '--bg-sidebar': '#0c1530',
+            '--color-primary': '#00a8ff',
+            '--color-secondary': '#00dec7',
+            '--border-focus': '#00a8ff',
+            '--text-primary': '#ffffff',
+            '--text-secondary': '#a0c4ff',
+            '--text-muted': '#00dec7',
+            '--border-color': 'rgba(0, 168, 255, 0.15)',
+            '--primary-gradient': 'linear-gradient(135deg, #00a8ff 0%, #0097e6 100%)',
+            '--secondary-gradient': 'linear-gradient(135deg, #00dec7 0%, #00a8ff 100%)',
+        },
+        light: {
+            '--bg-base': '#f0f4f8',
+            '--bg-surface': '#ffffff',
+            '--bg-surface-hover': '#e1ecf7',
+            '--bg-sidebar': '#101f42',
+            '--color-primary': '#0066cc',
+            '--color-secondary': '#0097e6',
+            '--border-focus': '#0066cc',
+            '--text-primary': '#0a1128',
+            '--text-secondary': '#3a506b',
+            '--text-muted': '#0097e6',
+            '--border-color': 'rgba(0, 102, 204, 0.08)',
+            '--primary-gradient': 'linear-gradient(135deg, #0066cc 0%, #0a1128 100%)',
+            '--secondary-gradient': 'linear-gradient(135deg, #0097e6 0%, #0066cc 100%)',
+        }
+    },
+    C: {
+        name: 'クリムゾン・サンセット',
+        dark: {
+            '--bg-base': '#1c1212',
+            '--bg-surface': '#2b1a1a',
+            '--bg-surface-hover': '#3a2525',
+            '--bg-sidebar': '#221515',
+            '--color-primary': '#e05a47',
+            '--color-secondary': '#d9a05b',
+            '--border-focus': '#e05a47',
+            '--text-primary': '#fcebeb',
+            '--text-secondary': '#e9c46a',
+            '--text-muted': '#d9a05b',
+            '--border-color': 'rgba(224, 90, 71, 0.15)',
+            '--primary-gradient': 'linear-gradient(135deg, #e05a47 0%, #b83b28 100%)',
+            '--secondary-gradient': 'linear-gradient(135deg, #d9a05b 0%, #e05a47 100%)',
+        },
+        light: {
+            '--bg-base': '#faf6f5',
+            '--bg-surface': '#ffffff',
+            '--bg-surface-hover': '#f7e1dd',
+            '--bg-sidebar': '#2b1a1a',
+            '--color-primary': '#b83b28',
+            '--color-secondary': '#d9a05b',
+            '--border-focus': '#b83b28',
+            '--text-primary': '#2b1a1a',
+            '--text-secondary': '#7c4d3a',
+            '--text-muted': '#d9a05b',
+            '--border-color': 'rgba(184, 59, 40, 0.08)',
+            '--primary-gradient': 'linear-gradient(135deg, #b83b28 0%, #2b1a1a 100%)',
+            '--secondary-gradient': 'linear-gradient(135deg, #d9a05b 0%, #b83b28 100%)',
+        }
+    },
+    D: {
+        name: 'ロイヤル・アメジスト',
+        dark: {
+            '--bg-base': '#13111c',
+            '--bg-surface': '#201c2e',
+            '--bg-surface-hover': '#2d2741',
+            '--bg-sidebar': '#191624',
+            '--color-primary': '#9b5de5',
+            '--color-secondary': '#f15bb5',
+            '--border-focus': '#9b5de5',
+            '--text-primary': '#f6f0ff',
+            '--text-secondary': '#d8b4fe',
+            '--text-muted': '#f15bb5',
+            '--border-color': 'rgba(155, 93, 229, 0.15)',
+            '--primary-gradient': 'linear-gradient(135deg, #9b5de5 0%, #7209b7 100%)',
+            '--secondary-gradient': 'linear-gradient(135deg, #f15bb5 0%, #9b5de5 100%)',
+        },
+        light: {
+            '--bg-base': '#f8f6fa',
+            '--bg-surface': '#ffffff',
+            '--bg-surface-hover': '#f0e6f7',
+            '--bg-sidebar': '#201c2e',
+            '--color-primary': '#7209b7',
+            '--color-secondary': '#9b5de5',
+            '--border-focus': '#7209b7',
+            '--text-primary': '#201c2e',
+            '--text-secondary': '#5d3a77',
+            '--text-muted': '#9b5de5',
+            '--border-color': 'rgba(114, 9, 183, 0.08)',
+            '--primary-gradient': 'linear-gradient(135deg, #7209b7 0%, #201c2e 100%)',
+            '--secondary-gradient': 'linear-gradient(135deg, #9b5de5 0%, #7209b7 100%)',
+        }
+    }
+};
+
 // Sync Optimization Engine Flags (PayGuard inspired)
 const DIRTY_KEY = 'fitflow_db_dirty';
 let isSyncing = false;
@@ -414,10 +549,18 @@ function initTheme() {
         document.body.classList.add('light-theme');
     }
     
+    // Load and apply the saved color palette theme (A, B, C, D)
+    const activePalette = localStorage.getItem('fitflow_theme_id') || 'A';
+    applyThemePalette(activePalette);
+    
     const handleThemeToggle = () => {
         document.body.classList.toggle('light-theme');
         const theme = document.body.classList.contains('light-theme') ? 'light' : 'dark';
         localStorage.setItem('fitflow_theme', theme);
+        
+        // Re-apply palette for the new dark/light state
+        const currentPalette = localStorage.getItem('fitflow_theme_id') || 'A';
+        applyThemePalette(currentPalette);
         
         // Re-render active charts to adjust text color for theme
         if (state.charts.category) renderCategoryChart();
@@ -432,6 +575,38 @@ function initTheme() {
     if (DOM.mobileThemeToggleBtn) {
         DOM.mobileThemeToggleBtn.addEventListener('click', handleThemeToggle);
     }
+}
+
+function applyThemePalette(themeId) {
+    const isLight = document.body.classList.contains('light-theme');
+    const palette = THEME_PALETTES[themeId] || THEME_PALETTES.A;
+    const variables = isLight ? palette.light : palette.dark;
+    
+    for (const [prop, val] of Object.entries(variables)) {
+        document.documentElement.style.setProperty(prop, val);
+    }
+    
+    // Update active state class on settings theme selection buttons
+    document.querySelectorAll('.theme-select-btn').forEach(btn => {
+        btn.classList.remove('active');
+    });
+    const activeBtn = document.getElementById('theme-btn-' + themeId);
+    if (activeBtn) {
+        activeBtn.classList.add('active');
+    }
+}
+
+function setThemePalette(themeId) {
+    localStorage.setItem('fitflow_theme_id', themeId);
+    applyThemePalette(themeId);
+    
+    // Re-render active charts to adjust colors dynamically
+    if (state.charts.category) renderCategoryChart();
+    if (state.charts.progression) renderProgressionChart();
+    if (state.charts.weight) renderWeightChart();
+    if (state.charts.calorieComparison) renderCalorieChart();
+    
+    showToast(`テーマを「${THEME_PALETTES[themeId].name}」に変更しました`);
 }
 
 function initDateTexts() {
@@ -450,7 +625,7 @@ function initDateTexts() {
     else greeting = 'こんばんは！今日もお疲れ様です🌙';
     
     if (DOM.greetingText) {
-        DOM.greetingText.innerHTML = `${greeting} <span class="app-version-badge">v1.3.1</span>`;
+        DOM.greetingText.innerHTML = `${greeting} <span class="app-version-badge">v1.4.0</span>`;
     }
 }
 
@@ -691,6 +866,18 @@ function getChartThemeColors() {
     };
 }
 
+function hexToRgba(hex, alpha) {
+    if (!hex) return `rgba(134, 172, 65, ${alpha})`;
+    hex = hex.trim().replace('#', '');
+    if (hex.length === 3) {
+        hex = hex[0] + hex[0] + hex[1] + hex[1] + hex[2] + hex[2];
+    }
+    const r = parseInt(hex.substring(0, 2), 16) || 134;
+    const g = parseInt(hex.substring(2, 4), 16) || 172;
+    const b = parseInt(hex.substring(4, 6), 16) || 65;
+    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
 // Doughnut Chart - Categories distribution
 function renderCategoryChart() {
     const theme = getChartThemeColors();
@@ -795,53 +982,19 @@ function initFormControls() {
         });
     }
 
-    if (DOM.weightForm) {
-        DOM.weightForm.addEventListener('submit', (e) => {
-            e.preventDefault();
-            saveWeight();
-        });
-    }
-
     if (DOM.logCardioDist) {
         DOM.logCardioDist.addEventListener('input', updateCardioHint);
     }
-
-    if (DOM.cardioForm) {
-        DOM.cardioForm.addEventListener('submit', (e) => {
-            e.preventDefault();
-            saveCardio();
-        });
-        
-        if (DOM.logCardioDate) {
-            DOM.logCardioDate.value = getLocalDateString();
-        }
+    if (DOM.logWeightVal) {
+        DOM.logWeightVal.addEventListener('input', updateCardioHint);
     }
 
-    // Workout form: Simultaneous Cardio Logging panel toggling & calculations
-    const addCardioChk = document.getElementById('add-cardio-to-workout-chk');
-    const cardioInsideInputs = document.getElementById('cardio-inside-inputs');
-    const workoutCardioDist = document.getElementById('workout-cardio-dist');
-    const workoutCardioCalcHint = document.getElementById('workout-cardio-calc-hint');
-    
-    if (addCardioChk && cardioInsideInputs) {
-        addCardioChk.addEventListener('change', () => {
-            cardioInsideInputs.style.display = addCardioChk.checked ? 'block' : 'none';
-            if (addCardioChk.checked) {
-                updateWorkoutCardioHint();
-            }
+    const recordGymWorkoutChk = document.getElementById('record-gym-workout-chk');
+    const gymWorkoutFieldsContainer = document.getElementById('gym-workout-fields-container');
+    if (recordGymWorkoutChk && gymWorkoutFieldsContainer) {
+        recordGymWorkoutChk.addEventListener('change', () => {
+            gymWorkoutFieldsContainer.style.display = recordGymWorkoutChk.checked ? 'block' : 'none';
         });
-    }
-    
-    if (workoutCardioDist) {
-        workoutCardioDist.addEventListener('input', updateWorkoutCardioHint);
-    }
-    
-    function updateWorkoutCardioHint() {
-        if (!workoutCardioDist || !workoutCardioCalcHint) return;
-        const dist = parseFloat(workoutCardioDist.value) || 0;
-        const latestWeight = getLatestWeight();
-        const kcal = Math.round(dist * latestWeight);
-        workoutCardioCalcHint.textContent = `※消費目安: ${kcal} kcal (最新体重: ${latestWeight} kg)`;
     }
 }
 
@@ -860,10 +1013,17 @@ function resetWorkoutForm() {
     if (DOM.noExercisesHelper) DOM.noExercisesHelper.style.display = 'flex';
     if (DOM.saveWorkoutBtn) DOM.saveWorkoutBtn.innerHTML = '<i data-lucide="check"></i> 記録を保存する';
     
-    const titleHeader = DOM.workoutForm ? DOM.workoutForm.querySelector('.form-header-row h2') : null;
-    if (titleHeader) titleHeader.textContent = '新規ワークアウトの記録';
+    const titleHeader = document.getElementById('logger-form-title');
+    if (titleHeader) titleHeader.textContent = '今日の活動を一括記録';
     
     addExerciseBlock();
+    
+    const recordGymWorkoutChk = document.getElementById('record-gym-workout-chk');
+    const gymWorkoutFieldsContainer = document.getElementById('gym-workout-fields-container');
+    if (recordGymWorkoutChk && gymWorkoutFieldsContainer) {
+        gymWorkoutFieldsContainer.style.display = recordGymWorkoutChk.checked ? 'block' : 'none';
+    }
+    updateCardioHint();
     
     if (window.lucide) {
         lucide.createIcons();
@@ -985,101 +1145,146 @@ function addSetRow(tbody, weight = '', reps = '') {
 function saveWorkout() {
     const date = DOM.workoutDate.value;
     const time = DOM.workoutTime.value;
-    const title = DOM.workoutTitle.value.trim();
-    const category = DOM.workoutCategory.value;
-    const mood = DOM.workoutForm.querySelector('input[name="workout-mood"]:checked').value;
-    const impression = DOM.workoutImpression.value.trim();
     
-    const exerciseItems = DOM.exerciseList ? DOM.exerciseList.querySelectorAll('.exercise-item') : [];
-    const exercises = [];
-    let hasValidationError = false;
-    
-    exerciseItems.forEach(item => {
-        const name = item.querySelector('.exercise-name').value.trim();
-        if (!name) {
-            // 種目名が空の場合は、入力途中の不要な項目とみなしてスキップ（ジム記録自体は保存可能にする）
-            return;
+    // 1. Read optional weight value
+    let weightSaved = false;
+    let weightVal = null;
+    if (DOM.logWeightVal) {
+        const weightText = DOM.logWeightVal.value.trim();
+        if (weightText !== '') {
+            const weight = parseFloat(weightText);
+            if (isNaN(weight) || weight <= 0) {
+                showToast('有効な体重を入力してください');
+                return;
+            }
+            weightVal = weight;
+            const existingIndex = state.weightLogs.findIndex(w => w.date === date);
+            if (existingIndex !== -1) {
+                state.weightLogs[existingIndex].weight = weight;
+            } else {
+                state.weightLogs.push({ date, weight });
+            }
+            state.weightLogs.sort((a, b) => new Date(a.date) - new Date(b.date));
+            weightSaved = true;
         }
-        
-        const setRows = item.querySelectorAll('.set-row');
-        const sets = [];
-        
-        setRows.forEach(row => {
-            const weightVal = row.querySelector('.set-weight').value;
-            const repsVal = row.querySelector('.set-reps').value;
-            const weight = parseFloat(weightVal);
-            const reps = parseInt(repsVal);
+    }
+    
+    // 2. Read optional cardio running distance
+    let cardioSaved = false;
+    if (DOM.logCardioDist) {
+        const cardioText = DOM.logCardioDist.value.trim();
+        if (cardioText !== '') {
+            const dist = parseFloat(cardioText);
+            if (isNaN(dist) || dist <= 0) {
+                showToast('有効な走行距離を入力してください');
+                return;
+            }
+            const latestWeight = weightVal || getLatestWeight();
+            const calories = Math.round(dist * latestWeight);
             
-            if (isNaN(weight) || isNaN(reps) || weight < 0 || reps < 0) {
+            state.cardioLogs.push({
+                date: date,
+                distance: dist,
+                calories: calories
+            });
+            state.cardioLogs.sort((a, b) => new Date(a.date) - new Date(b.date));
+            cardioSaved = true;
+        }
+    }
+    
+    // 3. Read gym workout if checked
+    let workoutSaved = false;
+    const recordGymWorkoutChk = document.getElementById('record-gym-workout-chk');
+    if (recordGymWorkoutChk && recordGymWorkoutChk.checked) {
+        const title = DOM.workoutTitle.value.trim();
+        const category = DOM.workoutCategory.value;
+        const mood = DOM.workoutForm.querySelector('input[name="workout-mood"]:checked').value;
+        const impression = DOM.workoutImpression.value.trim();
+        
+        const exerciseItems = DOM.exerciseList ? DOM.exerciseList.querySelectorAll('.exercise-item') : [];
+        const exercises = [];
+        let hasValidationError = false;
+        
+        exerciseItems.forEach(item => {
+            const name = item.querySelector('.exercise-name').value.trim();
+            if (!name) return; // Skip empty exercise names
+            
+            const setRows = item.querySelectorAll('.set-row');
+            const sets = [];
+            
+            setRows.forEach(row => {
+                const wVal = row.querySelector('.set-weight').value;
+                const rVal = row.querySelector('.set-reps').value;
+                const weight = parseFloat(wVal);
+                const reps = parseInt(rVal);
+                
+                if (isNaN(weight) || isNaN(reps) || weight < 0 || reps < 0) {
+                    hasValidationError = true;
+                    return;
+                }
+                sets.push({ weight, reps });
+            });
+            
+            if (sets.length === 0) {
                 hasValidationError = true;
                 return;
             }
-            sets.push({ weight, reps });
+            exercises.push({ name, sets });
         });
         
-        if (sets.length === 0) {
-            hasValidationError = true;
+        if (hasValidationError) {
+            showToast('筋トレ種目の入力内容を確認してください（すべてのセットに正しい値を入力）');
             return;
         }
-        exercises.push({ name, sets });
-    });
+        
+        const workoutData = {
+            id: state.editingWorkoutId || 'workout-' + Date.now(),
+            date,
+            time,
+            title: title || '無題のワークアウト',
+            category,
+            mood,
+            impression,
+            exercises
+        };
+        
+        if (state.editingWorkoutId) {
+            const idx = state.workouts.findIndex(w => w.id === state.editingWorkoutId);
+            if (idx !== -1) {
+                state.workouts[idx] = workoutData;
+            }
+        } else {
+            state.workouts.unshift(workoutData);
+        }
+        workoutSaved = true;
+    }
     
-    if (hasValidationError) {
-        showToast('入力内容を確認してください（すべてのセットに正しい値を入力）');
+    // 4. Validate that at least one type of data is recorded
+    if (!weightSaved && !cardioSaved && !workoutSaved) {
+        showToast('体重、有酸素、または筋トレのいずれかを入力・選択してください');
         return;
     }
     
-    const workoutData = {
-        id: state.editingWorkoutId || 'workout-' + Date.now(),
-        date,
-        time,
-        title: title || '無題のワークアウト',
-        category,
-        mood,
-        impression,
-        exercises
-    };
-    
-    if (state.editingWorkoutId) {
-        const idx = state.workouts.findIndex(w => w.id === state.editingWorkoutId);
-        if (idx !== -1) {
-            state.workouts[idx] = workoutData;
-            showToast('ワークアウト記録を更新しました！');
-        }
-    } else {
-        state.workouts.unshift(workoutData);
-        showToast('ワークアウト記録を保存しました！');
-    }
-    // Simultaneous Cardio Logging check
-    const addCardioChk = document.getElementById('add-cardio-to-workout-chk');
-    if (addCardioChk && addCardioChk.checked) {
-        const cardioDistInput = document.getElementById('workout-cardio-dist');
-        if (cardioDistInput) {
-            const dist = parseFloat(cardioDistInput.value);
-            if (!isNaN(dist) && dist > 0) {
-                const latestWeight = getLatestWeight();
-                const calories = Math.round(dist * latestWeight);
-                
-                // Add to cardioLogs
-                state.cardioLogs.push({
-                    date: date,
-                    distance: dist,
-                    calories: calories
-                });
-                state.cardioLogs.sort((a, b) => new Date(a.date) - new Date(b.date));
-                
-                // Reset cardio inside fields
-                cardioDistInput.value = '';
-                addCardioChk.checked = false;
-                const cardioInsideInputs = document.getElementById('cardio-inside-inputs');
-                if (cardioInsideInputs) cardioInsideInputs.style.display = 'none';
-            }
-        }
-    }
-    
+    // Save, Sync & Update Views
     saveDataAndSync();
-    state.editingWorkoutId = null;
     
+    // Show success message based on what was saved
+    const savedParts = [];
+    if (weightSaved) savedParts.push('体重');
+    if (cardioSaved) savedParts.push('有酸素');
+    if (workoutSaved) savedParts.push(state.editingWorkoutId ? '筋トレ更新' : '筋トレ');
+    showToast(`${savedParts.join('・')}を記録しました！`);
+    
+    // Reset state & form
+    state.editingWorkoutId = null;
+    resetWorkoutForm();
+    
+    // Refresh views
+    updateDashboard();
+    updateHistoryList();
+    updateCardioHistoryList();
+    
+    // Move to history tab
     const historyNavItem = document.querySelector('[data-tab="history"]');
     if (historyNavItem) {
         historyNavItem.click();
@@ -1285,9 +1490,13 @@ function editWorkout(id) {
     const formNavItem = document.querySelector('[data-tab="quick-log"]');
     if (formNavItem) formNavItem.click();
     
-    if (DOM.workoutForm) {
-        DOM.workoutForm.querySelector('.form-header-row h2').textContent = 'ワークアウト記録の編集';
-    }
+    const titleHeader = document.getElementById('logger-form-title');
+    if (titleHeader) titleHeader.textContent = 'ワークアウト記録の編集';
+    
+    const recordGymWorkoutChk = document.getElementById('record-gym-workout-chk');
+    const gymWorkoutFieldsContainer = document.getElementById('gym-workout-fields-container');
+    if (recordGymWorkoutChk) recordGymWorkoutChk.checked = true;
+    if (gymWorkoutFieldsContainer) gymWorkoutFieldsContainer.style.display = 'block';
     if (DOM.saveWorkoutBtn) {
         DOM.saveWorkoutBtn.innerHTML = '<i data-lucide="save"></i> 編集を保存する';
     }
@@ -1448,6 +1657,9 @@ function renderProgressionChart() {
     const maxWeights = points.map(p => p.maxWeight);
     const est1RMs = points.map(p => p.est1RM);
     
+    const colorPrimary = getComputedStyle(document.documentElement).getPropertyValue('--color-primary').trim() || '#86ac41';
+    const colorSecondary = getComputedStyle(document.documentElement).getPropertyValue('--color-secondary').trim() || '#7da3a1';
+    
     state.charts.progression = new Chart(ctx, {
         type: 'line',
         data: {
@@ -1456,25 +1668,25 @@ function renderProgressionChart() {
                 {
                     label: '推定 1RM (MAX)',
                     data: est1RMs,
-                    borderColor: '#86ac41',
-                    backgroundColor: 'rgba(134, 172, 65, 0.1)',
+                    borderColor: colorPrimary,
+                    backgroundColor: hexToRgba(colorPrimary, 0.1),
                     borderWidth: 2.5,
                     tension: 0.25,
                     fill: true,
-                    pointBackgroundColor: '#86ac41',
+                    pointBackgroundColor: colorPrimary,
                     pointRadius: 4,
                     pointHoverRadius: 6
                 },
                 {
                     label: '最大重量',
                     data: maxWeights,
-                    borderColor: '#7da3a1',
+                    borderColor: colorSecondary,
                     backgroundColor: 'transparent',
                     borderWidth: 2,
                     borderDash: [3, 3],
                     tension: 0.25,
                     fill: false,
-                    pointBackgroundColor: '#7da3a1',
+                    pointBackgroundColor: colorSecondary,
                     pointRadius: 3
                 }
             ]
@@ -1527,6 +1739,16 @@ function initSettingsControls() {
             calculateFluidMaintenance();
         });
     }
+
+    // Theme select buttons click events
+    ['A', 'B', 'C', 'D'].forEach(themeId => {
+        const btn = document.getElementById('theme-btn-' + themeId);
+        if (btn) {
+            btn.addEventListener('click', () => {
+                setThemePalette(themeId);
+            });
+        }
+    });
 
     if (DOM.sheetsUrlInput) {
         DOM.sheetsUrlInput.value = state.sheetsUrl;
@@ -1830,7 +2052,8 @@ function getLatestWeight() {
 function updateCardioHint() {
     if (!DOM.logCardioDist || !DOM.cardioCalcHint) return;
     const dist = parseFloat(DOM.logCardioDist.value) || 0;
-    const latestWeight = getLatestWeight();
+    const enteredWeight = DOM.logWeightVal ? parseFloat(DOM.logWeightVal.value) : 0;
+    const latestWeight = enteredWeight > 0 ? enteredWeight : getLatestWeight();
     const kcal = Math.round(dist * latestWeight);
     DOM.cardioCalcHint.textContent = `※消費目安: ${kcal} kcal (最新体重: ${latestWeight} kg)`;
 }
@@ -1907,12 +2130,12 @@ function renderWeightChart() {
             datasets: [{
                 label: '体重 (kg)',
                 data: weights,
-                borderColor: '#86ac41',
-                backgroundColor: 'rgba(134, 172, 65, 0.1)',
+                borderColor: getComputedStyle(document.documentElement).getPropertyValue('--color-primary').trim() || '#86ac41',
+                backgroundColor: hexToRgba(getComputedStyle(document.documentElement).getPropertyValue('--color-primary').trim() || '#86ac41', 0.1),
                 borderWidth: 2.5,
                 tension: 0.3,
                 fill: true,
-                pointBackgroundColor: '#86ac41',
+                pointBackgroundColor: getComputedStyle(document.documentElement).getPropertyValue('--color-primary').trim() || '#86ac41',
                 pointRadius: 4
             }]
         },
@@ -1983,7 +2206,7 @@ function renderCalorieChart() {
                 {
                     label: '消費カロリー (ラン)',
                     data: activeCalories,
-                    backgroundColor: '#86ac41',
+                    backgroundColor: getComputedStyle(document.documentElement).getPropertyValue('--color-primary').trim() || '#86ac41',
                     borderRadius: 4,
                     barThickness: 16
                 },
@@ -1991,7 +2214,7 @@ function renderCalorieChart() {
                     label: 'メンテナンス',
                     data: maintenanceLimit,
                     type: 'line',
-                    borderColor: '#7da3a1',
+                    borderColor: getComputedStyle(document.documentElement).getPropertyValue('--color-secondary').trim() || '#7da3a1',
                     borderWidth: 2,
                     borderDash: [5, 5],
                     fill: false,

@@ -1533,3 +1533,9 @@ textarea:focus {
     display: inline-block;
     box-shadow: var(--shadow-sm);
 }
+
+.theme-select-btn.active {
+    border-color: var(--color-primary) !important;
+    background-color: rgba(255, 255, 255, 0.08) !important;
+    box-shadow: 0 0 12px rgba(255, 255, 255, 0.05);
+}
