@@ -12,7 +12,19 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
-    <link rel="stylesheet" href="style.css?v=1.8.1">
+    <!-- CSSはカスケードレイヤーで管理。layers.cssの宣言順が優先度を決めるため、
+         必ずこれを他のどのスタイルシートよりも先に読み込むこと（<link>の物理的な順番には依存しない）。 -->
+    <link rel="stylesheet" href="css/layers.css?v=1.8.1">
+    <link rel="stylesheet" href="css/tokens.css?v=1.8.1">
+    <link rel="stylesheet" href="css/base.css?v=1.8.1">
+    <link rel="stylesheet" href="css/layout.css?v=1.8.1">
+    <link rel="stylesheet" href="css/components.css?v=1.8.1">
+    <link rel="stylesheet" href="css/pages/record.css?v=1.8.1">
+    <link rel="stylesheet" href="css/pages/dashboard.css?v=1.8.1">
+    <link rel="stylesheet" href="css/pages/plan.css?v=1.8.1">
+    <link rel="stylesheet" href="css/pages/history.css?v=1.8.1">
+    <link rel="stylesheet" href="css/pages/settings.css?v=1.8.1">
+    <link rel="stylesheet" href="css/responsive.css?v=1.8.1">
 </head>
 <body>
     <div class="app-container">
@@ -27,19 +39,19 @@
                     <span class="app-version">v1.8.1</span>
                 </div>
             </div>
-            
+
             <nav class="nav-menu">
                 <a href="#quick-log" class="nav-item active" data-tab="quick-log">
                     <i data-lucide="plus-circle"></i>
                     <span>記録する</span>
                 </a>
+                <a href="#analytics" class="nav-item" data-tab="analytics">
+                    <i data-lucide="layout-dashboard"></i>
+                    <span>ダッシュボード</span>
+                </a>
                 <a href="#plan" class="nav-item" data-tab="plan">
                     <i data-lucide="target"></i>
                     <span>最適化計画</span>
-                </a>
-                <a href="#analytics" class="nav-item" data-tab="analytics">
-                    <i data-lucide="trending-up"></i>
-                    <span>分析と統計</span>
                 </a>
                 <a href="#history" class="nav-item" data-tab="history">
                     <i data-lucide="history"></i>
@@ -50,7 +62,7 @@
                     <span>同期と設定</span>
                 </a>
             </nav>
-            
+
             <div class="sidebar-footer">
                 <div class="theme-toggle" id="theme-toggle-btn">
                     <i data-lucide="moon" class="dark-icon"></i>
@@ -82,7 +94,7 @@
                 </div>
             </header>
 
-            <!-- Quick Log Tab -->
+            <!-- Quick Log Tab: 純粋な入力ページ（有酸素・特別な飲食・筋トレ・体重のみ） -->
             <section id="quick-log" class="tab-content active">
                 <div class="quick-log-grid">
                     <!-- Unified Activity Logger Form -->
@@ -99,7 +111,7 @@
                                     <input type="date" id="workout-date" required>
                                 </div>
                             </div>
-                            
+
                             <div class="form-group margin-top-1">
                                 <label for="workout-time">時刻 <span class="required">*</span></label>
                                 <div class="input-icon-wrapper">
@@ -108,25 +120,25 @@
                                 </div>
                             </div>
 
-                            <hr style="margin: 1.5rem 0; border: none; border-top: 1px solid var(--border-color);" />
+                            <hr class="form-section-divider" />
 
                             <!-- Cardio Input -->
                             <div class="form-group">
-                                <label for="log-cardio-dist">今日の有酸素ランニング走行距離 (km) <span style="font-size: 0.8rem; font-weight: normal; color: var(--text-muted);">(任意)</span></label>
+                                <label for="log-cardio-dist">今日の有酸素ランニング走行距離 (km) <span class="field-optional-hint">(任意)</span></label>
                                 <div class="input-icon-wrapper">
                                     <i data-lucide="flame" class="input-icon"></i>
                                     <input type="number" step="0.01" id="log-cardio-dist" placeholder="走った距離を入力してください...">
                                 </div>
-                                <div class="form-hint" id="cardio-calc-hint" style="margin-top: 0.5rem;">
+                                <div class="form-hint" id="cardio-calc-hint">
                                     ※消費目安: 0 kcal (最新体重: -- kg)
                                 </div>
                             </div>
 
-                            <hr style="margin: 1.5rem 0; border: none; border-top: 1px solid var(--border-color);" />
+                            <hr class="form-section-divider" />
 
                             <!-- Special Foods/Drinks Checkbox Chips -->
                             <div class="form-group">
-                                <label style="font-weight: 600;">特別な飲食の記録 <span style="font-size: 0.8rem; font-weight: normal; color: var(--text-muted);">(任意・カロリーが分かれば入力)</span></label>
+                                <label class="food-section-label">特別な飲食の記録 <span class="field-optional-hint">(任意・カロリーが分かれば入力)</span></label>
                                 <div class="food-chips-container">
                                     <div class="food-chip-row">
                                         <label>
@@ -181,12 +193,12 @@
                                 </div>
                             </div>
 
-                            <hr style="margin: 1.5rem 0; border: none; border-top: 1px solid var(--border-color);" />
+                            <hr class="form-section-divider" />
 
                             <!-- Gym Workout Fields Toggle -->
-                            <div class="gym-workout-section-toggle" style="margin-bottom: 1.25rem;">
-                                <label class="checkbox-label" style="display: flex; align-items: center; gap: 0.5rem; font-weight: 600; cursor: pointer; user-select: none;">
-                                    <input type="checkbox" id="record-gym-workout-chk" checked style="width: 18px; height: 18px; cursor: pointer;">
+                            <div class="gym-workout-section-toggle">
+                                <label class="gym-workout-toggle-label">
+                                    <input type="checkbox" id="record-gym-workout-chk" checked>
                                     <span>🏋️ 筋トレ（ジムでのトレーニング）も同時に記録する</span>
                                 </label>
                             </div>
@@ -245,7 +257,7 @@
                         </div>
                     </form>
 
-                    <!-- Side column: weight quick logger + optimization plan widget -->
+                    <!-- Side column: 体重クイックフォームのみ（最適化計画サマリーはダッシュボードに移設） -->
                     <div class="side-loggers-column">
                         <!-- Weight Quick Logger (体重だけを単独で記録するためのフォーム) -->
                         <form id="weight-quick-form" class="card log-card">
@@ -275,35 +287,26 @@
                                 </button>
                             </div>
                         </form>
-
-                        <div id="plan-sidebar-widget-container">
-                            <!-- Generated by JS -->
-                        </div>
-                    </div><!-- Global datalist for popular exercises list suggestions -->
-                <datalist id="popular-exercises">
-                    <option value="ベンチプレス">
-                    <option value="ダンベルフライ">
-                    <option value="インクラインダンベルプレス">
-                    <option value="ラットプルダウン">
-                    <option value="懸垂 (チンニング)">
-                    <option value="デッドリフト">
-                    <option value="スクワット">
-                    <option value="レッグプレス">
-                    <option value="ショルダープレス">
-                    <option value="サイドレイズ">
-                    <option value="クランチ">
-                    <option value="プランク">
-                </datalist>
-            </section>
-
-            <!-- Optimization Plan Tab -->
-            <section id="plan" class="tab-content">
-                <div id="plan-container">
-                    <!-- Generated by JS -->
+                    </div>
+                    <!-- Global datalist for popular exercises list suggestions -->
+                    <datalist id="popular-exercises">
+                        <option value="ベンチプレス">
+                        <option value="ダンベルフライ">
+                        <option value="インクラインダンベルプレス">
+                        <option value="ラットプルダウン">
+                        <option value="懸垂 (チンニング)">
+                        <option value="デッドリフト">
+                        <option value="スクワット">
+                        <option value="レッグプレス">
+                        <option value="ショルダープレス">
+                        <option value="サイドレイズ">
+                        <option value="クランチ">
+                        <option value="プランク">
+                    </datalist>
                 </div>
             </section>
 
-            <!-- Analytics Tab -->
+            <!-- Dashboard Tab: 統計・グラフ・カレンダー + メンテナンスカロリー設定 + 計画サマリー -->
             <section id="analytics" class="tab-content">
                 <div class="dashboard-grid">
                     <!-- Stats summary cards -->
@@ -401,21 +404,61 @@
                         </div>
                     </div>
 
+                    <!-- Maintenance Calories Card (v2再構成で「同期と設定」タブから移設。
+                         このグラフに直接効く入力なので、入力→表示の距離を縮める) -->
+                    <div class="card settings-card col-span-2">
+                        <div class="card-header">
+                            <div class="header-title">
+                                <i data-lucide="flame"></i>
+                                <h3>メンテナンスカロリーの設定</h3>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <p class="settings-desc">ご自身の1日のメンテナンスカロリー（体重維持に必要なエネルギー消費量）を設定し、上のカロリーバランスと比較します。</p>
+                            <div class="form-group">
+                                <label for="maintenance-input">メンテナンスカロリー (kcal)</label>
+                                <input type="number" id="maintenance-input" min="0" value="2000" class="width-full">
+                            </div>
+                            <div class="settings-actions">
+                                <button class="btn btn-secondary" id="save-maintenance-btn">
+                                    <i data-lucide="save"></i> 設定を保存
+                                </button>
+                                <button class="btn btn-primary" id="auto-calc-maintenance-btn" type="button">
+                                    <i data-lucide="calculator"></i> 体重と筋トレ実績から自動計算
+                                </button>
+                            </div>
+                            <p class="form-hint">
+                                ※直近30日間の筋トレ実績（頻度）と最新の体重に基づき、流動的に適切なメンテナンスカロリーを自動で再計算します。
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- 最適化計画サマリー（元は記録するタブのサイドにあった。ここに集約） -->
+                    <div id="plan-sidebar-widget-container">
+                        <!-- Generated by JS -->
+                    </div>
+                </div>
+            </section>
+
+            <!-- Optimization Plan Tab -->
+            <section id="plan" class="tab-content">
+                <div id="plan-container">
+                    <!-- Generated by JS -->
                 </div>
             </section>
 
             <!-- History and Analytics Tab -->
             <section id="history" class="tab-content">
-                <!-- Sub navigation tabs for Workout vs Cardio -->
-                <div class="history-sub-tabs" style="display: flex; gap: 0.5rem; margin-bottom: 1.25rem; flex-wrap: wrap;">
-                    <button class="btn btn-primary btn-sm" id="history-tab-workouts" type="button" style="padding: 0.5rem 1rem; border-radius: 8px;">筋トレ履歴</button>
-                    <button class="btn btn-secondary btn-sm" id="history-tab-cardio" type="button" style="padding: 0.5rem 1rem; border-radius: 8px;">有酸素（ラン）履歴</button>
-                    <button class="btn btn-secondary btn-sm" id="history-tab-weight" type="button" style="padding: 0.5rem 1rem; border-radius: 8px;">体重履歴</button>
-                    <button class="btn btn-secondary btn-sm" id="history-tab-food" type="button" style="padding: 0.5rem 1rem; border-radius: 8px;">特別な飲食履歴</button>
+                <!-- Sub navigation tabs for Workout vs Cardio vs Weight vs Food -->
+                <div class="history-sub-tabs" role="tablist" aria-label="履歴の種類">
+                    <button class="btn btn-sm history-sub-tab-btn active" id="history-tab-workouts" type="button" role="tab" aria-selected="true">筋トレ履歴</button>
+                    <button class="btn btn-sm history-sub-tab-btn" id="history-tab-cardio" type="button" role="tab" aria-selected="false">有酸素（ラン）履歴</button>
+                    <button class="btn btn-sm history-sub-tab-btn" id="history-tab-weight" type="button" role="tab" aria-selected="false">体重履歴</button>
+                    <button class="btn btn-sm history-sub-tab-btn" id="history-tab-food" type="button" role="tab" aria-selected="false">特別な飲食履歴</button>
                 </div>
 
                 <!-- 筋トレ履歴コンテンツ (Workout History Panel) -->
-                <div id="history-workouts-panel">
+                <div id="history-workouts-panel" role="tabpanel">
                     <!-- Search and Filters Panel -->
                     <div class="card filter-card">
                         <div class="filter-grid">
@@ -470,7 +513,7 @@
                 </div>
 
                 <!-- 有酸素履歴コンテンツ (Cardio History Panel) -->
-                <div id="history-cardio-panel" style="display: none;">
+                <div id="history-cardio-panel" role="tabpanel" class="is-hidden">
                     <div class="history-list-header">
                         <h3>有酸素ラン履歴一覧 (<span id="cardio-history-count">0</span>件)</h3>
                     </div>
@@ -481,7 +524,7 @@
                 </div>
 
                 <!-- 体重履歴コンテンツ (Weight History Panel) -->
-                <div id="history-weight-panel" style="display: none;">
+                <div id="history-weight-panel" role="tabpanel" class="is-hidden">
                     <div class="history-list-header">
                         <h3>体重履歴一覧 (<span id="weight-history-count">0</span>件)</h3>
                     </div>
@@ -492,7 +535,7 @@
                 </div>
 
                 <!-- 特別な飲食履歴コンテンツ (Food History Panel) -->
-                <div id="history-food-panel" style="display: none;">
+                <div id="history-food-panel" role="tabpanel" class="is-hidden">
                     <div class="history-list-header">
                         <h3>特別な飲食履歴一覧 (<span id="food-history-count">0</span>件)</h3>
                     </div>
@@ -503,9 +546,10 @@
                 </div>
             </section>
 
-            <!-- Settings Tab -->
+            <!-- Settings Tab: 外観 / データ / ヘルプ -->
             <section id="settings" class="tab-content">
                 <div class="settings-grid">
+                    <div class="settings-group-heading">外観</div>
                     <!-- Color Theme Settings Card -->
                     <div class="card settings-card">
                         <div class="card-header">
@@ -516,55 +560,28 @@
                         </div>
                         <div class="card-body">
                             <p class="settings-desc">アプリのアクセントカラーと全体の色調を選択します。</p>
-                            <div class="theme-select-grid" style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; margin-bottom: 1rem;">
-                                <button class="theme-select-btn" id="theme-btn-A" type="button" style="display: flex; flex-direction: column; align-items: flex-start; padding: 0.75rem; border-radius: 12px; cursor: pointer; border: 2px solid var(--border-color); background: rgba(0,0,0,0.2); outline: none; -webkit-tap-highlight-color: transparent;">
-                                    <span style="font-weight: 700; color: #86ac41;">🌳 フォレスト</span>
-                                    <span style="font-size: 0.75rem; color: var(--text-secondary);">オリーブ＆セージ</span>
+                            <div class="theme-select-grid">
+                                <button class="theme-select-btn" id="theme-btn-A" type="button">
+                                    <span class="theme-select-name" style="color: #86ac41;">🌳 フォレスト</span>
+                                    <span class="theme-select-desc">オリーブ＆セージ</span>
                                 </button>
-                                <button class="theme-select-btn" id="theme-btn-B" type="button" style="display: flex; flex-direction: column; align-items: flex-start; padding: 0.75rem; border-radius: 12px; cursor: pointer; border: 2px solid var(--border-color); background: rgba(0,0,0,0.2); outline: none; -webkit-tap-highlight-color: transparent;">
-                                    <span style="font-weight: 700; color: #00a8ff;">🌌 ディープオーシャン</span>
-                                    <span style="font-size: 0.75rem; color: var(--text-secondary);">ネイビー＆シアン</span>
+                                <button class="theme-select-btn" id="theme-btn-B" type="button">
+                                    <span class="theme-select-name" style="color: #00a8ff;">🌌 ディープオーシャン</span>
+                                    <span class="theme-select-desc">ネイビー＆シアン</span>
                                 </button>
-                                <button class="theme-select-btn" id="theme-btn-C" type="button" style="display: flex; flex-direction: column; align-items: flex-start; padding: 0.75rem; border-radius: 12px; cursor: pointer; border: 2px solid var(--border-color); background: rgba(0,0,0,0.2); outline: none; -webkit-tap-highlight-color: transparent;">
-                                    <span style="font-weight: 700; color: #e05a47;">🌇 サンセット</span>
-                                    <span style="font-size: 0.75rem; color: var(--text-secondary);">クリムゾン＆ゴールド</span>
+                                <button class="theme-select-btn" id="theme-btn-C" type="button">
+                                    <span class="theme-select-name" style="color: #e05a47;">🌇 サンセット</span>
+                                    <span class="theme-select-desc">クリムゾン＆ゴールド</span>
                                 </button>
-                                <button class="theme-select-btn" id="theme-btn-D" type="button" style="display: flex; flex-direction: column; align-items: flex-start; padding: 0.75rem; border-radius: 12px; cursor: pointer; border: 2px solid var(--border-color); background: rgba(0,0,0,0.2); outline: none; -webkit-tap-highlight-color: transparent;">
-                                    <span style="font-weight: 700; color: #9b5de5;">🔮 アメジスト</span>
-                                    <span style="font-size: 0.75rem; color: var(--text-secondary);">パープル＆ピンク</span>
+                                <button class="theme-select-btn" id="theme-btn-D" type="button">
+                                    <span class="theme-select-name" style="color: #9b5de5;">🔮 アメジスト</span>
+                                    <span class="theme-select-desc">パープル＆ピンク</span>
                                 </button>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Maintenance Calories Card -->
-                    <div class="card settings-card">
-                        <div class="card-header">
-                            <div class="header-title">
-                                <i data-lucide="flame"></i>
-                                <h3>メンテナンスカロリーの設定</h3>
-                            </div>
-                        </div>
-                        <div class="card-body">
-                            <p class="settings-desc">ご自身の1日のメンテナンスカロリー（体重維持に必要なエネルギー消費量）を設定し、消費カロリーと比較します。</p>
-<div class="form-group">
-                                <label for="maintenance-input">メンテナンスカロリー (kcal)</label>
-                                <input type="number" id="maintenance-input" min="0" value="2000" class="width-full">
-                            </div>
-                            <div class="settings-actions">
-                                <button class="btn btn-secondary" id="save-maintenance-btn">
-                                    <i data-lucide="save"></i> 設定を保存
-                                </button>
-                                <button class="btn btn-primary" id="auto-calc-maintenance-btn" type="button">
-                                    <i data-lucide="calculator"></i> 体重と筋トレ実績から自動計算
-                                </button>
-                            </div>
-                            <p class="form-hint" style="margin-top: 0.5rem;">
-                                ※直近30日間の筋トレ実績（頻度）と最新の体重に基づき、流動的に適切なメンテナンスカロリーを自動で再計算します。
-                            </p>
-                        </div>
-                    </div>
-
+                    <div class="settings-group-heading">データ</div>
                     <!-- Google Sheets Cloud Sync Card -->
                     <div class="card settings-card">
                         <div class="card-header">
@@ -575,7 +592,7 @@
                         </div>
                         <div class="card-body">
                             <p class="settings-desc">デプロイしたGoogle Apps Script (GAS) のウェブアプリURLを設定することで、クラウド（スプレッドシート）と双方向同期が可能です。</p>
-                            <p class="settings-desc" style="color: var(--color-danger);">⚠️ このURLはブラウザのLocalStorageにのみ保存されます。ソースコードには書き込まないでください（このリポジトリがPublicの場合、誰でも読み書きできてしまいます）。</p>
+                            <p class="settings-desc text-danger">⚠️ このURLはブラウザのLocalStorageにのみ保存されます。ソースコードには書き込まないでください（このリポジトリがPublicの場合、誰でも読み書きできてしまいます）。</p>
                             <div class="form-group">
                                 <label for="sheets-url-input">GAS ウェブアプリ URL</label>
                                 <input type="url" id="sheets-url-input" placeholder="https://script.google.com/macros/s/.../exec" class="width-full">
@@ -604,17 +621,17 @@
                         </div>
                         <div class="card-body">
                             <p class="settings-desc">ワークアウト履歴はすべてお使いのブラウザに保存されています。データを別の端末に移行したり、バックアップを取るためにファイルをエクスポートできます。</p>
-                            
+
                             <div class="settings-actions">
                                 <button class="btn btn-secondary" id="export-btn">
                                     <i data-lucide="download"></i> データをエクスポート (JSON)
                                 </button>
-                                
+
                                 <div class="import-wrapper">
                                     <button class="btn btn-secondary" id="import-trigger-btn">
                                         <i data-lucide="upload"></i> データをインポート (JSON)
                                     </button>
-                                    <input type="file" id="import-file-input" accept=".json" style="display: none;">
+                                    <input type="file" id="import-file-input" accept=".json" class="is-hidden">
                                 </div>
                             </div>
                         </div>
@@ -636,6 +653,7 @@
                         </div>
                     </div>
 
+                    <div class="settings-group-heading">ヘルプ</div>
                     <!-- Help / About Card -->
                     <div class="card settings-card col-span-2">
                         <div class="card-header">
@@ -674,7 +692,26 @@
         </div>
     </div>
 
+    <!-- lib/data-utils.js: DOM非依存の純粋関数（node --testでもテストされる）。他のどのjs/*.jsよりも先に読み込む -->
     <script src="lib/data-utils.js?v=1.8.1"></script>
-    <script src="app.js?v=1.8.1"></script>
+    <!-- js/*.js: すべてグローバルスコープに関数を定義するクラシックscript。
+         ESモジュールにはしていない（index.htmlをダブルクリックしてfile://で開いても動作させるため）。
+         依存関係は読み込み順で解決するので、この順番を変えないこと。 -->
+    <script src="js/config.js?v=1.8.1"></script>
+    <script src="js/state.js?v=1.8.1"></script>
+    <script src="js/utils.js?v=1.8.1"></script>
+    <script src="js/dom.js?v=1.8.1"></script>
+    <script src="js/notifications.js?v=1.8.1"></script>
+    <script src="js/theme.js?v=1.8.1"></script>
+    <script src="js/navigation.js?v=1.8.1"></script>
+    <script src="js/dashboard.js?v=1.8.1"></script>
+    <script src="js/record-form.js?v=1.8.1"></script>
+    <script src="js/history-workouts.js?v=1.8.1"></script>
+    <script src="js/history-logs.js?v=1.8.1"></script>
+    <script src="js/history-nav.js?v=1.8.1"></script>
+    <script src="js/plan.js?v=1.8.1"></script>
+    <script src="js/sync.js?v=1.8.1"></script>
+    <script src="js/backup.js?v=1.8.1"></script>
+    <script src="js/main.js?v=1.8.1"></script>
 </body>
 </html>
