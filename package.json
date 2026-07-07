@@ -2,7 +2,7 @@
   "name": "workout-tracker",
   "version": "1.8.1",
   "description": "筋トレ実績＆ヘルスケア実績管理Webアプリ",
-  "main": "app.js",
+  "main": "js/main.js",
   "scripts": {
     "start": "npx serve .",
     "test": "node --test lib/"

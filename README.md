@@ -30,6 +30,36 @@ npx serve .
 
 ---
 
+## 🗂️ プロジェクト構成
+
+ビルドステップなしで動くよう、CSS/JSともに素朴な `<link>`/`<script>` の読み込み順で依存関係を解決するクラシックスクリプト構成にしています（ESモジュールは使っていません。ダブルクリックで`file://`から開いても動くようにするためです）。
+
+```
+index.html            単一のHTML。5タブすべてのマークアップとscript/linkタグを持つ
+css/
+  layers.css           @layerの優先順位宣言（必ず最初に読み込む）
+  tokens.css           CSS変数・カラーテーマの基礎トークン
+  base.css              リセット・共通アニメーション
+  layout.css            サイドバー・ヘッダー・カード・グリッドの骨格
+  components.css        ボタン・フォーム部品・トースト・モーダルなど汎用UI
+  pages/                タブごとの固有スタイル (record/dashboard/plan/history/settings)
+  responsive.css        900px以下のレスポンシブ対応（最後に読み込む）
+js/
+  config.js              定数・設定値
+  state.js                グローバル状態とlocalStorage永続化
+  dom.js / utils.js / notifications.js / theme.js / navigation.js
+  dashboard.js            ダッシュボードタブ（統計・カレンダー・グラフ・メンテナンスカロリー設定）
+  record-form.js          記録するタブ（一括記録フォーム・体重クイックフォーム）
+  history-workouts.js / history-logs.js / history-nav.js   履歴リストタブ
+  plan.js                 最適化計画タブ + ダッシュボードの計画サマリーウィジェット
+  sync.js                 Googleスプレッドシート(GAS)クラウド同期
+  backup.js               テーマ配線・JSONエクスポート/インポート/初期化
+  main.js                 エントリポイント（DOMContentLoaded初期化）
+lib/data-utils.js       DOM非依存の純粋関数（`npm test`でテストされる唯一のファイル）
+```
+
+---
+
 ## 📱 モバイル優先 (Mobile-First) 設計
 
 スマートフォンなど横幅が狭いデバイス（900px以下）からアクセスした場合、UIがモバイル表示に自動で最適化されます。
@@ -64,7 +94,7 @@ npx serve .
    - 今日の総消費カロリーや走った距離のサマリーを即座にダッシュボードに反映します。
 
 6. **メンテナンスカロリー比較 (Calorie Balance)**
-   - 自分の1日の維持カロリー（メンテナンスカロリー）を**データ・設定**タブから調整・保存できます（デフォルト: 2000 kcal）。
+   - 自分の1日の維持カロリー（メンテナンスカロリー）を**ダッシュボード**タブから調整・保存できます（デフォルト: 2000 kcal）。カロリーバランスグラフのすぐ下に設定欄があるので、調整した結果をその場で確認できます。
    - ダッシュボードの「カロリーバランス」グラフで、直近7日間のランニングによる消費カロリーとメンテナンスカロリーの閾値を並べて比較・確認できます。
 
 7. **最適化計画 (Plan)**
