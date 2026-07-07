@@ -412,7 +412,10 @@ function loadData() {
     }
 
     // 5. Google Sheets Sync URL
-    state.sheetsUrl = localStorage.getItem('fitflow_sheets_url') || 'https://script.google.com/macros/s/AKfycbzvGub8qkPOxTPDcoDbGfiT-U3tdky93ZRMr1SriYq8L4mfPENtZr5iAYyPSJ-xxaZ8/exec';
+    // 注意: 個人のGAS URLをここにデフォルト値として書かないこと。
+    // このリポジトリはPublicであり、ソースにURLを埋め込むと誰でも読み書きできてしまう。
+    // ユーザーは「データ・設定」タブから自分のURLを都度入力・保存する。
+    state.sheetsUrl = localStorage.getItem('fitflow_sheets_url') || '';
     
     // 6. Plan Settings
     const planData = localStorage.getItem('fitflow_plan_settings');
@@ -582,7 +585,7 @@ function initDateTexts() {
     else greeting = 'こんばんは！今日もお疲れ様です🌙';
     
     if (DOM.greetingText) {
-        DOM.greetingText.innerHTML = `${greeting} <span class="app-version-badge">v1.7.0</span>`;
+        DOM.greetingText.innerHTML = `${greeting} <span class="app-version-badge">v1.7.1</span>`;
     }
 }
 
@@ -1220,11 +1223,15 @@ function saveWorkout() {
             }
             const calories = Math.round(dist * getLatestWeight());
 
-            state.cardioLogs.push({
-                date: date,
-                distance: dist,
-                calories: calories
-            });
+            // 体重ログと同様、同じ日付の既存エントリがあれば上書きする
+            // (無条件pushだと、同日の走行距離を訂正のため再入力するたびに重複行が増え、
+            //  「今日の総消費カロリー」が水増しされてしまう)
+            const existingCardioIndex = state.cardioLogs.findIndex(c => c.date === date);
+            if (existingCardioIndex !== -1) {
+                state.cardioLogs[existingCardioIndex] = { date, distance: dist, calories };
+            } else {
+                state.cardioLogs.push({ date, distance: dist, calories });
+            }
             state.cardioLogs.sort((a, b) => new Date(a.date) - new Date(b.date));
             cardioSaved = true;
         }
@@ -2026,6 +2033,8 @@ function importWorkouts(event) {
                 showToast('インポートデータのフォーマットが不正です。');
                 return;
             }
+            importedWeights = filterValidWeightLogs(importedWeights);
+            importedCardio = filterValidCardioLogs(importedCardio);
 
             showConfirmModal(
                 'データの復元',
@@ -2043,34 +2052,9 @@ function importWorkouts(event) {
     reader.readAsText(file);
 }
 
-// Rigorous JSON Schema Validation for Imported Data
-function validateWorkoutsSchema(data) {
-    if (!Array.isArray(data)) return false;
-    for (const w of data) {
-        if (!w || typeof w !== 'object') return false;
-        if (typeof w.id !== 'string' || !w.id) return false;
-        if (typeof w.date !== 'string' || !w.date) return false;
-        if (typeof w.title !== 'string') return false;
-        if (typeof w.category !== 'string') return false;
-        if (typeof w.mood !== 'string') return false;
-        if (typeof w.impression !== 'string') return false;
-        if (!Array.isArray(w.exercises)) return false;
-        
-        for (const ex of w.exercises) {
-            if (!ex || typeof ex !== 'object') return false;
-            if (typeof ex.name !== 'string' || !ex.name) return false;
-            if (!Array.isArray(ex.sets)) return false;
-            for (const s of ex.sets) {
-                if (!s || typeof s !== 'object') return false;
-                // Support both float/int, check isNaN
-                const weight = parseFloat(s.weight);
-                const reps = parseInt(s.reps);
-                if (isNaN(weight) || isNaN(reps)) return false;
-            }
-        }
-    }
-    return true;
-}
+// バリデーション/正規化用の純粋関数（normalizeDate, normalizeTime, validateWorkoutsSchema,
+// filterValidWeightLogs, filterValidCardioLogs, sortedByDateDesc, getLatestWeightFromLogs）は
+// lib/data-utils.js に切り出し、index.htmlでこのファイルより先に読み込んでいる
 
 function mergeImportedData(workouts, weights, cardio, maintenance, foodLogs = [], planSettings = null) {
     // 1. Merge workouts by ID
@@ -2172,11 +2156,9 @@ function clearAllWorkouts() {
 // ==========================================
 
 function getLatestWeight() {
-    if (state.weightLogs && state.weightLogs.length > 0) {
-        // Last element since it's sorted chronologically in load/save
-        return state.weightLogs[state.weightLogs.length - 1].weight;
-    }
-    return DEFAULT_WEIGHT_KG;
+    // 昇順ソート済みのstate.weightLogsから最新値を取り出す部分はlib/data-utils.jsの
+    // 純粋関数に委譲（ロジック自体はそちらでテストする）
+    return getLatestWeightFromLogs(state.weightLogs, DEFAULT_WEIGHT_KG);
 }
 
 function updateCardioHint() {
@@ -2378,6 +2360,20 @@ function renderCalorieChart() {
 // GOOGLE SHEETS CLOUD SYNC FUNCTIONS
 // ==========================================
 
+// GASのコールドスタート等でレスポンスが極端に遅い/失敗するケースがあるため、
+// タイムアウトと1回の自動リトライを共通化したfetchラッパー
+function fetchSheetsWithRetry(url, options, { timeoutMs = 15000, retries = 1, retryDelayMs = 1500 } = {}) {
+    const attempt = (remaining) => {
+        return fetch(url, { ...options, signal: AbortSignal.timeout(timeoutMs) })
+            .catch(err => {
+                if (remaining <= 0) throw err;
+                return new Promise(resolve => setTimeout(resolve, retryDelayMs))
+                    .then(() => attempt(remaining - 1));
+            });
+    };
+    return attempt(retries);
+}
+
 function backupToSheets() {
     triggerSync(false);
 }
@@ -2410,7 +2406,7 @@ function triggerSync(isSilent = false) {
         planSettings: state.planSettings
     };
     
-    fetch(state.sheetsUrl, {
+    fetchSheetsWithRetry(state.sheetsUrl, {
         method: 'POST',
         mode: 'cors',
         headers: {
@@ -2455,7 +2451,7 @@ function autoSyncFromCloud() {
         return;
     }
     
-    fetch(state.sheetsUrl, {
+    fetchSheetsWithRetry(state.sheetsUrl, {
         method: 'GET',
         mode: 'cors'
     })
@@ -2467,8 +2463,8 @@ function autoSyncFromCloud() {
         if (data && !data.error) {
             data = normalizeImportedData(data);
             const importedWorkouts = data.workouts || [];
-            const importedWeights = data.weightLogs || [];
-            const importedCardio = data.cardioLogs || [];
+            const importedWeights = filterValidWeightLogs(data.weightLogs || []);
+            const importedCardio = filterValidCardioLogs(data.cardioLogs || []);
             const importedMaint = data.maintenanceCalories || DEFAULT_MAINTENANCE_CALORIES;
             const importedFood = data.foodLogs || [];
             const importedPlan = data.planSettings || null;
@@ -2530,7 +2526,7 @@ function restoreFromSheets() {
 
     showToast('クラウドからデータ取得中...');
 
-    fetch(state.sheetsUrl, {
+    fetchSheetsWithRetry(state.sheetsUrl, {
         method: 'GET',
         mode: 'cors'
     })
@@ -2539,8 +2535,8 @@ function restoreFromSheets() {
         if (data && !data.error) {
             data = normalizeImportedData(data);
             const importedWorkouts = data.workouts || [];
-            const importedWeights = data.weightLogs || [];
-            const importedCardio = data.cardioLogs || [];
+            const importedWeights = filterValidWeightLogs(data.weightLogs || []);
+            const importedCardio = filterValidCardioLogs(data.cardioLogs || []);
             const importedMaint = data.maintenanceCalories || DEFAULT_MAINTENANCE_CALORIES;
             const importedFood = data.foodLogs || [];
             const importedPlan = data.planSettings || null;
@@ -2623,35 +2619,6 @@ function normalizeImportedData(data) {
     return data;
 }
 
-function normalizeDate(dateStr) {
-    if (!dateStr) return '';
-    const str = String(dateStr);
-    if (str.includes('T') || str.includes('/') || str.includes('-')) {
-        const d = new Date(str);
-        if (!isNaN(d.getTime())) {
-            const y = d.getFullYear();
-            const m = String(d.getMonth() + 1).padStart(2, '0');
-            const day = String(d.getDate()).padStart(2, '0');
-            return `${y}-${m}-${day}`;
-        }
-    }
-    return str;
-}
-
-function normalizeTime(timeStr) {
-    if (!timeStr) return '';
-    const str = String(timeStr);
-    if (str.includes('T')) {
-        const d = new Date(str);
-        if (!isNaN(d.getTime())) {
-            const h = String(d.getHours()).padStart(2, '0');
-            const min = String(d.getMinutes()).padStart(2, '0');
-            return `${h}:${min}`;
-        }
-    }
-    return str;
-}
-
 function updateCardioHistoryList() {
     const container = document.getElementById('cardio-history-container');
     const countSpan = document.getElementById('cardio-history-count');
@@ -2659,7 +2626,7 @@ function updateCardioHistoryList() {
 
     // 表示用の並び替えは state.cardioLogs 自体を書き換えず、コピー配列に対して行う
     // (直接ソートすると getLatestWeight() のような「末尾 = 最新」前提のロジックが壊れるため)
-    const sortedLogs = state.cardioLogs.slice().sort((a, b) => new Date(b.date) - new Date(a.date));
+    const sortedLogs = sortedByDateDesc(state.cardioLogs);
 
     countSpan.textContent = sortedLogs.length;
     container.innerHTML = '';
@@ -2752,7 +2719,7 @@ function updateWeightHistoryList() {
 
     // 表示用の並び替えは state.weightLogs 自体を書き換えず、コピー配列に対して行う
     // (直接ソートすると getLatestWeight() の「末尾 = 最新」前提が壊れ、ダッシュボードの最新体重がおかしくなる)
-    const sortedLogs = state.weightLogs.slice().sort((a, b) => new Date(b.date) - new Date(a.date));
+    const sortedLogs = sortedByDateDesc(state.weightLogs);
 
     countSpan.textContent = sortedLogs.length;
     container.innerHTML = '';

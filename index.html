@@ -24,7 +24,7 @@
                 </div>
                 <div class="brand-text">
                     <h1>FITFLOW</h1>
-                    <span class="app-version">v1.7.0</span>
+                    <span class="app-version">v1.7.1</span>
                 </div>
             </div>
             
@@ -65,7 +65,7 @@
             <!-- Top bar -->
             <header class="top-bar">
                 <div class="welcome">
-                    <h2 id="greeting-text">こんにちは！<span class="app-version-badge">v1.7.0</span></h2>
+                    <h2 id="greeting-text">こんにちは！<span class="app-version-badge">v1.7.1</span></h2>
                     <p id="date-text">2026年7月3日 金曜日</p>
                 </div>
                 <div class="header-right-controls">
@@ -573,6 +573,7 @@
                         </div>
                         <div class="card-body">
                             <p class="settings-desc">デプロイしたGoogle Apps Script (GAS) のウェブアプリURLを設定することで、クラウド（スプレッドシート）と双方向同期が可能です。</p>
+                            <p class="settings-desc" style="color: var(--color-danger);">⚠️ このURLはブラウザのLocalStorageにのみ保存されます。ソースコードには書き込まないでください（このリポジトリがPublicの場合、誰でも読み書きできてしまいます）。</p>
                             <div class="form-group">
                                 <label for="sheets-url-input">GAS ウェブアプリ URL</label>
                                 <input type="url" id="sheets-url-input" placeholder="https://script.google.com/macros/s/.../exec" class="width-full">
@@ -672,6 +673,7 @@
         </div>
     </div>
 
-    <script src="app.js?v=1.5.1"></script>
+    <script src="lib/data-utils.js?v=1.7.1"></script>
+    <script src="app.js?v=1.7.1"></script>
 </body>
 </html>
