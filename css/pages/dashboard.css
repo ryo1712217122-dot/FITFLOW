@@ -1,0 +1,210 @@
+@layer pages {
+/* Stat Cards */
+.stat-card {
+    display: flex;
+    align-items: center;
+    gap: 1.25rem;
+}
+
+.stat-card .card-icon {
+    width: 56px;
+    height: 56px;
+    border-radius: 12px;
+    background-color: var(--bg-icon-neutral);
+    border: 1px solid var(--border-color);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--color-primary);
+    transition: var(--transition);
+}
+
+.stat-card:hover .card-icon {
+    background: var(--primary-gradient);
+    color: #fff;
+    border-color: transparent;
+    transform: scale(1.05);
+}
+
+.stat-card .card-icon i {
+    width: 26px;
+    height: 26px;
+}
+
+.stat-card .card-info h3 {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 0.25rem;
+}
+
+.stat-card .big-number {
+    font-family: var(--font-display);
+    font-size: 2rem;
+    font-weight: 700;
+    line-height: 1;
+    margin-bottom: 0.25rem;
+}
+
+.stat-card .big-number .unit {
+    font-size: 1rem;
+    color: var(--text-secondary);
+    font-weight: 400;
+}
+
+.stat-card .stat-desc {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+}
+
+/* Calendar Heatmap */
+.calendar-wrapper {
+    margin-top: 1rem;
+    background-color: var(--bg-wrapper);
+    border-radius: var(--radius-sm);
+    padding: 1rem;
+}
+
+.calendar-grid-header {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    text-align: center;
+    font-weight: 600;
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    margin-bottom: 0.5rem;
+}
+
+.calendar-grid-days {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 6px;
+}
+
+.calendar-day {
+    aspect-ratio: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.85rem;
+    font-weight: 500;
+    border-radius: 8px;
+    color: var(--text-secondary);
+    background-color: rgba(255, 255, 255, 0.02);
+    border: 1px solid transparent;
+    cursor: pointer;
+    transition: var(--transition);
+    position: relative;
+}
+
+.calendar-day:hover {
+    background-color: rgba(255, 255, 255, 0.06);
+    color: var(--text-primary);
+}
+
+.calendar-day.empty {
+    background-color: transparent;
+    border: none;
+    cursor: default;
+}
+
+.calendar-day.today {
+    border: 1px solid var(--color-primary);
+    color: var(--color-primary);
+    font-weight: 700;
+}
+
+.calendar-day.workout-done {
+    background: var(--secondary-gradient);
+    color: #fff;
+    box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
+}
+
+.calendar-day.workout-done.today {
+    background: var(--primary-gradient);
+    border: none;
+}
+
+.calendar-day .workout-dot-indicator {
+    position: absolute;
+    bottom: 4px;
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background-color: #fff;
+}
+
+.calendar-legend {
+    display: flex;
+    justify-content: flex-end;
+    gap: 1.5rem;
+    margin-top: 1rem;
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.legend-item .dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 3px;
+}
+
+.legend-item .dot.done {
+    background: var(--secondary-gradient);
+}
+
+.legend-item .dot.today {
+    border: 1px solid var(--color-primary);
+}
+
+/* Calorie Balance Widget */
+.calorie-analytics-wrapper {
+    display: grid;
+    grid-template-columns: 1fr 2fr;
+    gap: 1.5rem;
+    align-items: center;
+}
+
+.calorie-stats-column {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.calorie-summary-tile {
+    background-color: rgba(0, 0, 0, 0.15);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    padding: 0.75rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.calorie-summary-tile .tile-label {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    font-weight: 500;
+}
+
+.calorie-summary-tile .tile-value {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 1.25rem;
+    color: var(--color-primary);
+}
+
+.calorie-summary-tile .tile-value .unit {
+    font-size: 0.8rem;
+    font-weight: 400;
+    color: var(--text-secondary);
+}
+} /* end @layer pages (dashboard) */

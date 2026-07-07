@@ -1,0 +1,98 @@
+@layer pages {
+.settings-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.5rem;
+}
+
+.settings-group-heading {
+    grid-column: 1 / -1;
+    font-family: var(--font-display);
+    font-size: 0.85rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text-muted);
+    margin: 0.5rem 0 -0.5rem;
+}
+
+.settings-group-heading:first-child {
+    margin-top: 0;
+}
+
+.settings-card {
+    height: fit-content;
+}
+
+.settings-desc {
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    line-height: 1.6;
+    margin-bottom: 1.5rem;
+}
+
+.settings-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.import-wrapper {
+    position: relative;
+}
+
+.danger-card {
+    border-color: rgba(239, 68, 68, 0.2);
+}
+
+.help-body h4 {
+    margin-bottom: 0.75rem;
+    font-size: 1rem;
+}
+
+.help-body ul {
+    padding-left: 1.25rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    line-height: 1.5;
+}
+
+/* テーマ選択グリッド（元はボタン4つぶんすべてインラインstyleだった） */
+.theme-select-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.theme-select-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 0.75rem;
+    border-radius: 12px;
+    cursor: pointer;
+    border: 2px solid var(--border-color);
+    background: rgba(0, 0, 0, 0.2);
+    outline: none;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.theme-select-btn.active {
+    border-color: var(--color-primary) !important;
+    background-color: rgba(255, 255, 255, 0.08) !important;
+    box-shadow: 0 0 12px rgba(255, 255, 255, 0.05);
+}
+
+.theme-select-name {
+    font-weight: 700;
+}
+
+.theme-select-desc {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+}
+} /* end @layer pages (settings) */

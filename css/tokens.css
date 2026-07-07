@@ -1,0 +1,72 @@
+@layer tokens {
+/* CSS Variables and Design Tokens */
+:root {
+    --bg-base: #141f23;
+    --bg-surface: #1e2d33;
+    --bg-surface-hover: #273941;
+    --bg-sidebar: #182429;
+    --border-color: rgba(125, 163, 161, 0.15);
+    --border-focus: #86ac41;
+
+    --text-primary: #f0f4f3;
+    --text-secondary: #a8c0be;
+    --text-muted: #7da3a1;
+
+    --primary-gradient: linear-gradient(135deg, #86ac41 0%, #34675c 100%);
+    --secondary-gradient: linear-gradient(135deg, #7da3a1 0%, #324851 100%);
+    --success-gradient: linear-gradient(135deg, #86ac41 0%, #34675c 100%);
+    --danger-gradient: linear-gradient(135deg, #e05a47 0%, #c0392b 100%);
+
+    --color-primary: #86ac41;
+    --color-secondary: #7da3a1;
+    --color-success: #86ac41;
+    --color-danger: #e05a47;
+    --color-warning: #d9a05b;
+
+    --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.2);
+    --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.3);
+    --shadow-lg: 0 16px 48px rgba(0, 0, 0, 0.45);
+
+    --radius-sm: 8px;
+    --radius-md: 14px;
+    --radius-lg: 20px;
+    --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+    --font-display: 'Outfit', sans-serif;
+
+    --bg-input: rgba(0, 0, 0, 0.2);
+    --bg-wrapper: rgba(0, 0, 0, 0.1);
+    --bg-item: rgba(0, 0, 0, 0.15);
+    --bg-impression: rgba(0, 0, 0, 0.12);
+    --bg-icon-neutral: rgba(255, 255, 255, 0.03);
+}
+
+/* Light Theme overrides if toggled */
+body.light-theme {
+    --bg-base: #f0f4f3;
+    --bg-surface: #ffffff;
+    --bg-surface-hover: #f7faf9;
+    --bg-sidebar: #1e2d33; /* Keep sidebar dark for contrast/premium feel */
+    --border-color: rgba(50, 72, 81, 0.08);
+    --border-focus: #34675c;
+
+    --text-primary: #1f2d33;
+    --text-secondary: #4e656d;
+    --text-muted: #7da3a1;
+
+    --color-primary: #34675c;
+    --color-secondary: #7da3a1;
+    --color-success: #86ac41;
+    --color-danger: #e05a47;
+
+    --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.05);
+    --shadow-md: 0 8px 20px rgba(0, 0, 0, 0.08);
+    --shadow-lg: 0 12px 30px rgba(0, 0, 0, 0.12);
+
+    --bg-input: #f7faf9;
+    --bg-wrapper: #e5ecea;
+    --bg-item: #f7faf9;
+    --bg-impression: #e5ecea;
+    --bg-icon-neutral: rgba(0, 0, 0, 0.03);
+}
+} /* end @layer tokens */

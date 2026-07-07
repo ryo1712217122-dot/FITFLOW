@@ -1,0 +1,3 @@
+/* レイヤー優先順位の宣言。ここでの並び順（後ろほど強い）がカスケードを決めるため、
+   各CSSファイルの<link>の物理的な順番に依存しない。必ず他のどのスタイルシートより先に読み込むこと。 */
+@layer tokens, base, layout, components, pages, responsive;

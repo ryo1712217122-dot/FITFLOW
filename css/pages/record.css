@@ -1,0 +1,325 @@
+@layer pages {
+/* 記録するタブ: 一括記録フォーム + 体重クイックフォーム */
+.quick-log-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 1.5rem;
+}
+
+.side-loggers-column {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.log-card {
+    height: fit-content;
+}
+
+.form-section-divider {
+    margin: 1.5rem 0;
+    border: none;
+    border-top: 1px solid var(--border-color);
+}
+
+.field-optional-hint {
+    font-size: 0.8rem;
+    font-weight: normal;
+    color: var(--text-muted);
+}
+
+.food-section-label {
+    font-weight: 600;
+}
+
+/* 特別な飲食チップ */
+.food-chips-container {
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    margin-top: 0.5rem;
+}
+
+.food-chip-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: var(--bg-surface-hover);
+    border: 1px solid var(--border-color);
+    padding: 0.5rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    /* チップ数が増えても内部のラベルが折り返されないよう、縮まずに次の行へ流す */
+    flex: 0 0 auto;
+    max-width: 100%;
+}
+
+.food-chip-row label {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    cursor: pointer;
+    user-select: none;
+    margin: 0;
+    white-space: nowrap;
+}
+
+.food-chip-row input[type="checkbox"] {
+    cursor: pointer;
+    width: 16px;
+    height: 16px;
+}
+
+.food-kcal-input {
+    width: 64px;
+    padding: 0.3rem 0.5rem;
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+    background: var(--bg-surface);
+    color: var(--text-primary);
+    font-size: 0.8rem;
+    text-align: right;
+}
+
+.food-kcal-input:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.food-custom-name-input {
+    width: 84px;
+    padding: 0.3rem 0.5rem;
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+    background: var(--bg-surface);
+    color: var(--text-primary);
+    font-size: 0.8rem;
+}
+
+.food-custom-name-input:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+/* 筋トレも同時に記録するかのトグル */
+.gym-workout-section-toggle {
+    margin-bottom: 1.25rem;
+}
+
+.gym-workout-toggle-label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-weight: 600;
+    cursor: pointer;
+    user-select: none;
+}
+
+.gym-workout-toggle-label input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+}
+
+/* Mood Selector */
+.mood-selector {
+    display: flex;
+    gap: 0.75rem;
+}
+
+.mood-option {
+    cursor: pointer;
+    flex: 1;
+}
+
+.mood-option input {
+    display: none;
+}
+
+.mood-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    height: 48px;
+    border-radius: var(--radius-sm);
+    background-color: rgba(255, 255, 255, 0.02);
+    border: 1px solid var(--border-color);
+    transition: var(--transition);
+}
+
+.mood-option input:checked + .mood-btn {
+    background-color: rgba(139, 92, 246, 0.12);
+    border-color: var(--border-focus);
+    box-shadow: 0 0 10px rgba(139, 92, 246, 0.15);
+    transform: translateY(-2px);
+}
+
+/* 種目詳細の折りたたみパネル */
+.exercise-details-panel {
+    background-color: var(--bg-wrapper);
+    border: 1px dashed var(--border-color);
+    border-radius: var(--radius-sm);
+    padding: 0.85rem;
+}
+
+.exercise-details-summary {
+    cursor: pointer;
+    font-weight: 600;
+    color: var(--color-primary);
+    outline: none;
+    user-select: none;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.exercise-details-summary::marker {
+    color: var(--color-primary);
+}
+
+.exercise-details-content {
+    margin-top: 0.75rem;
+}
+
+/* Dynamic Exercise Builder */
+.exercise-builder-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+}
+
+.exercise-item {
+    border: 1px solid var(--border-color);
+    background-color: var(--bg-item);
+    border-radius: var(--radius-md);
+    padding: 1.25rem;
+    position: relative;
+    animation: slideIn 0.3s ease;
+}
+
+.exercise-item-header {
+    display: grid;
+    grid-template-columns: 1fr auto auto;
+    gap: 1rem;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.exercise-name-input-wrapper {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+}
+
+.exercise-name-input-wrapper input,
+.exercise-name-input-wrapper select {
+    width: 100%;
+}
+
+.exercise-name-picker {
+    font-size: 0.85rem;
+    padding: 0.5rem 0.75rem;
+}
+
+.exercise-sets-counter {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.exercise-sets-counter label {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    margin: 0;
+    white-space: nowrap;
+}
+
+.exercise-sets-input {
+    width: 50px;
+    padding: 0.35rem 0.25rem;
+    font-size: 0.85rem;
+    border-radius: 6px;
+    border: 1px solid var(--border-color);
+    background: var(--bg-surface-hover);
+    text-align: center;
+    color: var(--text-primary);
+}
+
+.sets-table-wrapper {
+    margin-top: 0.75rem;
+}
+
+.sets-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.sets-table th {
+    text-align: left;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    padding-bottom: 0.5rem;
+    text-transform: uppercase;
+}
+
+.sets-table td {
+    padding: 0.35rem 0;
+    vertical-align: middle;
+}
+
+.sets-table input {
+    width: 75px;
+    padding: 0.4rem 0.6rem;
+    font-size: 0.85rem;
+    text-align: center;
+}
+
+.set-row {
+    animation: fadeIn 0.2s ease;
+}
+
+.set-num {
+    font-weight: 600;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    width: 40px;
+}
+
+.set-multiply {
+    color: var(--text-muted);
+    text-align: center;
+    width: 30px;
+    font-size: 0.85rem;
+}
+
+.set-action {
+    text-align: right;
+    width: 40px;
+}
+
+.add-set-row-btn {
+    margin-top: 0.75rem;
+    color: var(--color-primary);
+    background: none;
+    border: none;
+    font-size: 0.85rem;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.add-set-row-btn:hover {
+    color: var(--text-primary);
+}
+
+.add-set-row-btn i {
+    width: 14px;
+    height: 14px;
+}
+} /* end @layer pages (record) */
