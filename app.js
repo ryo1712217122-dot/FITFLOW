@@ -590,7 +590,7 @@ function initDateTexts() {
     else greeting = 'こんばんは！今日もお疲れ様です🌙';
     
     if (DOM.greetingText) {
-        DOM.greetingText.innerHTML = `${greeting} <span class="app-version-badge">v1.8.0</span>`;
+        DOM.greetingText.innerHTML = `${greeting} <span class="app-version-badge">v1.8.1</span>`;
     }
 }
 
@@ -984,6 +984,13 @@ function initFormControls() {
         DOM.logCardioDist.addEventListener('input', updateCardioHint);
     }
 
+    // 日付を選び直した時、その日にすでにある有酸素・特別な飲食の記録をフォームに反映する
+    if (DOM.workoutDate) {
+        DOM.workoutDate.addEventListener('change', () => {
+            syncFormWithExistingDataForDate(DOM.workoutDate.value);
+        });
+    }
+
     if (DOM.weightQuickForm) {
         if (DOM.weightQuickDate) DOM.weightQuickDate.value = getLocalDateString();
         DOM.weightQuickForm.addEventListener('submit', (e) => {
@@ -1021,24 +1028,13 @@ function initFormControls() {
 function resetWorkoutForm() {
     state.editingWorkoutId = null;
     if (DOM.workoutForm) DOM.workoutForm.reset();
-    
-    FOOD_ITEMS.forEach(item => {
-        const chk = document.getElementById(item.chkId);
-        const kcalInput = document.getElementById(item.kcalId);
-        const nameInput = item.nameId ? document.getElementById(item.nameId) : null;
-        if (chk) chk.checked = false;
-        if (kcalInput) {
-            kcalInput.value = '';
-            kcalInput.disabled = true;
-        }
-        if (nameInput) {
-            nameInput.value = '';
-            nameInput.disabled = true;
-        }
-    });
 
     const now = new Date();
     if (DOM.workoutDate) DOM.workoutDate.value = getLocalDateString(now);
+
+    // 今日の日付にすでにある有酸素・特別な飲食の記録があればフォームに反映し、
+    // 無ければ空欄にする(既存記録の有無に関わらず一貫した状態にするため)
+    syncFormWithExistingDataForDate(DOM.workoutDate ? DOM.workoutDate.value : '');
 
     const hours = String(now.getHours()).padStart(2, '0');
     const minutes = String(now.getMinutes()).padStart(2, '0');
@@ -1225,6 +1221,37 @@ function addSetRow(tbody, weight = '', reps = '') {
     }
 }
 
+// フォームで選択された日付にすでにある有酸素・特別な飲食の記録を、フォームへ反映する。
+// (これをせずにフォームを空のまま送信すると、特別な飲食は「未チェック=削除」と
+//  解釈されて、その日にすでに記録していた内容が消えてしまっていた。日付を選んだ・
+//  変えた時点で必ず既存データを見せることで、入力内容と既存記録を食い違わせないようにする)
+function syncFormWithExistingDataForDate(date) {
+    if (!date) return;
+
+    const existingCardio = state.cardioLogs.find(c => c.date === date);
+    if (DOM.logCardioDist) {
+        DOM.logCardioDist.value = existingCardio ? existingCardio.distance : '';
+    }
+    updateCardioHint();
+
+    const existingFood = state.foodLogs.find(f => f.date === date);
+    FOOD_ITEMS.forEach(item => {
+        const chk = document.getElementById(item.chkId);
+        const kcalInput = document.getElementById(item.kcalId);
+        const nameInput = item.nameId ? document.getElementById(item.nameId) : null;
+        const checked = existingFood ? !!existingFood[item.key] : false;
+        if (chk) chk.checked = checked;
+        if (kcalInput) {
+            kcalInput.disabled = !checked;
+            kcalInput.value = (checked && existingFood && existingFood[item.calKey]) ? existingFood[item.calKey] : '';
+        }
+        if (nameInput) {
+            nameInput.disabled = !checked;
+            nameInput.value = (checked && existingFood && item.nameKey && existingFood[item.nameKey]) ? existingFood[item.nameKey] : '';
+        }
+    });
+}
+
 function saveWorkout() {
     const date = DOM.workoutDate.value;
     const time = DOM.workoutTime.value;
@@ -1304,27 +1331,34 @@ function saveWorkout() {
             showToast('筋トレ種目の入力内容を確認してください（すべてのセットに正しい値を入力）');
             return;
         }
-        
-        const workoutData = {
-            id: state.editingWorkoutId || 'workout-' + Date.now(),
-            date,
-            time,
-            title: title || '無題のワークアウト',
-            category,
-            mood,
-            impression,
-            exercises
-        };
-        
-        if (state.editingWorkoutId) {
-            const idx = state.workouts.findIndex(w => w.id === state.editingWorkoutId);
-            if (idx !== -1) {
-                state.workouts[idx] = workoutData;
+
+        // 「筋トレも同時に記録する」はフォームリセット時にHTMLのdefaultで毎回チェックが
+        // 復活する(form.reset()の仕様)。種目を何も入力していない新規記録の場合にまで
+        // 空のワークアウト(「無題のワークアウト」・種目0件)を作ってしまうと、有酸素や
+        // 食事だけを記録したいだけの日にも履歴が増えてしまうため、新規作成時は
+        // 実際に種目が1件以上入力された時だけ保存する(編集時は既存の挙動を維持する)
+        if (state.editingWorkoutId || exercises.length > 0) {
+            const workoutData = {
+                id: state.editingWorkoutId || 'workout-' + Date.now(),
+                date,
+                time,
+                title: title || '無題のワークアウト',
+                category,
+                mood,
+                impression,
+                exercises
+            };
+
+            if (state.editingWorkoutId) {
+                const idx = state.workouts.findIndex(w => w.id === state.editingWorkoutId);
+                if (idx !== -1) {
+                    state.workouts[idx] = workoutData;
+                }
+            } else {
+                state.workouts.unshift(workoutData);
             }
-        } else {
-            state.workouts.unshift(workoutData);
+            workoutSaved = true;
         }
-        workoutSaved = true;
     }
     
     // 3. Read optional special foods (+ 任意のkcal数値)
@@ -1624,11 +1658,6 @@ function editWorkout(id) {
     const titleHeader = document.getElementById('logger-form-title');
     if (titleHeader) titleHeader.textContent = 'ワークアウト記録の編集';
 
-    // このワークアウトと無関係な有酸素の入力欄はクリアしておく
-    // (入力中だった値がそのままこの編集の保存に紛れ込むのを防ぐ)
-    if (DOM.logCardioDist) DOM.logCardioDist.value = '';
-    updateCardioHint();
-
     const recordGymWorkoutChk = document.getElementById('record-gym-workout-chk');
     const gymWorkoutFieldsContainer = document.getElementById('gym-workout-fields-container');
     if (recordGymWorkoutChk) recordGymWorkoutChk.checked = true;
@@ -1636,28 +1665,15 @@ function editWorkout(id) {
     if (DOM.saveWorkoutBtn) {
         DOM.saveWorkoutBtn.innerHTML = '<i data-lucide="save"></i> 編集を保存する';
     }
-    
+
     if (DOM.workoutDate) DOM.workoutDate.value = workout.date;
     if (DOM.workoutTime) DOM.workoutTime.value = workout.time || '12:00';
-    
-    // Populate special food checkboxes (+ kcal) for this date
-    const foodRecord = state.foodLogs ? state.foodLogs.find(f => f.date === workout.date) : null;
-    FOOD_ITEMS.forEach(item => {
-        const chk = document.getElementById(item.chkId);
-        const kcalInput = document.getElementById(item.kcalId);
-        const nameInput = item.nameId ? document.getElementById(item.nameId) : null;
-        const checked = foodRecord ? !!foodRecord[item.key] : false;
-        if (chk) chk.checked = checked;
-        if (kcalInput) {
-            kcalInput.disabled = !checked;
-            kcalInput.value = (checked && foodRecord && foodRecord[item.calKey]) ? foodRecord[item.calKey] : '';
-        }
-        if (nameInput) {
-            nameInput.disabled = !checked;
-            nameInput.value = (checked && foodRecord && item.nameKey && foodRecord[item.nameKey]) ? foodRecord[item.nameKey] : '';
-        }
-    });
-    
+
+    // このワークアウトの日付にすでにある有酸素・特別な飲食の記録をフォームに反映する
+    // (以前は無関係だと決めつけて有酸素欄を空にしていたが、それだと本当にその日に
+    //  記録済みの有酸素があっても見えず、気づかないまま再送信して食い違いが起きていた)
+    syncFormWithExistingDataForDate(workout.date);
+
     if (DOM.workoutImpression) DOM.workoutImpression.value = workout.impression || '';
     
     const moodRadio = DOM.workoutForm ? DOM.workoutForm.querySelector(`input[name="workout-mood"][value="${workout.mood}"]`) : null;
