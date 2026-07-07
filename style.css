@@ -654,6 +654,42 @@ body:not(.light-theme) .light-icon { display: none; }
     color: var(--color-danger);
 }
 
+.food-chips-container {
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    margin-top: 0.5rem;
+}
+
+.food-chip-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: var(--bg-surface-hover);
+    border: 1px solid var(--border-color);
+    padding: 0.5rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    /* チップ数が増えても内部のラベルが折り返されないよう、縮まずに次の行へ流す */
+    flex: 0 0 auto;
+}
+
+.food-chip-row label {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    cursor: pointer;
+    user-select: none;
+    margin: 0;
+    white-space: nowrap;
+}
+
+.food-chip-row input[type="checkbox"] {
+    cursor: pointer;
+    width: 16px;
+    height: 16px;
+}
+
 .food-kcal-input {
     width: 64px;
     padding: 0.3rem 0.5rem;
@@ -666,6 +702,21 @@ body:not(.light-theme) .light-icon { display: none; }
 }
 
 .food-kcal-input:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.food-custom-name-input {
+    width: 84px;
+    padding: 0.3rem 0.5rem;
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+    background: var(--bg-surface);
+    color: var(--text-primary);
+    font-size: 0.8rem;
+}
+
+.food-custom-name-input:disabled {
     opacity: 0.4;
     cursor: not-allowed;
 }

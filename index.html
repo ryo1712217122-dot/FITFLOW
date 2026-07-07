@@ -12,7 +12,7 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
-    <link rel="stylesheet" href="style.css?v=1.7.2">
+    <link rel="stylesheet" href="style.css?v=1.8.0">
 </head>
 <body>
     <div class="app-container">
@@ -24,7 +24,7 @@
                 </div>
                 <div class="brand-text">
                     <h1>FITFLOW</h1>
-                    <span class="app-version">v1.7.2</span>
+                    <span class="app-version">v1.8.0</span>
                 </div>
             </div>
             
@@ -65,7 +65,7 @@
             <!-- Top bar -->
             <header class="top-bar">
                 <div class="welcome">
-                    <h2 id="greeting-text">こんにちは！<span class="app-version-badge">v1.7.2</span></h2>
+                    <h2 id="greeting-text">こんにちは！<span class="app-version-badge">v1.8.0</span></h2>
                     <p id="date-text">2026年7月3日 金曜日</p>
                 </div>
                 <div class="header-right-controls">
@@ -127,27 +127,56 @@
                             <!-- Special Foods/Drinks Checkbox Chips -->
                             <div class="form-group">
                                 <label style="font-weight: 600;">特別な飲食の記録 <span style="font-size: 0.8rem; font-weight: normal; color: var(--text-muted);">(任意・カロリーが分かれば入力)</span></label>
-                                <div style="display: flex; gap: 0.75rem; flex-wrap: wrap; margin-top: 0.5rem;">
-                                    <div class="food-chip-row" style="display: flex; align-items: center; gap: 0.5rem; background: var(--bg-surface-hover); border: 1px solid var(--border-color); padding: 0.5rem 0.75rem; border-radius: 20px; font-size: 0.85rem;">
-                                        <label style="display: flex; align-items: center; gap: 0.35rem; cursor: pointer; user-select: none; margin: 0;">
-                                            <input type="checkbox" id="food-milktea-chk" style="cursor: pointer; width: 16px; height: 16px;">
+                                <div class="food-chips-container">
+                                    <div class="food-chip-row">
+                                        <label>
+                                            <input type="checkbox" id="food-milktea-chk">
                                             <span>🍵 紅茶・お菓子</span>
                                         </label>
                                         <input type="number" id="food-milktea-kcal" class="food-kcal-input" placeholder="kcal" min="0" step="1" disabled>
                                     </div>
-                                    <div class="food-chip-row" style="display: flex; align-items: center; gap: 0.5rem; background: var(--bg-surface-hover); border: 1px solid var(--border-color); padding: 0.5rem 0.75rem; border-radius: 20px; font-size: 0.85rem;">
-                                        <label style="display: flex; align-items: center; gap: 0.35rem; cursor: pointer; user-select: none; margin: 0;">
-                                            <input type="checkbox" id="food-ramen-chk" style="cursor: pointer; width: 16px; height: 16px;">
+                                    <div class="food-chip-row">
+                                        <label>
+                                            <input type="checkbox" id="food-ramen-chk">
                                             <span>🍜 ラーメン</span>
                                         </label>
                                         <input type="number" id="food-ramen-kcal" class="food-kcal-input" placeholder="kcal" min="0" step="1" disabled>
                                     </div>
-                                    <div class="food-chip-row" style="display: flex; align-items: center; gap: 0.5rem; background: var(--bg-surface-hover); border: 1px solid var(--border-color); padding: 0.5rem 0.75rem; border-radius: 20px; font-size: 0.85rem;">
-                                        <label style="display: flex; align-items: center; gap: 0.35rem; cursor: pointer; user-select: none; margin: 0;">
-                                            <input type="checkbox" id="food-drinking-chk" style="cursor: pointer; width: 16px; height: 16px;">
+                                    <div class="food-chip-row">
+                                        <label>
+                                            <input type="checkbox" id="food-drinking-chk">
                                             <span>🍺 飲み会</span>
                                         </label>
                                         <input type="number" id="food-drinking-kcal" class="food-kcal-input" placeholder="kcal" min="0" step="1" disabled>
+                                    </div>
+                                    <div class="food-chip-row">
+                                        <label>
+                                            <input type="checkbox" id="food-sweets-chk">
+                                            <span>🍰 スイーツ・デザート</span>
+                                        </label>
+                                        <input type="number" id="food-sweets-kcal" class="food-kcal-input" placeholder="kcal" min="0" step="1" disabled>
+                                    </div>
+                                    <div class="food-chip-row">
+                                        <label>
+                                            <input type="checkbox" id="food-fastfood-chk">
+                                            <span>🍔 ファーストフード</span>
+                                        </label>
+                                        <input type="number" id="food-fastfood-kcal" class="food-kcal-input" placeholder="kcal" min="0" step="1" disabled>
+                                    </div>
+                                    <div class="food-chip-row">
+                                        <label>
+                                            <input type="checkbox" id="food-teishoku-chk">
+                                            <span>🍣 寿司・定食</span>
+                                        </label>
+                                        <input type="number" id="food-teishoku-kcal" class="food-kcal-input" placeholder="kcal" min="0" step="1" disabled>
+                                    </div>
+                                    <div class="food-chip-row">
+                                        <label>
+                                            <input type="checkbox" id="food-custom-chk">
+                                            <span>✏️ その他</span>
+                                        </label>
+                                        <input type="text" id="food-custom-name" class="food-custom-name-input" placeholder="内容" maxlength="20" disabled>
+                                        <input type="number" id="food-custom-kcal" class="food-kcal-input" placeholder="kcal" min="0" step="1" disabled>
                                     </div>
                                 </div>
                             </div>
@@ -673,7 +702,7 @@
         </div>
     </div>
 
-    <script src="lib/data-utils.js?v=1.7.2"></script>
-    <script src="app.js?v=1.7.2"></script>
+    <script src="lib/data-utils.js?v=1.8.0"></script>
+    <script src="app.js?v=1.8.0"></script>
 </body>
 </html>

@@ -12,10 +12,15 @@ const CARDIO_DAYS_WINDOW = 7;
 const DEFAULT_WORKOUT_CATEGORY = 'その他 (Other)';
 
 // 特別な飲食チップの定義 (チェック有無 + 任意のkcal数値をこの並びで扱う)
+// customがtrueの項目だけは固定ラベルの代わりに自由入力の名前(nameId/nameKey)を持つ
 const FOOD_ITEMS = [
     { key: 'milktea', chkId: 'food-milktea-chk', kcalId: 'food-milktea-kcal', calKey: 'milkteaCalories', label: '🍵 紅茶・お菓子' },
     { key: 'ramen', chkId: 'food-ramen-chk', kcalId: 'food-ramen-kcal', calKey: 'ramenCalories', label: '🍜 ラーメン' },
-    { key: 'drinking', chkId: 'food-drinking-chk', kcalId: 'food-drinking-kcal', calKey: 'drinkingCalories', label: '🍺 飲み会' }
+    { key: 'drinking', chkId: 'food-drinking-chk', kcalId: 'food-drinking-kcal', calKey: 'drinkingCalories', label: '🍺 飲み会' },
+    { key: 'sweets', chkId: 'food-sweets-chk', kcalId: 'food-sweets-kcal', calKey: 'sweetsCalories', label: '🍰 スイーツ・デザート' },
+    { key: 'fastfood', chkId: 'food-fastfood-chk', kcalId: 'food-fastfood-kcal', calKey: 'fastfoodCalories', label: '🍔 ファーストフード' },
+    { key: 'teishoku', chkId: 'food-teishoku-chk', kcalId: 'food-teishoku-kcal', calKey: 'teishokuCalories', label: '🍣 寿司・定食' },
+    { key: 'custom', chkId: 'food-custom-chk', kcalId: 'food-custom-kcal', calKey: 'customCalories', label: '✏️ その他', nameId: 'food-custom-name', nameKey: 'customName', isCustom: true }
 ];
 
 const DEFAULT_PLAN_SETTINGS = {
@@ -585,7 +590,7 @@ function initDateTexts() {
     else greeting = 'こんばんは！今日もお疲れ様です🌙';
     
     if (DOM.greetingText) {
-        DOM.greetingText.innerHTML = `${greeting} <span class="app-version-badge">v1.7.2</span>`;
+        DOM.greetingText.innerHTML = `${greeting} <span class="app-version-badge">v1.8.0</span>`;
     }
 }
 
@@ -995,14 +1000,19 @@ function initFormControls() {
         });
     }
 
-    // 特別な飲食チェックのON/OFFに合わせてkcal入力欄を有効化・無効化する
+    // 特別な飲食チェックのON/OFFに合わせてkcal入力欄(と、その他項目のみ名前入力欄)を有効化・無効化する
     FOOD_ITEMS.forEach(item => {
         const chk = document.getElementById(item.chkId);
         const kcalInput = document.getElementById(item.kcalId);
+        const nameInput = item.nameId ? document.getElementById(item.nameId) : null;
         if (chk && kcalInput) {
             chk.addEventListener('change', () => {
                 kcalInput.disabled = !chk.checked;
                 if (!chk.checked) kcalInput.value = '';
+                if (nameInput) {
+                    nameInput.disabled = !chk.checked;
+                    if (!chk.checked) nameInput.value = '';
+                }
             });
         }
     });
@@ -1015,10 +1025,15 @@ function resetWorkoutForm() {
     FOOD_ITEMS.forEach(item => {
         const chk = document.getElementById(item.chkId);
         const kcalInput = document.getElementById(item.kcalId);
+        const nameInput = item.nameId ? document.getElementById(item.nameId) : null;
         if (chk) chk.checked = false;
         if (kcalInput) {
             kcalInput.value = '';
             kcalInput.disabled = true;
+        }
+        if (nameInput) {
+            nameInput.value = '';
+            nameInput.disabled = true;
         }
     });
 
@@ -1333,6 +1348,10 @@ function saveWorkout() {
                 calories = (!isNaN(val) && val > 0) ? val : null;
             }
             foodRecord[item.calKey] = calories;
+            if (item.nameKey) {
+                const nameInput = item.nameId ? document.getElementById(item.nameId) : null;
+                foodRecord[item.nameKey] = (checked && nameInput) ? nameInput.value.trim() : '';
+            }
         });
         if (foodIndex !== -1) {
             state.foodLogs[foodIndex] = foodRecord;
@@ -1626,11 +1645,16 @@ function editWorkout(id) {
     FOOD_ITEMS.forEach(item => {
         const chk = document.getElementById(item.chkId);
         const kcalInput = document.getElementById(item.kcalId);
+        const nameInput = item.nameId ? document.getElementById(item.nameId) : null;
         const checked = foodRecord ? !!foodRecord[item.key] : false;
         if (chk) chk.checked = checked;
         if (kcalInput) {
             kcalInput.disabled = !checked;
             kcalInput.value = (checked && foodRecord && foodRecord[item.calKey]) ? foodRecord[item.calKey] : '';
+        }
+        if (nameInput) {
+            nameInput.disabled = !checked;
+            nameInput.value = (checked && foodRecord && item.nameKey && foodRecord[item.nameKey]) ? foodRecord[item.nameKey] : '';
         }
     });
     
@@ -3458,7 +3482,11 @@ function updateFoodHistoryList() {
         const badgeStyles = {
             milktea: { bg: 'rgba(134,172,65,0.1)', color: 'var(--color-primary)' },
             ramen: { bg: 'rgba(224,90,71,0.1)', color: 'var(--color-danger)' },
-            drinking: { bg: 'rgba(217,160,91,0.1)', color: 'var(--color-warning)' }
+            drinking: { bg: 'rgba(217,160,91,0.1)', color: 'var(--color-warning)' },
+            sweets: { bg: 'rgba(224,120,180,0.1)', color: '#e078b4' },
+            fastfood: { bg: 'rgba(230,150,50,0.1)', color: '#e69632' },
+            teishoku: { bg: 'rgba(80,140,160,0.1)', color: '#508ca0' },
+            custom: { bg: 'rgba(150,150,150,0.12)', color: 'var(--text-secondary)' }
         };
         const itemsList = [];
         let totalKcal = 0;
@@ -3468,7 +3496,9 @@ function updateFoodHistoryList() {
             if (typeof cal === 'number' && cal > 0) totalKcal += cal;
             const style = badgeStyles[item.key] || badgeStyles.milktea;
             const kcalText = (typeof cal === 'number' && cal > 0) ? ` (${Math.round(cal)} kcal)` : '';
-            itemsList.push(`<span class="badge" style="background: ${style.bg}; color: ${style.color}; border: 1px solid ${style.color}; padding: 0.25rem 0.5rem; border-radius: 12px; font-size: 0.75rem;">${escapeHtml(item.label)}${kcalText}</span>`);
+            // customはユーザーが入力した名前があればそれを表示し、無ければ「その他」のまま
+            const label = (item.isCustom && log[item.nameKey]) ? `✏️ ${log[item.nameKey]}` : item.label;
+            itemsList.push(`<span class="badge" style="background: ${style.bg}; color: ${style.color}; border: 1px solid ${style.color}; padding: 0.25rem 0.5rem; border-radius: 12px; font-size: 0.75rem;">${escapeHtml(label)}${kcalText}</span>`);
         });
 
         const dateObj = new Date(log.date);
