@@ -55,7 +55,6 @@ let state = {
     planSettings: null,
     foodLogs: [],
     charts: {
-        category: null,
         progression: null,
         weight: null,
         calorieComparison: null
@@ -223,7 +222,6 @@ const DOM = {
     calendarDays: document.getElementById('calendar-days'),
     prevMonthBtn: document.getElementById('prev-month-btn'),
     nextMonthBtn: document.getElementById('next-month-btn'),
-    noCategoryData: document.getElementById('no-category-data'),
     noWeightData: document.getElementById('no-weight-data'),
     noCalorieData: document.getElementById('no-calorie-data'),
     
@@ -249,7 +247,6 @@ const DOM = {
 
     // History
     searchInput: document.getElementById('search-input'),
-    filterCategory: document.getElementById('filter-category'),
     filterMood: document.getElementById('filter-mood'),
     progressionSelect: document.getElementById('progression-exercise-select'),
     noProgressionData: document.getElementById('no-progression-data'),
@@ -528,7 +525,6 @@ function initTheme() {
         applyThemePalette(currentPalette);
         
         // Re-render active charts to adjust text color for theme
-        if (state.charts.category) renderCategoryChart();
         if (state.charts.progression) renderProgressionChart();
         if (state.charts.weight) renderWeightChart();
         if (state.charts.calorieComparison) renderCalorieChart();
@@ -566,7 +562,6 @@ function setThemePalette(themeId) {
     applyThemePalette(themeId);
     
     // Re-render active charts to adjust colors dynamically
-    if (state.charts.category) renderCategoryChart();
     if (state.charts.progression) renderProgressionChart();
     if (state.charts.weight) renderWeightChart();
     if (state.charts.calorieComparison) renderCalorieChart();
@@ -684,7 +679,6 @@ function updateDashboard() {
     
     // 5. Training Calendar & Charts
     renderCalendar();
-    renderCategoryChart();
     renderWeightChart();
     renderCalorieChart();
 }
@@ -814,8 +808,7 @@ function renderCalendar() {
             dot.classList.add('workout-dot-indicator');
             dayCell.appendChild(dot);
             
-            const titles = dayWorkouts.map(w => w.title || '無題').join(', ');
-            dayCell.setAttribute('title', `${titles} (${dayWorkouts.length}件)`);
+            dayCell.setAttribute('title', `トレーニング記録 ${dayWorkouts.length}件`);
             
             dayCell.addEventListener('click', () => {
                 const historyNavItem = document.querySelector('[data-tab="history"]');
@@ -874,92 +867,6 @@ function hexToRgba(hex, alpha) {
     const g = parseInt(hex.substring(2, 4), 16) || 172;
     const b = parseInt(hex.substring(4, 6), 16) || 65;
     return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-}
-
-// Doughnut Chart - Categories distribution
-function renderCategoryChart() {
-    const theme = getChartThemeColors();
-    
-    // Count categories
-    const categoriesCount = {};
-    state.workouts.forEach(w => {
-        if (w.category) {
-            categoriesCount[w.category] = (categoriesCount[w.category] || 0) + 1;
-        }
-    });
-    
-    const labels = Object.keys(categoriesCount);
-    const data = Object.values(categoriesCount);
-    
-    if (labels.length === 0) {
-        if (DOM.noCategoryData) DOM.noCategoryData.style.display = 'block';
-        if (state.charts.category) {
-            try { state.charts.category.destroy(); } catch(e){}
-            state.charts.category = null;
-        }
-        return;
-    }
-    
-    if (DOM.noCategoryData) DOM.noCategoryData.style.display = 'none';
-    
-    const canvas = document.getElementById('categoryChart');
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    
-    if (state.charts.category) {
-        try { state.charts.category.destroy(); } catch(e){}
-    }
-    
-    const colorsMap = {
-        '胸 (Chest)': '#e05a47',
-        '背中 (Back)': '#7da3a1',
-        '肩 (Shoulders)': '#d9a05b',
-        '腕 (Arms)': '#34675c',
-        '脚 (Legs)': '#86ac41',
-        '腹筋 (Core)': '#5ca393',
-        '有酸素 (Cardio)': '#a2bfa7',
-        'その他 (Other)': '#577c8a'
-    };
-    
-    const backgroundColors = labels.map(label => colorsMap[label] || '#94a3b8');
-    
-    state.charts.category = new Chart(ctx, {
-        type: 'doughnut',
-        data: {
-            labels: labels,
-            datasets: [{
-                data: data,
-                backgroundColor: backgroundColors,
-                borderWidth: 2,
-                borderColor: theme.surface
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: {
-                    position: 'right',
-                    labels: {
-                        color: theme.text,
-                        font: { family: 'Inter', size: 11 },
-                        padding: 15
-                    }
-                },
-                tooltip: {
-                    callbacks: {
-                        label: function(context) {
-                            const val = context.raw;
-                            const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                            const pct = Math.round((val / total) * 100);
-                            return ` ${context.label}: ${val}回 (${pct}%)`;
-                        }
-                    }
-                }
-            },
-            cutout: '70%'
-        }
-    });
 }
 
 // ==========================================
@@ -1441,7 +1348,6 @@ function saveWorkout() {
 
 function initHistoryControls() {
     if (DOM.searchInput) DOM.searchInput.addEventListener('input', () => updateHistoryList());
-    if (DOM.filterCategory) DOM.filterCategory.addEventListener('change', () => updateHistoryList());
     if (DOM.filterMood) DOM.filterMood.addEventListener('change', () => updateHistoryList());
     
     if (DOM.progressionSelect) {
@@ -1502,20 +1408,17 @@ function initHistoryControls() {
 function updateHistoryList() {
     if (!DOM.historyContainer || !DOM.historyCount) return;
     const searchQuery = DOM.searchInput.value.toLowerCase().trim();
-    const catFilter = DOM.filterCategory.value;
     const moodFilter = DOM.filterMood.value;
-    
+
     const filtered = state.workouts.filter(w => {
-        const matchesSearch = searchQuery === '' || 
-            (w.title && w.title.toLowerCase().includes(searchQuery)) ||
+        const matchesSearch = searchQuery === '' ||
             (w.impression && w.impression.toLowerCase().includes(searchQuery)) ||
             (w.date && w.date.includes(searchQuery)) ||
             (w.exercises && w.exercises.some(ex => ex.name && ex.name.toLowerCase().includes(searchQuery)));
-            
-        const matchesCategory = catFilter === 'all' || w.category === catFilter;
+
         const matchesMood = moodFilter === 'all' || w.mood === moodFilter;
-        
-        return matchesSearch && matchesCategory && matchesMood;
+
+        return matchesSearch && matchesMood;
     });
     
     DOM.historyCount.textContent = filtered.length;
@@ -1602,8 +1505,6 @@ function createHistoryCard(workout) {
             <div class="history-title-area">
                 <div class="history-title-row">
                     <span class="history-mood-badge" title="調子: ${workout.mood}">${emoji}</span>
-                    <h4>${escapeHtml(workout.title)}</h4>
-                    <span class="category-tag">${escapeHtml(workout.category)}</span>
                 </div>
                 <div class="history-date-row">
                     <i data-lucide="calendar"></i>
@@ -1638,7 +1539,7 @@ function createHistoryCard(workout) {
     });
     
     card.querySelector('.btn-delete-history').addEventListener('click', () => {
-        showConfirmModal('記録の削除', `「${workout.title} (${formattedDate})」の記録を削除しますか？`, () => {
+        showConfirmModal('記録の削除', `「${formattedDate}」の記録を削除しますか？`, () => {
             deleteWorkout(workout.id);
         });
     });

@@ -401,22 +401,9 @@
                         </div>
                     </div>
 
-                    <!-- Category Chart Card -->
-                    <div class="card chart-card">
-                        <div class="card-header">
-                            <div class="header-title">
-                                <i data-lucide="pie-chart"></i>
-                                <h3>部位別トレーニング比率</h3>
-                            </div>
-                        </div>
-                        <div class="chart-container pie-container">
-                            <canvas id="categoryChart"></canvas>
-                            <div id="no-category-data" class="no-data-msg">データがありません</div>
-                        </div>
-                    </div>
                 </div>
             </section>
-            
+
             <!-- History and Analytics Tab -->
             <section id="history" class="tab-content">
                 <!-- Sub navigation tabs for Workout vs Cardio -->
@@ -436,22 +423,8 @@
                                 <label for="search-input">キーワード検索</label>
                                 <div class="input-icon-wrapper">
                                     <i data-lucide="search" class="input-icon"></i>
-                                    <input type="text" id="search-input" placeholder="種目名、タイトル、感想から検索...">
+                                    <input type="text" id="search-input" placeholder="種目名、感想から検索...">
                                 </div>
-                            </div>
-                            <div class="form-group">
-                                <label for="filter-category">部位で絞り込み</label>
-                                <select id="filter-category">
-                                    <option value="all">すべての部位</option>
-                                    <option value="胸 (Chest)">胸 (Chest)</option>
-                                    <option value="背中 (Back)">背中 (Back)</option>
-                                    <option value="肩 (Shoulders)">肩 (Shoulders)</option>
-                                    <option value="腕 (Arms)">腕 (Arms)</option>
-                                    <option value="脚 (Legs)">脚 (Legs)</option>
-                                    <option value="腹筋 (Core)">腹筋 (Core)</option>
-                                    <option value="有酸素 (Cardio)">有酸素 (Cardio)</option>
-                                    <option value="その他 (Other)">その他 (Other)</option>
-                                </select>
                             </div>
                             <div class="form-group">
                                 <label for="filter-mood">調子で絞り込み</label>
@@ -674,7 +647,6 @@
                         <div class="card-body help-body">
                             <h4>💪 筋トレを効率的に記録するヒント</h4>
                             <ul>
-                                <li><strong>部位カテゴリー</strong>: グラフ分析で部位ごとのバランスを確認できます。正しく選択しましょう。</li>
                                 <li><strong>推定1RMについて</strong>: <code>重量 × (1 + レップ数 / 30)</code> の公式で算出した擬似的なMAX重量（1RM）を推移としてグラフ表示します。筋力の成長を実感しやすくなります。</li>
                                 <li><strong>感想・コンディション</strong>: 体調やケガの予兆、フォームの気づきなどをメモしておくと、後から見返した際に大きなヒントになります。</li>
                             </ul>
