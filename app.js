@@ -585,7 +585,7 @@ function initDateTexts() {
     else greeting = 'こんばんは！今日もお疲れ様です🌙';
     
     if (DOM.greetingText) {
-        DOM.greetingText.innerHTML = `${greeting} <span class="app-version-badge">v1.7.1</span>`;
+        DOM.greetingText.innerHTML = `${greeting} <span class="app-version-badge">v1.7.2</span>`;
     }
 }
 
@@ -663,8 +663,11 @@ function updateDashboard() {
     if (DOM.todayCardioDist) DOM.todayCardioDist.textContent = `${todayDistance.toFixed(2)} km 走行`;
 
     // Calorie Balance tiles update
+    // 「本日の消費」は運動分だけでなく、メンテナンス（生活代謝の基準線）を含めた総消費で表示する
+    // (運動分だけをメンテナンスと比較すると、常に大幅な消費不足に見えてしまうため)
+    const todayTotalExpenditure = state.maintenanceCalories + todayCalories;
     if (DOM.todayBurnedKcal) {
-        DOM.todayBurnedKcal.innerHTML = `${Math.round(todayCalories)} <span class="unit">kcal</span>`;
+        DOM.todayBurnedKcal.innerHTML = `${Math.round(todayTotalExpenditure)} <span class="unit">kcal</span>`;
     }
     if (DOM.currentMaintenanceKcal) {
         DOM.currentMaintenanceKcal.innerHTML = `${state.maintenanceCalories} <span class="unit">kcal</span>`;
@@ -2273,7 +2276,11 @@ function renderCalorieChart() {
     const theme = getChartThemeColors();
     const canvas = document.getElementById('calorieComparisonChart');
     if (!canvas || !DOM.noCalorieData) return;
-    
+
+    // このチャートはメンテナンス消費（常に0より大きい）を基準線として必ず描画できるため、
+    // 他のチャートと違って「データなし」状態は存在しない
+    DOM.noCalorieData.style.display = 'none';
+
     const ctx = canvas.getContext('2d');
     
     const labels = [];
@@ -2300,27 +2307,32 @@ function renderCalorieChart() {
         });
         return sum;
     });
-    
+
     const maintenanceLimit = datesYmd.map(() => state.maintenanceCalories);
-    
+
+    // 棒グラフは「メンテナンス（生活代謝の基準線）＋ 運動による追加消費」の合計消費とする。
+    // 運動消費だけをメンテナンスと直接比較すると、メンテナンス自体が既に1日の基礎的な消費を
+    // 表しているため、常に「大幅な消費不足」に見えてしまい誤解を招く。
+    const totalExpenditure = datesYmd.map((ymd, i) => maintenanceLimit[i] + activeCalories[i]);
+
     if (state.charts.calorieComparison) {
         try { state.charts.calorieComparison.destroy(); } catch(e){}
     }
-    
+
     state.charts.calorieComparison = new Chart(ctx, {
         type: 'bar',
         data: {
             labels: labels,
             datasets: [
                 {
-                    label: '消費カロリー (ラン)',
-                    data: activeCalories,
+                    label: '総消費（メンテナンス＋運動）',
+                    data: totalExpenditure,
                     backgroundColor: getComputedStyle(document.documentElement).getPropertyValue('--color-primary').trim() || '#86ac41',
                     borderRadius: 4,
                     barThickness: 16
                 },
                 {
-                    label: 'メンテナンス',
+                    label: 'メンテナンス基準',
                     data: maintenanceLimit,
                     type: 'line',
                     borderColor: getComputedStyle(document.documentElement).getPropertyValue('--color-secondary').trim() || '#7da3a1',
