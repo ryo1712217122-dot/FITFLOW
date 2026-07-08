@@ -92,10 +92,14 @@ function loadData() {
     state.sheetsUrl = localStorage.getItem('fitflow_sheets_url') || '';
 
     // 6. Plan Settings
+    // 保存済みの設定はDEFAULT_PLAN_SETTINGSとマージする。
+    // (これをせず保存済みオブジェクトをそのまま使うと、アプリのアップデートで
+    //  新しい設定項目を追加した際、以前から使っているユーザーの設定にはその項目が
+    //  存在せずundefinedのままになってしまう)
     const planData = localStorage.getItem('fitflow_plan_settings');
     if (planData) {
         try {
-            state.planSettings = JSON.parse(planData);
+            state.planSettings = Object.assign({}, DEFAULT_PLAN_SETTINGS, JSON.parse(planData));
         } catch (e) {
             console.error('Error parsing plan settings', e);
             state.planSettings = Object.assign({}, DEFAULT_PLAN_SETTINGS);

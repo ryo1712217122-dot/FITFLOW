@@ -35,6 +35,7 @@ const DEFAULT_PLAN_SETTINGS = {
     baseBurn: 2450,
     runBurn: 338,
     runCount: 2,
+    weeklyRunDistanceTarget: 15,
     weightStart: 81.0,
     weight1Month: 79.0,
     weight3Month: 75.5,

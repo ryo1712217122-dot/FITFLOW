@@ -77,6 +77,9 @@ function updateDashboard() {
     const streak = calculateStreak(state.workouts);
     if (DOM.streakCount) DOM.streakCount.textContent = `${streak} 日`;
 
+    // 4.5 週間ランニング目標の達成度
+    updateWeeklyRunGoal(todayStr);
+
     // 5. Training Calendar & Charts
     renderCalendar();
     renderWeightChart();
@@ -117,6 +120,26 @@ function calculateStreak(workouts) {
     }
 
     return streak;
+}
+
+// 週間ランニング目標（デフォルト15km、最適化計画タブで編集可能）に対する今週(日〜土)の達成度を表示する
+function updateWeeklyRunGoal(todayStr) {
+    if (!DOM.weeklyRunDistanceNum && !DOM.weeklyRunProgressFill) return;
+
+    const target = (state.planSettings && state.planSettings.weeklyRunDistanceTarget > 0)
+        ? state.planSettings.weeklyRunDistanceTarget
+        : DEFAULT_PLAN_SETTINGS.weeklyRunDistanceTarget;
+    const weekStart = getWeekStartDate(todayStr);
+    const weekDistance = sumCardioDistanceForWeek(state.cardioLogs, weekStart);
+
+    if (DOM.weeklyRunDistanceNum) DOM.weeklyRunDistanceNum.textContent = weekDistance.toFixed(1);
+    if (DOM.weeklyRunDistanceTarget) DOM.weeklyRunDistanceTarget.textContent = target;
+
+    if (DOM.weeklyRunProgressFill) {
+        const pct = target > 0 ? Math.min(100, Math.round((weekDistance / target) * 100)) : 0;
+        DOM.weeklyRunProgressFill.style.width = `${pct}%`;
+        DOM.weeklyRunProgressFill.classList.toggle('progress-bar-fill-complete', pct >= 100);
+    }
 }
 
 // Calendar Heatmap rendering

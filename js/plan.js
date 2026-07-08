@@ -20,6 +20,7 @@ function renderPlanTab(isEditing = false) {
         (parseFloat(s.baseBurn) || 0) + ((parseFloat(s.runBurn) || 0) * (parseFloat(s.runCount) || 0)) / 7
     );
     const deficit = avgExpenditure - avgIntake;
+    const weekRunDistance = sumCardioDistanceForWeek(state.cardioLogs, getWeekStartDate(getLocalDateString()));
 
     if (isEditing) {
         container.innerHTML = `
@@ -111,6 +112,10 @@ function renderPlanTab(isEditing = false) {
                                     <label class="text-2xs">週のラン回数</label>
                                     <input type="number" id="edit-run-count" value="${s.runCount}" class="width-full">
                                 </div>
+                            </div>
+                            <div class="form-group">
+                                <label class="text-2xs">週間ランニング目標距離 (km)</label>
+                                <input type="number" step="0.1" id="edit-weekly-run-distance-target" value="${s.weeklyRunDistanceTarget}" class="width-full">
                             </div>
                         </div>
                     </div>
@@ -264,6 +269,10 @@ function renderPlanTab(isEditing = false) {
                                 <span>有酸素ラン（週${s.runCount}回 4km走）</span>
                                 <span>+${s.runBurn} kcal/回 (平均 +${Math.round(s.runBurn * s.runCount / 7)} kcal/日)</span>
                             </div>
+                            <div class="plan-summary-box-row">
+                                <span>週間ランニング目標</span>
+                                <span>${weekRunDistance.toFixed(1)} / ${s.weeklyRunDistanceTarget} km（今週の実績）</span>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -386,6 +395,7 @@ function savePlanSettings() {
     s.baseBurn = parseInt(document.getElementById('edit-base-burn').value) || 0;
     s.runBurn = parseInt(document.getElementById('edit-run-burn').value) || 0;
     s.runCount = parseInt(document.getElementById('edit-run-count').value) || 0;
+    s.weeklyRunDistanceTarget = parseFloat(document.getElementById('edit-weekly-run-distance-target').value) || 0;
 
     s.weightStart = parseFloat(document.getElementById('edit-weight-start').value) || 0.0;
     s.weight1Month = parseFloat(document.getElementById('edit-weight-1month').value) || 0.0;
@@ -402,6 +412,7 @@ function savePlanSettings() {
 
     renderPlanTab(false);
     renderPlanSidebarWidget();
+    updateDashboard(); // 週間ランニング目標カードの目標値もその場で反映する
 }
 
 // 実績（体重・筋トレ頻度・有酸素ログ）から消費カロリー予算（ベース消費・ラン消費・週回数）を再計算する
@@ -524,6 +535,7 @@ function renderPlanSidebarWidget() {
          (parseInt(s.intakeMilkTea) || 0) * (parseInt(s.daysMilkTea) || 0) +
          (parseInt(s.intakeEvent) || 0) * (parseInt(s.daysEvent) || 0)) / daysDenominator
     );
+    const weekRunDistance = sumCardioDistanceForWeek(state.cardioLogs, getWeekStartDate(getLocalDateString()));
 
     container.innerHTML = `
         <div class="card plan-summary-widget">
@@ -558,6 +570,10 @@ function renderPlanSidebarWidget() {
                         <div class="plan-summary-row">
                             <span>🏃 有酸素ラン (週${s.runCount}回)</span>
                             <span class="plan-summary-value">4km / 回 (+${s.runBurn} kcal)</span>
+                        </div>
+                        <div class="plan-summary-row">
+                            <span>🎯 週間走行距離目標</span>
+                            <span class="plan-summary-value">${weekRunDistance.toFixed(1)} / ${s.weeklyRunDistanceTarget} km</span>
                         </div>
                         <div class="plan-summary-row">
                             <span>🛌 睡眠時間 (目標)</span>
