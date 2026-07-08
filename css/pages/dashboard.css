@@ -207,4 +207,8 @@
     font-weight: 400;
     color: var(--text-secondary);
 }
+
+.calorie-summary-tile .tile-value-danger {
+    color: var(--color-danger);
+}
 } /* end @layer pages (dashboard) */

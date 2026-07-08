@@ -38,6 +38,7 @@ const DOM = {
     workoutCalorieHint: document.getElementById('workout-calorie-hint'),
     todayBurnedKcal: document.getElementById('today-burned-kcal'),
     currentMaintenanceKcal: document.getElementById('current-maintenance-kcal'),
+    todayFoodKcal: document.getElementById('today-food-kcal'),
 
     // Weight Quick Logger (体重単独記録フォーム)
     weightQuickForm: document.getElementById('weight-quick-form'),

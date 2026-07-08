@@ -155,6 +155,9 @@ function autoSyncFromCloud() {
             updateFoodHistoryList();
             renderPlanTab();
             renderPlanSidebarWidget();
+            // 「記録する」タブのフォームも取り込んだ最新データに合わせ直す
+            // (古い表示のまま送信すると、今取り込んだデータを消してしまうため)
+            refreshRecordFormsAfterExternalDataChange();
 
             showToast('☁️ クラウドデータを同期しました');
         }

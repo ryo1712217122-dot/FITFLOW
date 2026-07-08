@@ -31,6 +31,21 @@ function initFormControls() {
         });
     }
 
+    // 調子・メモは種目の保存に付随して保存されるが、種目を保存し直さずに
+    // これらだけを変更した場合(既存記録の編集など)も、その場で反映されるようにする
+    if (DOM.workoutImpression) {
+        DOM.workoutImpression.addEventListener('blur', () => {
+            persistOpenWorkoutMetaIfAny();
+        });
+    }
+    if (DOM.workoutForm) {
+        DOM.workoutForm.querySelectorAll('input[name="workout-mood"]').forEach(radio => {
+            radio.addEventListener('change', () => {
+                persistOpenWorkoutMetaIfAny();
+            });
+        });
+    }
+
     if (DOM.weightQuickForm) {
         if (DOM.weightQuickDate) {
             DOM.weightQuickDate.value = getLocalDateString();
@@ -330,6 +345,28 @@ function getOrCreateOpenWorkout() {
     return workout;
 }
 
+// 日付・時刻・調子・メモ(セッションのメタ情報)を、渡されたワークアウトへ最新のフォーム値で反映する。
+function applyOpenWorkoutMetaFromForm(workout) {
+    workout.date = DOM.workoutDate.value;
+    workout.time = DOM.workoutTime.value;
+    const moodInput = DOM.workoutForm ? DOM.workoutForm.querySelector('input[name="workout-mood"]:checked') : null;
+    if (moodInput) workout.mood = moodInput.value;
+    if (DOM.workoutImpression) workout.impression = DOM.workoutImpression.value.trim();
+}
+
+// 調子・メモは種目とは独立して変更されうるため、既に開いている(=既存)ワークアウトが
+// あれば、種目を保存し直さなくてもその場で変更を反映する。
+// (新規記録でまだ種目を1件も保存していない段階では、メモだけでワークアウトを
+//  作らないという既存の仕様を維持するため、開いているワークアウトが無ければ何もしない)
+function persistOpenWorkoutMetaIfAny() {
+    if (!state.editingWorkoutId) return;
+    const workout = state.workouts.find(w => w.id === state.editingWorkoutId);
+    if (!workout) return;
+
+    applyOpenWorkoutMetaFromForm(workout);
+    saveDataAndSync();
+}
+
 // 種目1件をその場で保存する。ジムでリアルタイムに使うことを想定し、
 // 種目をまとめて最後に一括保存するのではなく、1種目終えるごとに個別保存できるようにしている。
 function saveExerciseBlock(exerciseBlockEl) {
@@ -342,13 +379,7 @@ function saveExerciseBlock(exerciseBlockEl) {
     }
 
     const workout = getOrCreateOpenWorkout();
-
-    // セッション中に変わりうる項目(日付・時刻・調子・メモ)は保存の度に最新のフォーム値で更新する
-    workout.date = DOM.workoutDate.value;
-    workout.time = DOM.workoutTime.value;
-    const moodInput = DOM.workoutForm ? DOM.workoutForm.querySelector('input[name="workout-mood"]:checked') : null;
-    if (moodInput) workout.mood = moodInput.value;
-    if (DOM.workoutImpression) workout.impression = DOM.workoutImpression.value.trim();
+    applyOpenWorkoutMetaFromForm(workout);
 
     const existingIndexAttr = exerciseBlockEl.getAttribute('data-existing-index');
     const isExisting = existingIndexAttr !== null && existingIndexAttr !== '';
@@ -476,6 +507,12 @@ function saveCardioAndFinishSession() {
         return;
     }
 
+    // blurのタイミングに関わらず、完了時点の調子・メモを取りこぼさないよう念のため反映する
+    if (hasOpenWorkoutSession) {
+        const workout = state.workouts.find(w => w.id === state.editingWorkoutId);
+        if (workout) applyOpenWorkoutMetaFromForm(workout);
+    }
+
     saveDataAndSync();
 
     const savedParts = [];
@@ -493,6 +530,21 @@ function saveCardioAndFinishSession() {
     const historyNavItem = document.querySelector('[data-tab="history"]');
     if (historyNavItem) {
         historyNavItem.click();
+    }
+}
+
+// クラウド同期のダウンロード・JSONインポートのマージ・全データ初期化など、
+// state.*(workouts/weightLogs/cardioLogs/foodLogs)が外部要因でまとめて置き換わった直後に呼ぶ。
+// 「記録する」タブのフォームを表示したまま(古い値のまま)にしておくと、次にどちらかの
+// フォームを送信した時に「チェックなし・空欄＝削除」と解釈され、今取り込んだばかりの
+// データを上書き・削除してしまう(実際に発生した不具合)。フォームAは進行中のセッションが
+// 裏で入れ替わっている可能性があるため安全にリセットし、フォームBは選択中の日付で
+// 最新のstateに合わせ直す。
+function refreshRecordFormsAfterExternalDataChange() {
+    resetWorkoutForm();
+
+    if (DOM.weightQuickDate && DOM.weightQuickDate.value) {
+        syncDailyLogFormWithExistingDataForDate(DOM.weightQuickDate.value);
     }
 }
 

@@ -217,6 +217,9 @@ function mergeImportedData(workouts, weights, cardio, maintenance, foodLogs = []
     updateFoodHistoryList();
     renderPlanTab();
     renderPlanSidebarWidget();
+    // 「記録する」タブのフォームも取り込んだ最新データに合わせ直す
+    // (古い表示のまま送信すると、今取り込んだデータを消してしまうため)
+    refreshRecordFormsAfterExternalDataChange();
 }
 
 function clearAllWorkouts() {
@@ -243,4 +246,7 @@ function clearAllWorkouts() {
     updateFoodHistoryList();
     renderPlanTab();
     renderPlanSidebarWidget();
+    // 「記録する」タブのフォームに削除済みの値(特にチェック済みの食事項目)が
+    // 残ったままにならないようにする
+    refreshRecordFormsAfterExternalDataChange();
 }

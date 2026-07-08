@@ -15,6 +15,16 @@ function getWorkoutCaloriesForDate(dateStr) {
         }, 0);
 }
 
+// 指定日付に記録された特別な飲食のカロリー合計を返す（同じ日に複数項目チェックしていれば合算）。
+function getFoodCaloriesForDate(dateStr) {
+    const record = state.foodLogs.find(f => f.date === dateStr);
+    if (!record) return 0;
+    return FOOD_ITEMS.reduce((sum, item) => {
+        const cal = record[item.calKey];
+        return sum + (typeof cal === 'number' && cal > 0 ? cal : 0);
+    }, 0);
+}
+
 function updateDashboard() {
     // 1. Stats: Total workouts
     const total = state.workouts.length;
@@ -57,6 +67,10 @@ function updateDashboard() {
     }
     if (DOM.currentMaintenanceKcal) {
         DOM.currentMaintenanceKcal.innerHTML = `${state.maintenanceCalories} <span class="unit">kcal</span>`;
+    }
+    if (DOM.todayFoodKcal) {
+        const todayFoodCalories = getFoodCaloriesForDate(todayStr);
+        DOM.todayFoodKcal.innerHTML = `${Math.round(todayFoodCalories)} <span class="unit">kcal</span>`;
     }
 
     // 4. Streaks
@@ -416,6 +430,9 @@ function renderCalorieChart() {
     // 表しているため、常に「大幅な消費不足」に見えてしまい誤解を招く。
     const totalExpenditure = datesYmd.map((ymd, i) => maintenanceLimit[i] + activeCalories[i]);
 
+    // 特別な飲食で追加摂取したカロリーも並べて表示し、消費と摂取を見比べられるようにする
+    const foodCalories = datesYmd.map(ymd => getFoodCaloriesForDate(ymd));
+
     if (state.charts.calorieComparison) {
         try { state.charts.calorieComparison.destroy(); } catch(e){}
     }
@@ -442,6 +459,18 @@ function renderCalorieChart() {
                     fill: false,
                     pointRadius: 0,
                     pointHoverRadius: 0
+                },
+                {
+                    label: '特別な飲食の摂取',
+                    data: foodCalories,
+                    type: 'line',
+                    borderColor: getComputedStyle(document.documentElement).getPropertyValue('--color-danger').trim() || '#e05a47',
+                    backgroundColor: hexToRgba(getComputedStyle(document.documentElement).getPropertyValue('--color-danger').trim() || '#e05a47', 0.1),
+                    borderWidth: 2,
+                    borderDash: [2, 2],
+                    fill: false,
+                    pointRadius: 3,
+                    pointHoverRadius: 5
                 }
             ]
         },
