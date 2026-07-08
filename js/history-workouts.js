@@ -105,6 +105,7 @@ function createHistoryCard(workout) {
                     <i data-lucide="calendar"></i>
                     <span>${formattedDate} ${workout.time ? `&nbsp; ${workout.time}` : ''}</span>
                 </div>
+                ${workout.estimatedCalories ? `<div class="history-date-row"><i data-lucide="flame"></i><span>筋トレ消費目安: ${workout.estimatedCalories} kcal</span></div>` : ''}
             </div>
             <div class="history-actions">
                 <button class="btn-icon text-primary btn-edit-history" title="編集する">
@@ -146,6 +147,8 @@ function editWorkout(id) {
     const workout = state.workouts.find(w => w.id === id);
     if (!workout) return;
 
+    // 以後、種目ブロックの個別保存はこのワークアウトに対して行われる
+    // (record-form.jsのgetOrCreateOpenWorkout/saveExerciseBlockが参照する)
     state.editingWorkoutId = id;
 
     const formNavItem = document.querySelector('[data-tab="quick-log"]');
@@ -159,16 +162,16 @@ function editWorkout(id) {
     if (recordGymWorkoutChk) recordGymWorkoutChk.checked = true;
     if (gymWorkoutFieldsContainer) gymWorkoutFieldsContainer.style.display = 'block';
     if (DOM.saveWorkoutBtn) {
-        DOM.saveWorkoutBtn.innerHTML = '<i data-lucide="save"></i> 編集を保存する';
+        DOM.saveWorkoutBtn.innerHTML = '<i data-lucide="save"></i> 編集を完了する';
     }
 
     if (DOM.workoutDate) DOM.workoutDate.value = workout.date;
     if (DOM.workoutTime) DOM.workoutTime.value = workout.time || '12:00';
 
-    // このワークアウトの日付にすでにある有酸素・特別な飲食の記録をフォームに反映する
+    // このワークアウトの日付にすでにある有酸素の記録をフォームに反映する
     // (以前は無関係だと決めつけて有酸素欄を空にしていたが、それだと本当にその日に
     //  記録済みの有酸素があっても見えず、気づかないまま再送信して食い違いが起きていた)
-    syncFormWithExistingDataForDate(workout.date);
+    syncCardioFormWithExistingDataForDate(workout.date);
 
     if (DOM.workoutImpression) DOM.workoutImpression.value = workout.impression || '';
 
@@ -179,11 +182,15 @@ function editWorkout(id) {
         DOM.exerciseList.innerHTML = '';
 
         if (workout.exercises) {
-            workout.exercises.forEach(ex => {
-                addExerciseBlock(ex);
+            workout.exercises.forEach((ex, idx) => {
+                addExerciseBlock(ex, idx);
             });
         }
+        // 既存種目に加えて、その場で新しい種目もすぐ追加できるよう空ブロックを1つ用意する
+        addExerciseBlock();
     }
+
+    updateWorkoutCalorieHint();
 
     if (window.lucide) {
         lucide.createIcons();
@@ -194,6 +201,11 @@ function deleteWorkout(id) {
     const idx = state.workouts.findIndex(w => w.id === id);
     if (idx !== -1) {
         state.workouts.splice(idx, 1);
+        // 削除したワークアウトが記録フォームで開いたままだった場合、
+        // 古いidを参照し続けないようにする(次の種目保存は自動的に新規作成にフォールバックする)
+        if (state.editingWorkoutId === id) {
+            state.editingWorkoutId = null;
+        }
         saveDataAndSync();
         showToast('ワークアウト記録を削除しました');
         updateDashboard(); // Sync total workouts and calendar count

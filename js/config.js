@@ -8,6 +8,10 @@ const MAX_RECENT_WEIGHT_LOGS = 10;
 const CARDIO_DAYS_WINDOW = 7;
 // タイトル・部位カテゴリーの入力欄はフォームから撤去したため、新規記録には固定のデフォルト値を使う
 const DEFAULT_WORKOUT_CATEGORY = 'その他 (Other)';
+// 筋トレの消費カロリー概算に使う「1セットあたりの目安kcal」。
+// 休憩を含めた1セット平均2〜3分・resistance trainingの目安消費(約5〜8kcal/分)から逆算した簡易値。
+// 有酸素の「距離×体重」と同様、種目や重量の違いを厳密には反映しない単純化モデル。
+const WORKOUT_CALORIES_PER_SET = 15;
 
 // 特別な飲食チップの定義 (チェック有無 + 任意のkcal数値をこの並びで扱う)
 // customがtrueの項目だけは固定ラベルの代わりに自由入力の名前(nameId/nameKey)を持つ

@@ -2,6 +2,19 @@
 // メンテナンスカロリー設定はv2再構成で「同期と設定」タブからここへ移設した
 // （カロリーバランスグラフに直接効く入力なので、入力→表示の距離を縮めるため）。
 
+// 指定日付に記録された筋トレセッション(複数あれば合算)の推定消費カロリー合計を返す。
+// 有酸素と同様、「本日の総消費」「カロリーバランスグラフ」の両方に合算するために使う。
+function getWorkoutCaloriesForDate(dateStr) {
+    return state.workouts
+        .filter(w => w.date === dateStr)
+        .reduce((sum, w) => {
+            const kcal = typeof w.estimatedCalories === 'number'
+                ? w.estimatedCalories
+                : estimateWorkoutCalories(w.exercises, WORKOUT_CALORIES_PER_SET);
+            return sum + kcal;
+        }, 0);
+}
+
 function updateDashboard() {
     // 1. Stats: Total workouts
     const total = state.workouts.length;
@@ -34,9 +47,11 @@ function updateDashboard() {
     if (DOM.todayCardioDist) DOM.todayCardioDist.textContent = `${todayDistance.toFixed(2)} km 走行`;
 
     // Calorie Balance tiles update
-    // 「本日の消費」は運動分だけでなく、メンテナンス（生活代謝の基準線）を含めた総消費で表示する
+    // 「本日の消費」は運動分（有酸素＋筋トレの推定消費）だけでなく、
+    // メンテナンス（生活代謝の基準線）を含めた総消費で表示する
     // (運動分だけをメンテナンスと比較すると、常に大幅な消費不足に見えてしまうため)
-    const todayTotalExpenditure = state.maintenanceCalories + todayCalories;
+    const todayWorkoutCalories = getWorkoutCaloriesForDate(todayStr);
+    const todayTotalExpenditure = state.maintenanceCalories + todayCalories + todayWorkoutCalories;
     if (DOM.todayBurnedKcal) {
         DOM.todayBurnedKcal.innerHTML = `${Math.round(todayTotalExpenditure)} <span class="unit">kcal</span>`;
     }
@@ -382,6 +397,7 @@ function renderCalorieChart() {
         labels.push(`${parseInt(parts[1])}/${parseInt(parts[2])}`);
     }
 
+    // 運動による消費は「有酸素の実測距離ベースの消費」＋「筋トレの推定消費（セット数ベース）」を合算する
     const activeCalories = datesYmd.map(ymd => {
         let sum = 0;
         state.cardioLogs.forEach(c => {
@@ -389,6 +405,7 @@ function renderCalorieChart() {
                 sum += c.calories || 0;
             }
         });
+        sum += getWorkoutCaloriesForDate(ymd);
         return sum;
     });
 

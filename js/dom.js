@@ -35,6 +35,7 @@ const DOM = {
     // Quick log extra fields (cardio, part of the unified workout-form)
     logCardioDist: document.getElementById('log-cardio-dist'),
     cardioCalcHint: document.getElementById('cardio-calc-hint'),
+    workoutCalorieHint: document.getElementById('workout-calorie-hint'),
     todayBurnedKcal: document.getElementById('today-burned-kcal'),
     currentMaintenanceKcal: document.getElementById('current-maintenance-kcal'),
 

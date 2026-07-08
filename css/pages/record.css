@@ -28,6 +28,14 @@
     color: var(--text-muted);
 }
 
+.form-section-intro {
+    margin: -0.75rem 0 1.25rem;
+}
+
+.side-loggers-column .form-section-intro {
+    margin: -0.5rem 0 1rem;
+}
+
 .food-section-label {
     font-weight: 600;
 }
@@ -196,6 +204,11 @@
     padding: 1.25rem;
     position: relative;
     animation: slideIn 0.3s ease;
+}
+
+/* すでに保存済みの種目(履歴編集時の復元 or 個別保存直後)は枠線でひと目分かるようにする */
+.exercise-item[data-existing-index] {
+    border-color: var(--color-primary);
 }
 
 .exercise-item-header {
