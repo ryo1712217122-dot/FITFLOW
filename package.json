@@ -5,7 +5,7 @@
   "main": "js/main.js",
   "scripts": {
     "start": "npx serve .",
-    "test": "node --test lib/"
+    "test": "node --test lib/*.test.js"
   },
   "author": "",
   "license": "ISC"
