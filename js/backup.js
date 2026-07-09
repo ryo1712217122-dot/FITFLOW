@@ -19,7 +19,7 @@ function initSettingsControls() {
     if (DOM.saveSheetsUrlBtn) {
         DOM.saveSheetsUrlBtn.addEventListener('click', () => {
             state.sheetsUrl = DOM.sheetsUrlInput.value.trim();
-            saveData();
+            saveSheetsUrl();
             showToast('GASのウェブアプリURLを保存しました！');
         });
     }

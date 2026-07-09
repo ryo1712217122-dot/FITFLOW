@@ -4,7 +4,7 @@
   "description": "筋トレ実績＆ヘルスケア実績管理Webアプリ",
   "main": "js/main.js",
   "scripts": {
-    "start": "npx serve .",
+    "start": "npx serve . -p 3000",
     "test": "node --test lib/*.test.js"
   },
   "author": "",

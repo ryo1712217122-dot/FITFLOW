@@ -131,9 +131,20 @@ function saveData() {
     localStorage.setItem('fitflow_weight_logs', JSON.stringify(state.weightLogs));
     localStorage.setItem('fitflow_cardio_logs', JSON.stringify(state.cardioLogs));
     localStorage.setItem('fitflow_maintenance', state.maintenanceCalories.toString());
-    localStorage.setItem('fitflow_sheets_url', state.sheetsUrl);
+    // 注意: fitflow_sheets_url はここでは書き込まない(saveSheetsUrl()に分離している)。
+    // saveData()はワークアウト記録などほぼ全ての保存操作のたびに呼ばれるため、
+    // もしstate.sheetsUrlが何らかの理由で一時的に空(未ロード)のままここに来ると、
+    // 無関係な保存操作のついでに正しいURLを空文字で上書き・消失させてしまっていた
+    // (実際に発生した不具合)。URLの保存は、ユーザーが明示的に保存ボタンを押した
+    // 時にだけ行われるべきもの。
     localStorage.setItem('fitflow_plan_settings', JSON.stringify(state.planSettings));
     localStorage.setItem('fitflow_food_logs', JSON.stringify(state.foodLogs));
+}
+
+// GAS ウェブアプリURLの保存は、ユーザーが「接続情報を保存」ボタンを押した時だけ行う
+// (saveData()から分離している理由は上記コメント参照)。
+function saveSheetsUrl() {
+    localStorage.setItem('fitflow_sheets_url', state.sheetsUrl);
 }
 
 function saveDataAndSync() {
