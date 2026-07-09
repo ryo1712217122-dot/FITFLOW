@@ -15,7 +15,9 @@ let state = {
     charts: {
         progression: null,
         weight: null,
-        calorieComparison: null
+        calorieComparison: null,
+        volumeTrend: null,
+        foodBreakdown: null
     }
 };
 

@@ -25,10 +25,9 @@ function initFormControls() {
     }
 
     // 日付を選び直した時、その日にすでにある有酸素の記録をフォームに反映する
+    // (未保存の入力があれば、破棄前に確認する = handleCardioDateChange)
     if (DOM.workoutDate) {
-        DOM.workoutDate.addEventListener('change', () => {
-            syncCardioFormWithExistingDataForDate(DOM.workoutDate.value);
-        });
+        DOM.workoutDate.addEventListener('change', handleCardioDateChange);
     }
 
     // 調子・メモは種目の保存に付随して保存されるが、種目を保存し直さずに
@@ -51,9 +50,7 @@ function initFormControls() {
             DOM.weightQuickDate.value = getLocalDateString();
             syncDailyLogFormWithExistingDataForDate(DOM.weightQuickDate.value);
         }
-        DOM.weightQuickDate.addEventListener('change', () => {
-            syncDailyLogFormWithExistingDataForDate(DOM.weightQuickDate.value);
-        });
+        DOM.weightQuickDate.addEventListener('change', handleDailyLogDateChange);
         DOM.weightQuickForm.addEventListener('submit', (e) => {
             e.preventDefault();
             saveDailyLog();
@@ -384,17 +381,25 @@ function saveExerciseBlock(exerciseBlockEl) {
     const existingIndexAttr = exerciseBlockEl.getAttribute('data-existing-index');
     const isExisting = existingIndexAttr !== null && existingIndexAttr !== '';
 
+    let exerciseIndex;
     if (isExisting) {
-        workout.exercises[parseInt(existingIndexAttr)] = data;
+        exerciseIndex = parseInt(existingIndexAttr);
+        workout.exercises[exerciseIndex] = data;
     } else {
         workout.exercises.push(data);
-        exerciseBlockEl.setAttribute('data-existing-index', String(workout.exercises.length - 1));
+        exerciseIndex = workout.exercises.length - 1;
+        exerciseBlockEl.setAttribute('data-existing-index', String(exerciseIndex));
     }
 
     workout.estimatedCalories = estimateWorkoutCalories(workout.exercises, WORKOUT_CALORIES_PER_SET);
 
     saveDataAndSync();
-    showToast(`「${data.name}」を${isExisting ? '更新' : '保存'}しました`);
+
+    // 同じ種目名の過去の記録(全ワークアウト横断)と比べて、今回が自己ベスト更新かどうかを判定する
+    const prs = computeExercisePRs(state.workouts);
+    const isPR = prs.has(`${workout.id}::${exerciseIndex}`);
+    const prSuffix = isPR ? ' 🏆自己ベスト更新！' : '';
+    showToast(`「${data.name}」を${isExisting ? '更新' : '保存'}しました${prSuffix}`);
 
     if (!isExisting) {
         // 保存済みの種目は片付けて、次の種目をすぐ入力できる空ブロックを用意する
@@ -460,6 +465,9 @@ function updateWorkoutCalorieHint() {
     DOM.workoutCalorieHint.textContent = `※このセッションの筋トレ消費目安: ${kcal} kcal`;
 }
 
+// 直近でフォームAに反映した日付。日付変更時の「未保存の入力を破棄してよいか」判定の基準にする。
+let lastSyncedCardioDate = null;
+
 // フォームで選択された日付にすでにある有酸素の記録を、フォームへ反映する。
 // (これをせずに空欄のまま日付だけ変えて誤送信すると、その日の有酸素記録を意図せず消してしまうため)
 function syncCardioFormWithExistingDataForDate(date) {
@@ -470,6 +478,35 @@ function syncCardioFormWithExistingDataForDate(date) {
         DOM.logCardioDist.value = existingCardio ? existingCardio.distance : '';
     }
     updateCardioHint();
+
+    // 自動で反映したことが分かるよう、理由を明示するヒントを出す
+    // (何も言わずにフォームが埋まっていると、ユーザーが「なぜ？」と混乱するため)
+    if (DOM.cardioExistingHint && DOM.cardioExistingHintText) {
+        if (existingCardio) {
+            DOM.cardioExistingHintText.textContent =
+                `この日はすでに有酸素 ${existingCardio.distance}km を記録済みです（内容を変更すると上書きされます）`;
+            DOM.cardioExistingHint.classList.remove('is-hidden');
+        } else {
+            DOM.cardioExistingHint.classList.add('is-hidden');
+        }
+    }
+
+    lastSyncedCardioDate = date;
+}
+
+// 日付選択(change)時のハンドラ。入力中の未保存の値が破棄されそうな場合は先に確認する。
+function handleCardioDateChange() {
+    const newDate = DOM.workoutDate.value;
+    const currentVal = DOM.logCardioDist ? DOM.logCardioDist.value.trim() : '';
+    const savedForOldDate = lastSyncedCardioDate ? state.cardioLogs.find(c => c.date === lastSyncedCardioDate) : null;
+    const savedVal = savedForOldDate ? String(savedForOldDate.distance) : '';
+    const isDirty = currentVal !== '' && currentVal !== savedVal;
+
+    if (isDirty && !confirm('入力中の有酸素の記録が保存されていません。日付を変更すると入力内容が失われます。続けますか？')) {
+        if (lastSyncedCardioDate) DOM.workoutDate.value = lastSyncedCardioDate;
+        return;
+    }
+    syncCardioFormWithExistingDataForDate(newDate);
 }
 
 // 有酸素を保存し、開いているワークアウトセッション(種目は既に個別保存済み)を締めくくる。
@@ -478,6 +515,7 @@ function saveCardioAndFinishSession() {
     const date = DOM.workoutDate.value;
 
     let cardioSaved = false;
+    let cardioUpdated = false;
     if (DOM.logCardioDist) {
         const cardioText = DOM.logCardioDist.value.trim();
         if (cardioText !== '') {
@@ -490,7 +528,8 @@ function saveCardioAndFinishSession() {
 
             // 体重ログと同様、同じ日付の既存エントリがあれば上書きする
             const existingCardioIndex = state.cardioLogs.findIndex(c => c.date === date);
-            if (existingCardioIndex !== -1) {
+            cardioUpdated = existingCardioIndex !== -1;
+            if (cardioUpdated) {
                 state.cardioLogs[existingCardioIndex] = { date, distance: dist, calories };
             } else {
                 state.cardioLogs.push({ date, distance: dist, calories });
@@ -515,8 +554,10 @@ function saveCardioAndFinishSession() {
 
     saveDataAndSync();
 
+    // 既存日付への上書きだと誤操作に気づきやすいよう、新規/更新を区別した文言にする
+    // (ワークアウトの種目保存は既に「保存/更新」を区別しているのに合わせる)
     const savedParts = [];
-    if (cardioSaved) savedParts.push('有酸素');
+    if (cardioSaved) savedParts.push(cardioUpdated ? '有酸素(更新)' : '有酸素');
     if (hasOpenWorkoutSession) savedParts.push('筋トレ');
     showToast(`${savedParts.join('・')}を記録しました！`);
 
@@ -566,6 +607,9 @@ function updateCardioHint() {
     DOM.cardioCalcHint.textContent = `※消費目安: ${kcal} kcal (最新体重: ${latestWeight} kg)`;
 }
 
+// 直近でフォームBに反映した日付。日付変更時の「未保存の入力を破棄してよいか」判定の基準にする。
+let lastSyncedDailyLogDate = null;
+
 // フォームBで選択された日付にすでにある体重・特別な飲食の記録を、フォームへ反映する。
 // (これをせずに空欄のまま送信すると、特別な飲食は「未チェック=削除」と解釈され、
 //  その日にすでに記録していた内容が消えてしまうため)
@@ -578,6 +622,7 @@ function syncDailyLogFormWithExistingDataForDate(date) {
     }
 
     const existingFood = state.foodLogs.find(f => f.date === date);
+    const checkedLabels = [];
     FOOD_ITEMS.forEach(item => {
         const chk = document.getElementById(item.chkId);
         const kcalInput = document.getElementById(item.kcalId);
@@ -592,7 +637,64 @@ function syncDailyLogFormWithExistingDataForDate(date) {
             nameInput.disabled = !checked;
             nameInput.value = (checked && existingFood && item.nameKey && existingFood[item.nameKey]) ? existingFood[item.nameKey] : '';
         }
+        if (checked) {
+            const label = (item.isCustom && existingFood && existingFood[item.nameKey]) ? existingFood[item.nameKey] : item.label;
+            checkedLabels.push(label);
+        }
     });
+
+    // 自動で反映したことが分かるよう、理由を明示するヒントを出す
+    if (DOM.dailyLogExistingHint && DOM.dailyLogExistingHintText) {
+        const parts = [];
+        if (existingWeight) parts.push(`体重 ${existingWeight.weight}kg`);
+        if (checkedLabels.length > 0) parts.push(`特別な飲食(${checkedLabels.join('・')})`);
+
+        if (parts.length > 0) {
+            DOM.dailyLogExistingHintText.textContent =
+                `この日はすでに${parts.join('・')}を記録済みです（内容を変更すると上書きされます）`;
+            DOM.dailyLogExistingHint.classList.remove('is-hidden');
+        } else {
+            DOM.dailyLogExistingHint.classList.add('is-hidden');
+        }
+    }
+
+    lastSyncedDailyLogDate = date;
+}
+
+// 日付選択(change)時のハンドラ。入力中の未保存の値が破棄されそうな場合は先に確認する。
+function handleDailyLogDateChange() {
+    const newDate = DOM.weightQuickDate.value;
+
+    const savedWeight = lastSyncedDailyLogDate ? state.weightLogs.find(w => w.date === lastSyncedDailyLogDate) : null;
+    const currentWeightVal = DOM.weightQuickVal ? DOM.weightQuickVal.value.trim() : '';
+    const savedWeightVal = savedWeight ? String(savedWeight.weight) : '';
+    let isDirty = currentWeightVal !== '' && currentWeightVal !== savedWeightVal;
+
+    if (!isDirty) {
+        const savedFood = lastSyncedDailyLogDate ? state.foodLogs.find(f => f.date === lastSyncedDailyLogDate) : null;
+        for (const item of FOOD_ITEMS) {
+            const chk = document.getElementById(item.chkId);
+            if (!chk) continue;
+            const savedChecked = savedFood ? !!savedFood[item.key] : false;
+            if (chk.checked !== savedChecked) { isDirty = true; break; }
+            if (chk.checked) {
+                const kcalInput = document.getElementById(item.kcalId);
+                const savedCal = (savedFood && savedFood[item.calKey]) ? String(savedFood[item.calKey]) : '';
+                if (kcalInput && kcalInput.value.trim() !== savedCal) { isDirty = true; break; }
+                if (item.nameKey) {
+                    const nameInput = document.getElementById(item.nameId);
+                    const savedName = (savedFood && savedFood[item.nameKey]) ? savedFood[item.nameKey] : '';
+                    if (nameInput && nameInput.value.trim() !== savedName) { isDirty = true; break; }
+                }
+            }
+        }
+    }
+
+    if (isDirty && !confirm('入力中の体重・特別な飲食の内容が保存されていません。日付を変更すると入力内容が失われます。続けますか？')) {
+        if (lastSyncedDailyLogDate) DOM.weightQuickDate.value = lastSyncedDailyLogDate;
+        return;
+    }
+    syncDailyLogFormWithExistingDataForDate(newDate);
 }
 
 // 体重・特別な飲食をまとめて記録する（ジムに行かない日でも入力する部分）。
@@ -606,6 +708,7 @@ function saveDailyLog() {
     }
 
     let weightSaved = false;
+    let weightUpdated = false;
     const weightText = DOM.weightQuickVal ? DOM.weightQuickVal.value.trim() : '';
     if (weightText !== '') {
         const weight = parseFloat(weightText);
@@ -614,7 +717,8 @@ function saveDailyLog() {
             return;
         }
         const existingIndex = state.weightLogs.findIndex(w => w.date === date);
-        if (existingIndex !== -1) {
+        weightUpdated = existingIndex !== -1;
+        if (weightUpdated) {
             state.weightLogs[existingIndex].weight = weight;
         } else {
             state.weightLogs.push({ date, weight });
@@ -630,6 +734,7 @@ function saveDailyLog() {
     });
 
     const foodIndex = state.foodLogs.findIndex(f => f.date === date);
+    const foodUpdated = foodIndex !== -1;
     if (hasSpecialFood) {
         const foodRecord = { date };
         FOOD_ITEMS.forEach(item => {
@@ -667,9 +772,10 @@ function saveDailyLog() {
 
     saveDataAndSync();
 
+    // 既存日付への上書きだと誤操作に気づきやすいよう、新規/更新を区別した文言にする
     const savedParts = [];
-    if (weightSaved) savedParts.push('体重');
-    if (foodSaved && hasSpecialFood) savedParts.push('特別な飲食');
+    if (weightSaved) savedParts.push(weightUpdated ? '体重(更新)' : '体重');
+    if (foodSaved && hasSpecialFood) savedParts.push(foodUpdated ? '特別な飲食(更新)' : '特別な飲食');
     if (savedParts.length > 0) {
         showToast(`${savedParts.join('・')}を記録しました！`);
     } else {
@@ -677,15 +783,10 @@ function saveDailyLog() {
         showToast('特別な飲食の記録を削除しました');
     }
 
-    if (DOM.weightQuickVal) DOM.weightQuickVal.value = '';
-    FOOD_ITEMS.forEach(item => {
-        const chk = document.getElementById(item.chkId);
-        const kcalInput = document.getElementById(item.kcalId);
-        const nameInput = item.nameId ? document.getElementById(item.nameId) : null;
-        if (chk) chk.checked = false;
-        if (kcalInput) { kcalInput.disabled = true; kcalInput.value = ''; }
-        if (nameInput) { nameInput.disabled = true; nameInput.value = ''; }
-    });
+    // 単純に空欄へ戻すのではなく、今保存した内容で再同期する
+    // (同じ日付を選んだままなら、保存直後のフォームには「たった今保存した内容」が
+    //  正しく表示され続けるべきで、ヒントも最新の状態に更新される)
+    syncDailyLogFormWithExistingDataForDate(date);
 
     updateCardioHint(); // 体重が変わると有酸素の消費目安も変わるため
     updateDashboard();

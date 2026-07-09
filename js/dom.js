@@ -24,6 +24,7 @@ const DOM = {
     prevMonthBtn: document.getElementById('prev-month-btn'),
     nextMonthBtn: document.getElementById('next-month-btn'),
     noWeightData: document.getElementById('no-weight-data'),
+    weightChangeSummary: document.getElementById('weight-change-summary'),
     noCalorieData: document.getElementById('no-calorie-data'),
 
     // Log Workout Form
@@ -42,17 +43,24 @@ const DOM = {
     todayBurnedKcal: document.getElementById('today-burned-kcal'),
     currentMaintenanceKcal: document.getElementById('current-maintenance-kcal'),
     todayFoodKcal: document.getElementById('today-food-kcal'),
+    cardioExistingHint: document.getElementById('cardio-existing-hint'),
+    cardioExistingHintText: document.getElementById('cardio-existing-hint-text'),
 
     // Weight Quick Logger (体重単独記録フォーム)
     weightQuickForm: document.getElementById('weight-quick-form'),
     weightQuickDate: document.getElementById('weight-quick-date'),
     weightQuickVal: document.getElementById('weight-quick-val'),
+    dailyLogExistingHint: document.getElementById('daily-log-existing-hint'),
+    dailyLogExistingHintText: document.getElementById('daily-log-existing-hint-text'),
 
     // History
     searchInput: document.getElementById('search-input'),
     filterMood: document.getElementById('filter-mood'),
     progressionSelect: document.getElementById('progression-exercise-select'),
     noProgressionData: document.getElementById('no-progression-data'),
+    noVolumeTrendData: document.getElementById('no-volume-trend-data'),
+    foodBreakdownMonth: document.getElementById('food-breakdown-month'),
+    noFoodBreakdownData: document.getElementById('no-food-breakdown-data'),
     historyCount: document.getElementById('history-count'),
     historyContainer: document.getElementById('history-container'),
 
@@ -72,6 +80,10 @@ const DOM = {
     toast: document.getElementById('toast'),
     confirmModal: document.getElementById('confirm-modal'),
     modalTitle: document.getElementById('modal-title'),
+    daySummaryModal: document.getElementById('day-summary-modal'),
+    daySummaryTitle: document.getElementById('day-summary-title'),
+    daySummaryBody: document.getElementById('day-summary-body'),
+    daySummaryAddBtn: document.getElementById('day-summary-add-btn'),
     modalMessage: document.getElementById('modal-message'),
     modalCancelBtn: document.getElementById('modal-cancel-btn'),
     modalConfirmBtn: document.getElementById('modal-confirm-btn')

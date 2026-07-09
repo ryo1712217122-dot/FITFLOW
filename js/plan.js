@@ -401,6 +401,9 @@ function savePlanSettings() {
     s.weight1Month = parseFloat(document.getElementById('edit-weight-1month').value) || 0.0;
     s.weight3Month = parseFloat(document.getElementById('edit-weight-3month').value) || 0.0;
     s.weightEquilibrium = parseFloat(document.getElementById('edit-weight-equilibrium').value) || 0.0;
+    // ロードマップを手動保存した時点を、予測の起点日として記録する
+    // (体重グラフで予測 vs 実績を重ねて表示する際、どの日から数えるかの基準になる)
+    s.weightPlanStartDate = getLocalDateString();
 
     s.sleepTarget = parseFloat(document.getElementById('edit-sleep-target').value) || 0.0;
     s.snackRule = document.getElementById('edit-snack-rule').value.trim();
@@ -507,6 +510,7 @@ function recalculatePlanRoadmap() {
     s.weightStart = latestWeight;
     s.weight1Month = weight1Month;
     s.weight3Month = weight3Month;
+    s.weightPlanStartDate = getLocalDateString();
     state.planSettings = s;
     saveData();
 

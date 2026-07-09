@@ -10,6 +10,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initHistoryControls();
     initDashboardControls();
     initSettingsControls();
+    initDaySummaryModal();
 
     // Load initial views
     updateDashboard();

@@ -221,6 +221,8 @@ function updateFoodHistoryList() {
 
     if (countEl) countEl.textContent = logs.length;
 
+    renderFoodBreakdownChart();
+
     if (logs.length === 0) {
         container.innerHTML = '<div class="no-data-msg">特別な飲食の記録はありません</div>';
         return;
@@ -304,4 +306,90 @@ function deleteFoodLog(index) {
         updateDashboard();
         updateFoodHistoryList();
     }
+}
+
+// 特別な飲食履歴の各バッジと同じ配色をチャートでも使う(視覚的な一貫性のため)。
+// CSS変数(var(--x))はcanvas描画では解決されないため、getComputedStyleで実色に変換して使う。
+function getFoodCategoryChartColors() {
+    const resolveVar = (name, fallback) =>
+        getComputedStyle(document.documentElement).getPropertyValue(name).trim() || fallback;
+    return {
+        milktea: resolveVar('--color-primary', '#86ac41'),
+        ramen: resolveVar('--color-danger', '#e05a47'),
+        drinking: resolveVar('--color-warning', '#d9a05b'),
+        sweets: '#e078b4',
+        fastfood: '#e69632',
+        teishoku: '#508ca0',
+        custom: resolveVar('--text-secondary', '#7da3a1')
+    };
+}
+
+// 今月の特別な飲食を、カテゴリ別の記録回数でドーナツチャート表示する。
+// kcalは任意入力なので件数を主指標にし、判明しているkcal合計はツールチップで補足する。
+function renderFoodBreakdownChart() {
+    const canvas = document.getElementById('foodBreakdownChart');
+    if (!canvas || !DOM.noFoodBreakdownData) return;
+
+    const now = new Date();
+    const yearMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    if (DOM.foodBreakdownMonth) {
+        DOM.foodBreakdownMonth.textContent = `${now.getFullYear()}年${now.getMonth() + 1}月`;
+    }
+
+    const breakdown = computeFoodCategoryBreakdown(state.foodLogs, FOOD_ITEMS, yearMonth);
+    const activeItems = FOOD_ITEMS.filter(item => breakdown[item.key] && breakdown[item.key].count > 0);
+
+    if (activeItems.length === 0) {
+        DOM.noFoodBreakdownData.style.display = 'block';
+        if (state.charts.foodBreakdown) {
+            try { state.charts.foodBreakdown.destroy(); } catch(e){}
+            state.charts.foodBreakdown = null;
+        }
+        return;
+    }
+    DOM.noFoodBreakdownData.style.display = 'none';
+
+    const categoryColors = getFoodCategoryChartColors();
+    const labels = activeItems.map(item => item.label);
+    const data = activeItems.map(item => breakdown[item.key].count);
+    const colors = activeItems.map(item => categoryColors[item.key] || '#888');
+    const theme = getChartThemeColors();
+
+    if (state.charts.foodBreakdown) {
+        try { state.charts.foodBreakdown.destroy(); } catch(e){}
+    }
+
+    const ctx = canvas.getContext('2d');
+    state.charts.foodBreakdown = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: labels,
+            datasets: [{
+                data: data,
+                backgroundColor: colors,
+                borderColor: theme.surface,
+                borderWidth: 2
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'right',
+                    labels: { color: theme.text, font: { size: 10 }, boxWidth: 12 }
+                },
+                tooltip: {
+                    callbacks: {
+                        label: (context) => {
+                            const item = activeItems[context.dataIndex];
+                            const b = breakdown[item.key];
+                            const kcalText = b.totalKcal > 0 ? ` (合計 ${Math.round(b.totalKcal)} kcal)` : '';
+                            return `${item.label}: ${b.count}回${kcalText}`;
+                        }
+                    }
+                }
+            }
+        }
+    });
 }

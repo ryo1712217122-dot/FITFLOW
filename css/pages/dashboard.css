@@ -1,4 +1,20 @@
 @layer pages {
+/* 体重推移グラフの「直近7日間で-0.8kg」サマリー。日々の変動ノイズに埋もれがちな
+   トレンドを数値でも見せる（減少=緑、増加=warning色、変化なし=通常色） */
+.weight-change-summary {
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: var(--text-secondary);
+}
+
+.weight-change-summary.weight-change-down {
+    color: var(--color-primary);
+}
+
+.weight-change-summary.weight-change-up {
+    color: var(--color-warning);
+}
+
 /* Stat Cards */
 .stat-card {
     display: flex;
@@ -166,6 +182,14 @@
     height: 4px;
     border-radius: 50%;
     background-color: #fff;
+}
+
+.calendar-day-indicator {
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    font-size: 0.6rem;
+    line-height: 1;
 }
 
 .calendar-legend {

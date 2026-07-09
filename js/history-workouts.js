@@ -26,25 +26,29 @@ function updateHistoryList() {
                 <p>該当するワークアウト履歴が見つかりません。</p>
             </div>
         `;
-        if (window.lucide) lucide.createIcons();
-        return;
+    } else {
+        // Sort chronologically descending
+        filtered.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+        // PR判定は全ワークアウト横断で行うため、カード毎ではなく一覧描画につき1回だけ計算する
+        const prs = computeExercisePRs(state.workouts);
+
+        filtered.forEach(w => {
+            const card = createHistoryCard(w, prs);
+            DOM.historyContainer.appendChild(card);
+        });
     }
 
-    // Sort chronologically descending
-    filtered.sort((a, b) => new Date(b.date) - new Date(a.date));
-
-    filtered.forEach(w => {
-        const card = createHistoryCard(w);
-        DOM.historyContainer.appendChild(card);
-    });
-
+    // 種目選択・重量推移・週次ボリュームはすべてstate.workouts全体を見るため、
+    // 検索/絞り込みでfilteredが0件になっても更新は継続する
     updateProgressionSelect();
+    renderVolumeTrendChart();
     if (window.lucide) {
         lucide.createIcons();
     }
 }
 
-function createHistoryCard(workout) {
+function createHistoryCard(workout, prs) {
     const card = document.createElement('div');
     card.classList.add('card', 'workout-history-card');
 
@@ -72,7 +76,7 @@ function createHistoryCard(workout) {
 
     let exercisesHtml = '';
     if (workout.exercises) {
-        workout.exercises.forEach(ex => {
+        workout.exercises.forEach((ex, exIdx) => {
             let setsListHtml = '';
             ex.sets.forEach((s, idx) => {
                 const est1RM = s.reps > 1 ? Math.round(s.weight * (1 + s.reps / 30)) : s.weight;
@@ -84,9 +88,11 @@ function createHistoryCard(workout) {
                 `;
             });
 
+            const isPR = prs && prs.has(`${workout.id}::${exIdx}`);
+
             exercisesHtml += `
                 <div class="history-exercise-box">
-                    <div class="history-exercise-name">${escapeHtml(ex.name)}</div>
+                    <div class="history-exercise-name">${escapeHtml(ex.name)}${isPR ? ' <span class="pr-badge" title="自己ベスト更新">🏆自己ベスト</span>' : ''}</div>
                     <div class="history-sets-list">${setsListHtml}</div>
                 </div>
             `;
@@ -370,6 +376,75 @@ function renderProgressionChart() {
                     grid: { color: theme.grid },
                     ticks: { color: theme.text, font: { size: 9 } },
                     beginAtZero: false
+                }
+            }
+        }
+    });
+}
+
+// 種目別ではなく、セッション全体の総負荷量(Σ重量×レップ数)を週単位で見る指標。
+// 「種目別の重量推移」は特定の種目の伸びを見るためのものだが、こちらは全体の練習量が
+// 伸びているかどうかを一目で確認するためのもの。
+function renderVolumeTrendChart() {
+    const theme = getChartThemeColors();
+    const canvas = document.getElementById('volumeTrendChart');
+    if (!canvas || !DOM.noVolumeTrendData) return;
+
+    const todayStr = getLocalDateString();
+    const weeklyVolumes = computeWeeklyTrainingVolume(state.workouts, VOLUME_TREND_WEEKS, todayStr);
+
+    const hasAnyData = weeklyVolumes.some(w => w.volume > 0);
+    if (!hasAnyData) {
+        DOM.noVolumeTrendData.style.display = 'block';
+        if (state.charts.volumeTrend) {
+            try { state.charts.volumeTrend.destroy(); } catch(e){}
+            state.charts.volumeTrend = null;
+        }
+        return;
+    }
+
+    DOM.noVolumeTrendData.style.display = 'none';
+
+    const labels = weeklyVolumes.map(w => {
+        const parts = w.weekStart.split('-');
+        return parts.length === 3 ? `${parseInt(parts[1])}/${parseInt(parts[2])}週` : w.weekStart;
+    });
+    const volumes = weeklyVolumes.map(w => w.volume);
+
+    const colorPrimary = getComputedStyle(document.documentElement).getPropertyValue('--color-primary').trim() || '#86ac41';
+
+    if (state.charts.volumeTrend) {
+        try { state.charts.volumeTrend.destroy(); } catch(e){}
+    }
+
+    const ctx = canvas.getContext('2d');
+    state.charts.volumeTrend = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: '総ボリューム (kg)',
+                data: volumes,
+                backgroundColor: colorPrimary,
+                borderRadius: 4,
+                barThickness: 20
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false }
+            },
+            scales: {
+                x: {
+                    grid: { display: false },
+                    ticks: { color: theme.text, font: { size: 9 } }
+                },
+                y: {
+                    grid: { color: theme.grid },
+                    ticks: { color: theme.text, font: { size: 9 } },
+                    beginAtZero: true
                 }
             }
         }

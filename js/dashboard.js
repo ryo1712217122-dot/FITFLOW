@@ -201,13 +201,17 @@ function renderCalendar() {
         workoutsByDate[w.date].push(w);
     });
 
-    // Group food logs by date
+    // Group food/cardio/weight logs by date (それぞれ日付ごとに高々1件)
     const foodByDate = {};
     if (state.foodLogs) {
         state.foodLogs.forEach(f => {
             foodByDate[f.date] = f;
         });
     }
+    const cardioByDate = {};
+    state.cardioLogs.forEach(c => { cardioByDate[c.date] = c; });
+    const weightByDate = {};
+    state.weightLogs.forEach(w => { weightByDate[w.date] = w; });
 
     // Render actual days
     for (let day = 1; day <= totalDays; day++) {
@@ -223,6 +227,15 @@ function renderCalendar() {
             dayCell.classList.add('today');
         }
 
+        // 日付をクリックすると、その日の全記録(筋トレ・有酸素・体重・特別な飲食)を
+        // 横断的にまとめた日別サマリーモーダルを開く。記録の有無に関わらず全日をクリック可能にする
+        // (記録が無い日でも「この日に記録を追加」からすぐ入力できるようにするため)
+        dayCell.addEventListener('click', () => {
+            openDaySummaryModal(dateStr);
+        });
+
+        const titleParts = [];
+
         const dayWorkouts = workoutsByDate[dateStr];
         if (dayWorkouts && dayWorkouts.length > 0) {
             dayCell.classList.add('workout-done');
@@ -231,38 +244,36 @@ function renderCalendar() {
             dot.classList.add('workout-dot-indicator');
             dayCell.appendChild(dot);
 
-            dayCell.setAttribute('title', `トレーニング記録 ${dayWorkouts.length}件`);
-
-            dayCell.addEventListener('click', () => {
-                const historyNavItem = document.querySelector('[data-tab="history"]');
-                if (DOM.searchInput) {
-                    DOM.searchInput.value = dateStr;
-                    updateHistoryList();
-                }
-                if (historyNavItem) historyNavItem.click();
-            });
+            titleParts.push(`トレーニング記録 ${dayWorkouts.length}件`);
         }
 
+        const emojis = [];
         const dayFood = foodByDate[dateStr];
         if (dayFood) {
-            const emojis = [];
-            if (dayFood.milktea) emojis.push('🍵');
-            if (dayFood.ramen) emojis.push('🍜');
-            if (dayFood.drinking) emojis.push('🍺');
-            if (emojis.length > 0) {
-                const foodIndicator = document.createElement('span');
-                foodIndicator.style.position = 'absolute';
-                foodIndicator.style.top = '2px';
-                foodIndicator.style.right = '2px';
-                foodIndicator.style.fontSize = '0.65rem';
-                foodIndicator.style.lineHeight = '1';
-                foodIndicator.textContent = emojis.join('');
-                dayCell.appendChild(foodIndicator);
-
-                const itemsText = emojis.join(' ');
-                const existingTitle = dayCell.getAttribute('title') || '';
-                dayCell.setAttribute('title', (existingTitle ? existingTitle + ' | ' : '') + `飲食: ${itemsText}`);
+            const hasAnyFood = FOOD_ITEMS.some(item => dayFood[item.key]);
+            if (hasAnyFood) {
+                emojis.push('🍽️');
+                titleParts.push('特別な飲食の記録あり');
             }
+        }
+        if (cardioByDate[dateStr]) {
+            emojis.push('🏃');
+            titleParts.push('有酸素の記録あり');
+        }
+        if (weightByDate[dateStr]) {
+            emojis.push('⚖️');
+            titleParts.push('体重の記録あり');
+        }
+
+        if (emojis.length > 0) {
+            const indicator = document.createElement('span');
+            indicator.classList.add('calendar-day-indicator');
+            indicator.textContent = emojis.join('');
+            dayCell.appendChild(indicator);
+        }
+
+        if (titleParts.length > 0) {
+            dayCell.setAttribute('title', titleParts.join(' | '));
         }
 
         DOM.calendarDays.appendChild(dayCell);
@@ -354,44 +365,116 @@ function renderWeightChart() {
             try { state.charts.weight.destroy(); } catch(e){}
             state.charts.weight = null;
         }
+        if (DOM.weightChangeSummary) DOM.weightChangeSummary.textContent = '';
         return;
     }
 
     DOM.noWeightData.style.display = 'none';
 
+    // 移動平均は表示ウィンドウより前の実績も踏まえて計算してから、表示件数分だけ切り出す
+    // (直近10件だけを渡すと、グラフ左端付近の平均が「本当は分かるはずの過去データ」を
+    //  使えずに不正確になるため)
+    const movingAverages = computeMovingAverage(state.weightLogs, WEIGHT_TREND_WINDOW_DAYS);
     const recentLogs = state.weightLogs.slice(-MAX_RECENT_WEIGHT_LOGS);
+    const recentAverages = movingAverages.slice(-MAX_RECENT_WEIGHT_LOGS);
 
     const labels = recentLogs.map(l => {
         const parts = l.date.split('-');
         return parts.length === 3 ? `${parseInt(parts[1])}/${parseInt(parts[2])}` : l.date;
     });
     const weights = recentLogs.map(l => l.weight);
+    const averages = recentAverages.map(a => a.average);
+
+    // 日々の変動ノイズに埋もれがちな傾向を、要約テキストとしても添える
+    if (DOM.weightChangeSummary) {
+        const change = computeWeightChangeOverDays(state.weightLogs, WEIGHT_TREND_WINDOW_DAYS);
+        if (change === null) {
+            DOM.weightChangeSummary.textContent = '';
+        } else {
+            const sign = change > 0 ? '+' : '';
+            const trendClass = change < 0 ? 'weight-change-down' : (change > 0 ? 'weight-change-up' : '');
+            DOM.weightChangeSummary.className = `weight-change-summary ${trendClass}`;
+            DOM.weightChangeSummary.textContent = `直近${WEIGHT_TREND_WINDOW_DAYS}日間で ${sign}${change}kg`;
+        }
+    }
+
+    const colorPrimary = getComputedStyle(document.documentElement).getPropertyValue('--color-primary').trim() || '#86ac41';
+    const colorSecondary = getComputedStyle(document.documentElement).getPropertyValue('--color-secondary').trim() || '#7da3a1';
+    const colorWarning = getComputedStyle(document.documentElement).getPropertyValue('--color-warning').trim() || '#d9a05b';
 
     if (state.charts.weight) {
         try { state.charts.weight.destroy(); } catch(e){}
+    }
+
+    const datasets = [
+        {
+            label: '体重 (kg)',
+            data: weights,
+            borderColor: colorPrimary,
+            backgroundColor: hexToRgba(colorPrimary, 0.1),
+            borderWidth: 2.5,
+            tension: 0.3,
+            fill: true,
+            pointBackgroundColor: colorPrimary,
+            pointRadius: 4
+        },
+        {
+            label: `${WEIGHT_TREND_WINDOW_DAYS}日移動平均`,
+            data: averages,
+            borderColor: colorSecondary,
+            backgroundColor: 'transparent',
+            borderWidth: 2,
+            borderDash: [4, 4],
+            tension: 0.3,
+            fill: false,
+            pointRadius: 0,
+            pointHoverRadius: 3
+        }
+    ];
+
+    // 最適化計画のロードマップ(開始時・1ヶ月目・3ヶ月目)が設定されていれば、
+    // 予測体重を実測と同じ日付軸に重ねて表示し、計画が当たっているか一目で確認できるようにする
+    const plan = state.planSettings;
+    if (plan && plan.weightPlanStartDate) {
+        const plannedSeries = computePlannedWeightSeries(
+            recentLogs.map(l => l.date),
+            plan.weightPlanStartDate,
+            plan.weightStart,
+            plan.weight1Month,
+            plan.weight3Month
+        );
+        if (plannedSeries.some(v => v !== null)) {
+            datasets.push({
+                label: '予測 (計画)',
+                data: plannedSeries,
+                borderColor: colorWarning,
+                backgroundColor: 'transparent',
+                borderWidth: 2,
+                borderDash: [2, 3],
+                tension: 0,
+                fill: false,
+                pointRadius: 0,
+                pointHoverRadius: 3,
+                spanGaps: true
+            });
+        }
     }
 
     state.charts.weight = new Chart(ctx, {
         type: 'line',
         data: {
             labels: labels,
-            datasets: [{
-                label: '体重 (kg)',
-                data: weights,
-                borderColor: getComputedStyle(document.documentElement).getPropertyValue('--color-primary').trim() || '#86ac41',
-                backgroundColor: hexToRgba(getComputedStyle(document.documentElement).getPropertyValue('--color-primary').trim() || '#86ac41', 0.1),
-                borderWidth: 2.5,
-                tension: 0.3,
-                fill: true,
-                pointBackgroundColor: getComputedStyle(document.documentElement).getPropertyValue('--color-primary').trim() || '#86ac41',
-                pointRadius: 4
-            }]
+            datasets: datasets
         },
         options: {
             responsive: true,
             maintainAspectRatio: false,
             plugins: {
-                legend: { display: false }
+                legend: {
+                    display: true,
+                    position: 'top',
+                    labels: { color: theme.text, font: { size: 10 } }
+                }
             },
             scales: {
                 x: {

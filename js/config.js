@@ -6,6 +6,10 @@ const DEFAULT_WEIGHT_KG = 70.0;
 const TARGET_MONTHLY_WORKOUTS = 12;
 const MAX_RECENT_WEIGHT_LOGS = 10;
 const CARDIO_DAYS_WINDOW = 7;
+// 体重推移グラフの移動平均・週間変化量サマリーで使う日数
+const WEIGHT_TREND_WINDOW_DAYS = 7;
+// 総トレーニングボリューム週次推移グラフで表示する週数
+const VOLUME_TREND_WEEKS = 8;
 // タイトル・部位カテゴリーの入力欄はフォームから撤去したため、新規記録には固定のデフォルト値を使う
 const DEFAULT_WORKOUT_CATEGORY = 'その他 (Other)';
 // 筋トレの消費カロリー概算に使う「1セットあたりの目安kcal」。
@@ -40,6 +44,10 @@ const DEFAULT_PLAN_SETTINGS = {
     weight1Month: 79.0,
     weight3Month: 75.5,
     weightEquilibrium: 67.0,
+    // ロードマップ(weightStart等)がどの日付を起点とした予測なのか。
+    // nullの場合は体重グラフの予測線を描画しない(いつからの計画か分からないため)。
+    // 手動保存または「実績から再計算」のたびに、その時点の日付で更新される。
+    weightPlanStartDate: null,
     sleepTarget: 6.5,
     snackRule: '間食は「明治おいしいミルク紅茶 450ml」を週2回まで。他の日は完全無糖。夜22時以降の白米大盛り化を阻止し、普通盛りでストップすること。',
     workoutRule: 'ジム通いを週1回に圧縮し、余った時間を睡眠時間の補填（+1.5時間×2日）に回します。週1回全力（レッグプレス200kg等）で筋肉量は十分維持されます。'
