@@ -420,17 +420,6 @@ textarea:focus {
     z-index: 2100;
 }
 
-/* 汎用バッジ（特別な飲食のカテゴリ表示などで使用） */
-.badge {
-    display: inline-block;
-    padding: 0.25rem 0.6rem;
-    border-radius: 12px;
-    font-size: 0.75rem;
-    background: rgba(134, 172, 65, 0.1);
-    color: var(--color-primary);
-    border: 1px solid rgba(134, 172, 65, 0.3);
-}
-
 /* Day Summary Modal */
 .day-summary-modal-content {
     max-width: 520px;
@@ -502,12 +491,6 @@ textarea:focus {
     display: flex;
     gap: 0.25rem;
     flex-shrink: 0;
-}
-
-.day-summary-badges {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.4rem;
 }
 
 .day-summary-empty {

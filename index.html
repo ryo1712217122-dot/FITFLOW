@@ -14,17 +14,17 @@
     <script src="https://unpkg.com/lucide@latest"></script>
     <!-- CSSはカスケードレイヤーで管理。layers.cssの宣言順が優先度を決めるため、
          必ずこれを他のどのスタイルシートよりも先に読み込むこと（<link>の物理的な順番には依存しない）。 -->
-    <link rel="stylesheet" href="css/layers.css?v=1.10.0">
-    <link rel="stylesheet" href="css/tokens.css?v=1.10.0">
-    <link rel="stylesheet" href="css/base.css?v=1.10.0">
-    <link rel="stylesheet" href="css/layout.css?v=1.10.0">
-    <link rel="stylesheet" href="css/components.css?v=1.10.0">
-    <link rel="stylesheet" href="css/pages/record.css?v=1.10.0">
-    <link rel="stylesheet" href="css/pages/dashboard.css?v=1.10.0">
-    <link rel="stylesheet" href="css/pages/plan.css?v=1.10.0">
-    <link rel="stylesheet" href="css/pages/history.css?v=1.10.0">
-    <link rel="stylesheet" href="css/pages/settings.css?v=1.10.0">
-    <link rel="stylesheet" href="css/responsive.css?v=1.10.0">
+    <link rel="stylesheet" href="css/layers.css?v=1.11.0">
+    <link rel="stylesheet" href="css/tokens.css?v=1.11.0">
+    <link rel="stylesheet" href="css/base.css?v=1.11.0">
+    <link rel="stylesheet" href="css/layout.css?v=1.11.0">
+    <link rel="stylesheet" href="css/components.css?v=1.11.0">
+    <link rel="stylesheet" href="css/pages/record.css?v=1.11.0">
+    <link rel="stylesheet" href="css/pages/dashboard.css?v=1.11.0">
+    <link rel="stylesheet" href="css/pages/plan.css?v=1.11.0">
+    <link rel="stylesheet" href="css/pages/history.css?v=1.11.0">
+    <link rel="stylesheet" href="css/pages/settings.css?v=1.11.0">
+    <link rel="stylesheet" href="css/responsive.css?v=1.11.0">
 </head>
 <body>
     <div class="app-container">
@@ -36,7 +36,7 @@
                 </div>
                 <div class="brand-text">
                     <h1>FITFLOW</h1>
-                    <span class="app-version">v1.10.0</span>
+                    <span class="app-version">v1.11.0</span>
                 </div>
             </div>
 
@@ -77,7 +77,7 @@
             <!-- Top bar -->
             <header class="top-bar">
                 <div class="welcome">
-                    <h2 id="greeting-text">こんにちは！<span class="app-version-badge">v1.10.0</span></h2>
+                    <h2 id="greeting-text">こんにちは！<span class="app-version-badge">v1.11.0</span></h2>
                     <p id="date-text">2026年7月3日 金曜日</p>
                 </div>
                 <div class="header-right-controls">
@@ -94,7 +94,7 @@
                 </div>
             </header>
 
-            <!-- Quick Log Tab: 純粋な入力ページ（有酸素・特別な飲食・筋トレ・体重のみ） -->
+            <!-- Quick Log Tab: 純粋な入力ページ（有酸素・筋トレ・体重のみ） -->
             <section id="quick-log" class="tab-content active">
                 <div class="quick-log-grid">
                     <!-- ジムに行った日の記録: 有酸素 + 筋トレ種目をまとめて入力するフォーム -->
@@ -207,13 +207,13 @@
                         </div>
                     </form>
 
-                    <!-- ジムに行かなくても記録する部分: 体重 + 特別な飲食をまとめて入力するフォーム -->
+                    <!-- ジムに行かなくても記録する部分: 体重を入力するフォーム -->
                     <div class="side-loggers-column">
                         <form id="weight-quick-form" class="card log-card">
                             <div class="card-header">
                                 <div class="header-title">
                                     <i data-lucide="scale"></i>
-                                    <h3>体重・食事の記録</h3>
+                                    <h3>体重の記録</h3>
                                 </div>
                             </div>
                             <p class="form-hint form-section-intro">ジムに行かない日でも入力する部分です。</p>
@@ -237,67 +237,8 @@
                                     </div>
                                 </div>
 
-                                <hr class="form-section-divider" />
-
-                                <!-- Special Foods/Drinks Checkbox Chips -->
-                                <div class="form-group">
-                                    <label class="food-section-label">特別な飲食の記録 <span class="field-optional-hint">(任意・カロリーが分かれば入力)</span></label>
-                                    <div class="food-chips-container">
-                                        <div class="food-chip-row">
-                                            <label>
-                                                <input type="checkbox" id="food-milktea-chk">
-                                                <span>🍵 紅茶・お菓子</span>
-                                            </label>
-                                            <input type="number" id="food-milktea-kcal" class="food-kcal-input" placeholder="kcal" min="0" step="1" disabled>
-                                        </div>
-                                        <div class="food-chip-row">
-                                            <label>
-                                                <input type="checkbox" id="food-ramen-chk">
-                                                <span>🍜 ラーメン</span>
-                                            </label>
-                                            <input type="number" id="food-ramen-kcal" class="food-kcal-input" placeholder="kcal" min="0" step="1" disabled>
-                                        </div>
-                                        <div class="food-chip-row">
-                                            <label>
-                                                <input type="checkbox" id="food-drinking-chk">
-                                                <span>🍺 飲み会</span>
-                                            </label>
-                                            <input type="number" id="food-drinking-kcal" class="food-kcal-input" placeholder="kcal" min="0" step="1" disabled>
-                                        </div>
-                                        <div class="food-chip-row">
-                                            <label>
-                                                <input type="checkbox" id="food-sweets-chk">
-                                                <span>🍰 スイーツ・デザート</span>
-                                            </label>
-                                            <input type="number" id="food-sweets-kcal" class="food-kcal-input" placeholder="kcal" min="0" step="1" disabled>
-                                        </div>
-                                        <div class="food-chip-row">
-                                            <label>
-                                                <input type="checkbox" id="food-fastfood-chk">
-                                                <span>🍔 ファーストフード</span>
-                                            </label>
-                                            <input type="number" id="food-fastfood-kcal" class="food-kcal-input" placeholder="kcal" min="0" step="1" disabled>
-                                        </div>
-                                        <div class="food-chip-row">
-                                            <label>
-                                                <input type="checkbox" id="food-teishoku-chk">
-                                                <span>🍣 寿司・定食</span>
-                                            </label>
-                                            <input type="number" id="food-teishoku-kcal" class="food-kcal-input" placeholder="kcal" min="0" step="1" disabled>
-                                        </div>
-                                        <div class="food-chip-row">
-                                            <label>
-                                                <input type="checkbox" id="food-custom-chk">
-                                                <span>✏️ その他</span>
-                                            </label>
-                                            <input type="text" id="food-custom-name" class="food-custom-name-input" placeholder="内容" maxlength="20" disabled>
-                                            <input type="number" id="food-custom-kcal" class="food-kcal-input" placeholder="kcal" min="0" step="1" disabled>
-                                        </div>
-                                    </div>
-                                </div>
-
                                 <button type="submit" class="btn btn-primary btn-full margin-top-1">
-                                    <i data-lucide="check"></i> 体重・食事を記録
+                                    <i data-lucide="check"></i> 体重を記録
                                 </button>
                             </div>
                         </form>
@@ -368,10 +309,6 @@
                                 <div class="calorie-summary-tile">
                                     <span class="tile-label">メンテナンス基準</span>
                                     <span class="tile-value" id="current-maintenance-kcal">2000 <span class="unit">kcal</span></span>
-                                </div>
-                                <div class="calorie-summary-tile">
-                                    <span class="tile-label">本日の特別な飲食摂取</span>
-                                    <span class="tile-value tile-value-danger" id="today-food-kcal">0 <span class="unit">kcal</span></span>
                                 </div>
                             </div>
                             <div class="chart-container calorie-chart-container">
@@ -488,12 +425,11 @@
 
             <!-- History and Analytics Tab -->
             <section id="history" class="tab-content">
-                <!-- Sub navigation tabs for Workout vs Cardio vs Weight vs Food -->
+                <!-- Sub navigation tabs for Workout vs Cardio vs Weight -->
                 <div class="history-sub-tabs" role="tablist" aria-label="履歴の種類">
                     <button class="btn btn-sm history-sub-tab-btn active" id="history-tab-workouts" type="button" role="tab" aria-selected="true">筋トレ履歴</button>
                     <button class="btn btn-sm history-sub-tab-btn" id="history-tab-cardio" type="button" role="tab" aria-selected="false">有酸素（ラン）履歴</button>
                     <button class="btn btn-sm history-sub-tab-btn" id="history-tab-weight" type="button" role="tab" aria-selected="false">体重履歴</button>
-                    <button class="btn btn-sm history-sub-tab-btn" id="history-tab-food" type="button" role="tab" aria-selected="false">特別な飲食履歴</button>
                 </div>
 
                 <!-- 筋トレ履歴コンテンツ (Workout History Panel) -->
@@ -587,31 +523,6 @@
                     </div>
                 </div>
 
-                <!-- 特別な飲食履歴コンテンツ (Food History Panel) -->
-                <div id="history-food-panel" role="tabpanel" class="is-hidden">
-                    <!-- Monthly category breakdown -->
-                    <div class="card food-breakdown-card">
-                        <div class="card-header">
-                            <div class="header-title">
-                                <i data-lucide="pie-chart"></i>
-                                <h3>カテゴリ別内訳</h3>
-                            </div>
-                            <span class="food-breakdown-month" id="food-breakdown-month"></span>
-                        </div>
-                        <div class="chart-container food-breakdown-container">
-                            <canvas id="foodBreakdownChart"></canvas>
-                            <div id="no-food-breakdown-data" class="no-data-msg">今月の記録はまだありません</div>
-                        </div>
-                    </div>
-
-                    <div class="history-list-header">
-                        <h3>特別な飲食履歴一覧 (<span id="food-history-count">0</span>件)</h3>
-                    </div>
-
-                    <div id="food-history-container" class="history-cards-container">
-                        <!-- Food history cards generated by JS -->
-                    </div>
-                </div>
             </section>
 
             <!-- Settings Tab: 外観 / データ / ヘルプ -->
@@ -760,8 +671,8 @@
         </div>
     </div>
 
-    <!-- Day Summary Modal: カレンダーの日付をクリックすると、その日の筋トレ・有酸素・体重・
-         特別な飲食の全記録を横断的にまとめて表示する（日別の対応関係を一目で確認できるように） -->
+    <!-- Day Summary Modal: カレンダーの日付をクリックすると、その日の筋トレ・有酸素・体重の
+         全記録を横断的にまとめて表示する（日別の対応関係を一目で確認できるように） -->
     <div id="day-summary-modal" class="modal hidden">
         <div class="modal-content day-summary-modal-content">
             <div class="day-summary-header">
@@ -783,26 +694,26 @@
     </div>
 
     <!-- lib/data-utils.js: DOM非依存の純粋関数（node --testでもテストされる）。他のどのjs/*.jsよりも先に読み込む -->
-    <script src="lib/data-utils.js?v=1.10.0"></script>
+    <script src="lib/data-utils.js?v=1.11.0"></script>
     <!-- js/*.js: すべてグローバルスコープに関数を定義するクラシックscript。
          ESモジュールにはしていない（index.htmlをダブルクリックしてfile://で開いても動作させるため）。
          依存関係は読み込み順で解決するので、この順番を変えないこと。 -->
-    <script src="js/config.js?v=1.10.0"></script>
-    <script src="js/state.js?v=1.10.0"></script>
-    <script src="js/utils.js?v=1.10.0"></script>
-    <script src="js/dom.js?v=1.10.0"></script>
-    <script src="js/notifications.js?v=1.10.0"></script>
-    <script src="js/theme.js?v=1.10.0"></script>
-    <script src="js/navigation.js?v=1.10.0"></script>
-    <script src="js/dashboard.js?v=1.10.0"></script>
-    <script src="js/record-form.js?v=1.10.0"></script>
-    <script src="js/history-workouts.js?v=1.10.0"></script>
-    <script src="js/history-logs.js?v=1.10.0"></script>
-    <script src="js/history-nav.js?v=1.10.0"></script>
-    <script src="js/day-summary.js?v=1.10.0"></script>
-    <script src="js/plan.js?v=1.10.0"></script>
-    <script src="js/sync.js?v=1.10.0"></script>
-    <script src="js/backup.js?v=1.10.0"></script>
-    <script src="js/main.js?v=1.10.0"></script>
+    <script src="js/config.js?v=1.11.0"></script>
+    <script src="js/state.js?v=1.11.0"></script>
+    <script src="js/utils.js?v=1.11.0"></script>
+    <script src="js/dom.js?v=1.11.0"></script>
+    <script src="js/notifications.js?v=1.11.0"></script>
+    <script src="js/theme.js?v=1.11.0"></script>
+    <script src="js/navigation.js?v=1.11.0"></script>
+    <script src="js/dashboard.js?v=1.11.0"></script>
+    <script src="js/record-form.js?v=1.11.0"></script>
+    <script src="js/history-workouts.js?v=1.11.0"></script>
+    <script src="js/history-logs.js?v=1.11.0"></script>
+    <script src="js/history-nav.js?v=1.11.0"></script>
+    <script src="js/day-summary.js?v=1.11.0"></script>
+    <script src="js/plan.js?v=1.11.0"></script>
+    <script src="js/sync.js?v=1.11.0"></script>
+    <script src="js/backup.js?v=1.11.0"></script>
+    <script src="js/main.js?v=1.11.0"></script>
 </body>
 </html>

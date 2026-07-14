@@ -2,6 +2,9 @@
 
 document.addEventListener('DOMContentLoaded', () => {
     loadData();
+    // 一回限りのデータ移行は、画面描画・クラウド同期より先に済ませる
+    // (移行前の古いデータで描画・アップロードしてしまわないように)
+    runOneTimeMigrations();
     initTheme();
     initNavigation();
     initDateTexts();
@@ -17,7 +20,6 @@ document.addEventListener('DOMContentLoaded', () => {
     updateHistoryList();
     updateCardioHistoryList();
     updateWeightHistoryList();
-    updateFoodHistoryList();
     renderPlanTab();
     renderPlanSidebarWidget();
 

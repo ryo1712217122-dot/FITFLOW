@@ -1,4 +1,4 @@
-// FITFLOW - 履歴リストタブ: 検索/フィルタ入力 + サブタブ(筋トレ/有酸素/体重/特別な飲食)切り替え
+// FITFLOW - 履歴リストタブ: 検索/フィルタ入力 + サブタブ(筋トレ/有酸素/体重)切り替え
 
 function initHistoryControls() {
     if (DOM.searchInput) DOM.searchInput.addEventListener('input', () => updateHistoryList());
@@ -14,15 +14,13 @@ function initHistoryControls() {
     const tabWorkouts = document.getElementById('history-tab-workouts');
     const tabCardio = document.getElementById('history-tab-cardio');
     const tabWeight = document.getElementById('history-tab-weight');
-    const tabFood = document.getElementById('history-tab-food');
     const panelWorkouts = document.getElementById('history-workouts-panel');
     const panelCardio = document.getElementById('history-cardio-panel');
     const panelWeight = document.getElementById('history-weight-panel');
-    const panelFood = document.getElementById('history-food-panel');
 
-    if (tabWorkouts && tabCardio && tabWeight && tabFood && panelWorkouts && panelCardio && panelWeight && panelFood) {
-        const allTabs = [tabWorkouts, tabCardio, tabWeight, tabFood];
-        const allPanels = [panelWorkouts, panelCardio, panelWeight, panelFood];
+    if (tabWorkouts && tabCardio && tabWeight && panelWorkouts && panelCardio && panelWeight) {
+        const allTabs = [tabWorkouts, tabCardio, tabWeight];
+        const allPanels = [panelWorkouts, panelCardio, panelWeight];
         const switchSubTab = (activeTab, activePanel) => {
             allTabs.forEach(t => {
                 t.classList.remove('active');
@@ -50,11 +48,6 @@ function initHistoryControls() {
         tabWeight.addEventListener('click', () => {
             switchSubTab(tabWeight, panelWeight);
             updateWeightHistoryList();
-        });
-
-        tabFood.addEventListener('click', () => {
-            switchSubTab(tabFood, panelFood);
-            updateFoodHistoryList();
         });
     }
 }

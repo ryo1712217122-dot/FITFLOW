@@ -74,7 +74,6 @@ function exportWorkouts() {
         weightLogs: state.weightLogs,
         cardioLogs: state.cardioLogs,
         maintenanceCalories: state.maintenanceCalories,
-        foodLogs: state.foodLogs,
         planSettings: state.planSettings
     };
 
@@ -103,7 +102,6 @@ function importWorkouts(event) {
             let importedWeights = [];
             let importedCardio = [];
             let importedMaint = DEFAULT_MAINTENANCE_CALORIES;
-            let importedFood = [];
             let importedPlan = null;
 
             if (Array.isArray(parsed)) {
@@ -111,11 +109,11 @@ function importWorkouts(event) {
                 importedWorkouts = parsed;
             } else if (parsed && typeof parsed === 'object') {
                 // Full state backup format
+                // (古いバックアップに含まれるfoodLogsは、機能廃止に伴い読み込まずに無視する)
                 importedWorkouts = parsed.workouts || [];
                 importedWeights = parsed.weightLogs || [];
                 importedCardio = parsed.cardioLogs || [];
                 importedMaint = parsed.maintenanceCalories || DEFAULT_MAINTENANCE_CALORIES;
-                importedFood = parsed.foodLogs || [];
                 importedPlan = parsed.planSettings || null;
             } else {
                 showToast('無効なファイル形式です。');
@@ -134,7 +132,7 @@ function importWorkouts(event) {
                 'データの復元',
                 `ファイルを読み込みました（ワークアウト: ${importedWorkouts.length}件, 体重ログ: ${importedWeights.length}件）。既存データにマージしますか？`,
                 () => {
-                    mergeImportedData(importedWorkouts, importedWeights, importedCardio, importedMaint, importedFood, importedPlan);
+                    mergeImportedData(importedWorkouts, importedWeights, importedCardio, importedMaint, importedPlan);
                 }
             );
         } catch (err) {
@@ -150,7 +148,7 @@ function importWorkouts(event) {
 // filterValidWeightLogs, filterValidCardioLogs, sortedByDateDesc, getLatestWeightFromLogs）は
 // lib/data-utils.js に切り出し、index.htmlでこのファイルより先に読み込んでいる
 
-function mergeImportedData(workouts, weights, cardio, maintenance, foodLogs = [], planSettings = null) {
+function mergeImportedData(workouts, weights, cardio, maintenance, planSettings = null) {
     // 1. Merge workouts by ID
     const workoutsMap = {};
     state.workouts.forEach(w => workoutsMap[w.id] = w);
@@ -191,18 +189,7 @@ function mergeImportedData(workouts, weights, cardio, maintenance, foodLogs = []
         if (DOM.maintenanceInput) DOM.maintenanceInput.value = maintenance;
     }
 
-    // 5. Merge food logs by date
-    const foodMap = {};
-    state.foodLogs.forEach(f => foodMap[f.date] = f);
-    (foodLogs || []).forEach(f => {
-        if (f && f.date) {
-            foodMap[f.date] = f;
-        }
-    });
-    state.foodLogs = Object.values(foodMap);
-    state.foodLogs.sort((a, b) => new Date(a.date) - new Date(b.date));
-
-    // 6. Merge plan settings (incoming values take precedence when provided)
+    // 5. Merge plan settings (incoming values take precedence when provided)
     if (planSettings && typeof planSettings === 'object') {
         state.planSettings = Object.assign({}, DEFAULT_PLAN_SETTINGS, state.planSettings, planSettings);
     }
@@ -214,7 +201,6 @@ function mergeImportedData(workouts, weights, cardio, maintenance, foodLogs = []
     updateHistoryList();
     updateCardioHistoryList();
     updateWeightHistoryList();
-    updateFoodHistoryList();
     renderPlanTab();
     renderPlanSidebarWidget();
     // 「記録する」タブのフォームも取り込んだ最新データに合わせ直す
@@ -226,7 +212,6 @@ function clearAllWorkouts() {
     state.workouts = [];
     state.weightLogs = [];
     state.cardioLogs = [];
-    state.foodLogs = [];
     state.maintenanceCalories = DEFAULT_MAINTENANCE_CALORIES;
     state.planSettings = Object.assign({}, DEFAULT_PLAN_SETTINGS);
 
@@ -243,10 +228,8 @@ function clearAllWorkouts() {
     updateHistoryList();
     updateCardioHistoryList();
     updateWeightHistoryList();
-    updateFoodHistoryList();
     renderPlanTab();
     renderPlanSidebarWidget();
-    // 「記録する」タブのフォームに削除済みの値(特にチェック済みの食事項目)が
-    // 残ったままにならないようにする
+    // 「記録する」タブのフォームに削除済みの値が残ったままにならないようにする
     refreshRecordFormsAfterExternalDataChange();
 }

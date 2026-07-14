@@ -48,7 +48,9 @@ function triggerSync(isSilent = false) {
         weightLogs: state.weightLogs,
         cardioLogs: state.cardioLogs,
         maintenanceCalories: state.maintenanceCalories,
-        foodLogs: state.foodLogs,
+        // 「特別な飲食」機能はv1.11.0で廃止したが、ペイロード形式はGAS側との契約のため
+        // キー自体は空配列のまま残す(キーを消すとGAS側の実装によっては書き込みが失敗しうる)
+        foodLogs: [],
         planSettings: state.planSettings
     };
 
@@ -112,7 +114,6 @@ function autoSyncFromCloud() {
             const importedWeights = filterValidWeightLogs(data.weightLogs || []);
             const importedCardio = filterValidCardioLogs(data.cardioLogs || []);
             const importedMaint = data.maintenanceCalories || DEFAULT_MAINTENANCE_CALORIES;
-            const importedFood = data.foodLogs || [];
             const importedPlan = data.planSettings || null;
 
             if (!validateWorkoutsSchema(importedWorkouts)) {
@@ -135,13 +136,11 @@ function autoSyncFromCloud() {
             state.weightLogs = importedWeights;
             state.cardioLogs = importedCardio;
             state.maintenanceCalories = importedMaint;
-            state.foodLogs = importedFood;
             if (importedPlan) state.planSettings = importedPlan;
 
             // Sort
             state.weightLogs.sort((a, b) => new Date(a.date) - new Date(b.date));
             state.cardioLogs.sort((a, b) => new Date(a.date) - new Date(b.date));
-            state.foodLogs.sort((a, b) => new Date(a.date) - new Date(b.date));
 
             // Save locally but keep clean state
             saveData();
@@ -152,7 +151,6 @@ function autoSyncFromCloud() {
             updateHistoryList();
             updateCardioHistoryList();
             updateWeightHistoryList();
-            updateFoodHistoryList();
             renderPlanTab();
             renderPlanSidebarWidget();
             // 「記録する」タブのフォームも取り込んだ最新データに合わせ直す
@@ -187,7 +185,6 @@ function restoreFromSheets() {
             const importedWeights = filterValidWeightLogs(data.weightLogs || []);
             const importedCardio = filterValidCardioLogs(data.cardioLogs || []);
             const importedMaint = data.maintenanceCalories || DEFAULT_MAINTENANCE_CALORIES;
-            const importedFood = data.foodLogs || [];
             const importedPlan = data.planSettings || null;
 
             if (!validateWorkoutsSchema(importedWorkouts)) {
@@ -199,7 +196,7 @@ function restoreFromSheets() {
                 'クラウドからの復元',
                 `スプレッドシートからデータを取得しました（ワークアウト: ${importedWorkouts.length}件, 体重ログ: ${importedWeights.length}件）。既存データにマージしますか？`,
                 () => {
-                    mergeImportedData(importedWorkouts, importedWeights, importedCardio, importedMaint, importedFood, importedPlan);
+                    mergeImportedData(importedWorkouts, importedWeights, importedCardio, importedMaint, importedPlan);
                     localStorage.setItem(DIRTY_KEY, 'false'); // Mark clean on manual merge override
                 }
             );

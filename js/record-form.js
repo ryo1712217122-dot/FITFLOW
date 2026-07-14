@@ -1,6 +1,6 @@
 // FITFLOW - 「記録する」タブ:
 //   フォームA(#workout-form)  : 有酸素 + 筋トレ（ジムに行った日に入力する部分）
-//   フォームB(#weight-quick-form): 体重 + 特別な飲食（ジムに行かない日でも入力する部分）
+//   フォームB(#weight-quick-form): 体重（ジムに行かない日でも入力する部分）
 //
 // 筋トレの種目は「まとめて最後に一括保存」ではなく、1種目入力し終えるごとに
 // その場で個別保存できる（ジムでのリアルタイム入力を想定）。編集中/記録中のワークアウトの
@@ -64,23 +64,6 @@ function initFormControls() {
             gymWorkoutFieldsContainer.style.display = recordGymWorkoutChk.checked ? 'block' : 'none';
         });
     }
-
-    // 特別な飲食チェックのON/OFFに合わせてkcal入力欄(と、その他項目のみ名前入力欄)を有効化・無効化する
-    FOOD_ITEMS.forEach(item => {
-        const chk = document.getElementById(item.chkId);
-        const kcalInput = document.getElementById(item.kcalId);
-        const nameInput = item.nameId ? document.getElementById(item.nameId) : null;
-        if (chk && kcalInput) {
-            chk.addEventListener('change', () => {
-                kcalInput.disabled = !chk.checked;
-                if (!chk.checked) kcalInput.value = '';
-                if (nameInput) {
-                    nameInput.disabled = !chk.checked;
-                    if (!chk.checked) nameInput.value = '';
-                }
-            });
-        }
-    });
 }
 
 function resetWorkoutForm() {
@@ -134,6 +117,11 @@ function addExerciseBlock(data = null, existingIndex = null) {
         .map(name => `<option value="${escapeHtml(name)}">${escapeHtml(name)}</option>`)
         .join('');
 
+    // 種目名・重量・レップ数の入力にはrequired属性を付けない。
+    // 種目保存後には空の入力ブロックが自動で追加されるため、requiredにすると
+    // その空ブロックがフォーム全体の送信(有酸素を保存して完了)をHTMLバリデーションで
+    // ブロックしてしまう(空ブロックを手で削除しないと完了できない)。
+    // 種目単体の保存時のバリデーションはreadExerciseBlockData()がJS側で行う。
     exerciseBlock.innerHTML = `
         <div class="exercise-item-header">
             <div class="exercise-name-input-wrapper">
@@ -141,7 +129,7 @@ function addExerciseBlock(data = null, existingIndex = null) {
                     <option value="">よく使う種目から選択...</option>
                     ${popularExerciseOptionsHtml}
                 </select>
-                <input type="text" class="exercise-name" placeholder="種目名（一覧にない場合は自由入力）" required list="popular-exercises" value="${data ? escapeHtml(data.name) : ''}">
+                <input type="text" class="exercise-name" placeholder="種目名（一覧にない場合は自由入力）" list="popular-exercises" value="${data ? escapeHtml(data.name) : ''}">
             </div>
             <div class="exercise-sets-counter">
                 <label>セット数:</label>
@@ -249,11 +237,11 @@ function addSetRow(tbody, weight = '', reps = '') {
     row.innerHTML = `
         <td class="set-num">${setIndex}</td>
         <td>
-            <input type="number" step="any" class="set-weight" placeholder="0" min="0" required value="${weight}">
+            <input type="number" step="any" class="set-weight" placeholder="0" min="0" value="${weight}">
         </td>
         <td class="set-multiply">×</td>
         <td>
-            <input type="number" class="set-reps" placeholder="0" min="0" required value="${reps}">
+            <input type="number" class="set-reps" placeholder="0" min="0" value="${reps}">
         </td>
         <td class="set-action">
             <button type="button" class="btn-icon btn-remove-set text-danger" title="セットを削除">
@@ -575,12 +563,11 @@ function saveCardioAndFinishSession() {
 }
 
 // クラウド同期のダウンロード・JSONインポートのマージ・全データ初期化など、
-// state.*(workouts/weightLogs/cardioLogs/foodLogs)が外部要因でまとめて置き換わった直後に呼ぶ。
+// state.*(workouts/weightLogs/cardioLogs)が外部要因でまとめて置き換わった直後に呼ぶ。
 // 「記録する」タブのフォームを表示したまま(古い値のまま)にしておくと、次にどちらかの
-// フォームを送信した時に「チェックなし・空欄＝削除」と解釈され、今取り込んだばかりの
-// データを上書き・削除してしまう(実際に発生した不具合)。フォームAは進行中のセッションが
-// 裏で入れ替わっている可能性があるため安全にリセットし、フォームBは選択中の日付で
-// 最新のstateに合わせ直す。
+// フォームを送信した時に、今取り込んだばかりのデータを古い値で上書きしてしまう
+// (実際に発生した不具合)。フォームAは進行中のセッションが裏で入れ替わっている可能性が
+// あるため安全にリセットし、フォームBは選択中の日付で最新のstateに合わせ直す。
 function refreshRecordFormsAfterExternalDataChange() {
     resetWorkoutForm();
 
@@ -590,7 +577,7 @@ function refreshRecordFormsAfterExternalDataChange() {
 }
 
 // ==========================================
-// WEIGHT & FOOD (ジムに行かなくても入力する部分)
+// WEIGHT (ジムに行かなくても入力する部分)
 // ==========================================
 
 function getLatestWeight() {
@@ -610,9 +597,8 @@ function updateCardioHint() {
 // 直近でフォームBに反映した日付。日付変更時の「未保存の入力を破棄してよいか」判定の基準にする。
 let lastSyncedDailyLogDate = null;
 
-// フォームBで選択された日付にすでにある体重・特別な飲食の記録を、フォームへ反映する。
-// (これをせずに空欄のまま送信すると、特別な飲食は「未チェック=削除」と解釈され、
-//  その日にすでに記録していた内容が消えてしまうため)
+// フォームBで選択された日付にすでにある体重の記録を、フォームへ反映する。
+// (これをせずに空欄のまま日付だけ変えて誤送信すると、既存記録の見落としに気づけないため)
 function syncDailyLogFormWithExistingDataForDate(date) {
     if (!date) return;
 
@@ -621,37 +607,11 @@ function syncDailyLogFormWithExistingDataForDate(date) {
         DOM.weightQuickVal.value = existingWeight ? existingWeight.weight : '';
     }
 
-    const existingFood = state.foodLogs.find(f => f.date === date);
-    const checkedLabels = [];
-    FOOD_ITEMS.forEach(item => {
-        const chk = document.getElementById(item.chkId);
-        const kcalInput = document.getElementById(item.kcalId);
-        const nameInput = item.nameId ? document.getElementById(item.nameId) : null;
-        const checked = existingFood ? !!existingFood[item.key] : false;
-        if (chk) chk.checked = checked;
-        if (kcalInput) {
-            kcalInput.disabled = !checked;
-            kcalInput.value = (checked && existingFood && existingFood[item.calKey]) ? existingFood[item.calKey] : '';
-        }
-        if (nameInput) {
-            nameInput.disabled = !checked;
-            nameInput.value = (checked && existingFood && item.nameKey && existingFood[item.nameKey]) ? existingFood[item.nameKey] : '';
-        }
-        if (checked) {
-            const label = (item.isCustom && existingFood && existingFood[item.nameKey]) ? existingFood[item.nameKey] : item.label;
-            checkedLabels.push(label);
-        }
-    });
-
     // 自動で反映したことが分かるよう、理由を明示するヒントを出す
     if (DOM.dailyLogExistingHint && DOM.dailyLogExistingHintText) {
-        const parts = [];
-        if (existingWeight) parts.push(`体重 ${existingWeight.weight}kg`);
-        if (checkedLabels.length > 0) parts.push(`特別な飲食(${checkedLabels.join('・')})`);
-
-        if (parts.length > 0) {
+        if (existingWeight) {
             DOM.dailyLogExistingHintText.textContent =
-                `この日はすでに${parts.join('・')}を記録済みです（内容を変更すると上書きされます）`;
+                `この日はすでに体重 ${existingWeight.weight}kg を記録済みです（内容を変更すると上書きされます）`;
             DOM.dailyLogExistingHint.classList.remove('is-hidden');
         } else {
             DOM.dailyLogExistingHint.classList.add('is-hidden');
@@ -668,37 +628,16 @@ function handleDailyLogDateChange() {
     const savedWeight = lastSyncedDailyLogDate ? state.weightLogs.find(w => w.date === lastSyncedDailyLogDate) : null;
     const currentWeightVal = DOM.weightQuickVal ? DOM.weightQuickVal.value.trim() : '';
     const savedWeightVal = savedWeight ? String(savedWeight.weight) : '';
-    let isDirty = currentWeightVal !== '' && currentWeightVal !== savedWeightVal;
+    const isDirty = currentWeightVal !== '' && currentWeightVal !== savedWeightVal;
 
-    if (!isDirty) {
-        const savedFood = lastSyncedDailyLogDate ? state.foodLogs.find(f => f.date === lastSyncedDailyLogDate) : null;
-        for (const item of FOOD_ITEMS) {
-            const chk = document.getElementById(item.chkId);
-            if (!chk) continue;
-            const savedChecked = savedFood ? !!savedFood[item.key] : false;
-            if (chk.checked !== savedChecked) { isDirty = true; break; }
-            if (chk.checked) {
-                const kcalInput = document.getElementById(item.kcalId);
-                const savedCal = (savedFood && savedFood[item.calKey]) ? String(savedFood[item.calKey]) : '';
-                if (kcalInput && kcalInput.value.trim() !== savedCal) { isDirty = true; break; }
-                if (item.nameKey) {
-                    const nameInput = document.getElementById(item.nameId);
-                    const savedName = (savedFood && savedFood[item.nameKey]) ? savedFood[item.nameKey] : '';
-                    if (nameInput && nameInput.value.trim() !== savedName) { isDirty = true; break; }
-                }
-            }
-        }
-    }
-
-    if (isDirty && !confirm('入力中の体重・特別な飲食の内容が保存されていません。日付を変更すると入力内容が失われます。続けますか？')) {
+    if (isDirty && !confirm('入力中の体重が保存されていません。日付を変更すると入力内容が失われます。続けますか？')) {
         if (lastSyncedDailyLogDate) DOM.weightQuickDate.value = lastSyncedDailyLogDate;
         return;
     }
     syncDailyLogFormWithExistingDataForDate(newDate);
 }
 
-// 体重・特別な飲食をまとめて記録する（ジムに行かない日でも入力する部分）。
-// 体重・食事はどちらも任意で、少なくとも一方が入力されていれば保存する。
+// 体重を記録する（ジムに行かない日でも入力する部分）。
 function saveDailyLog() {
     if (!DOM.weightQuickDate) return;
     const date = DOM.weightQuickDate.value;
@@ -707,81 +646,29 @@ function saveDailyLog() {
         return;
     }
 
-    let weightSaved = false;
-    let weightUpdated = false;
     const weightText = DOM.weightQuickVal ? DOM.weightQuickVal.value.trim() : '';
-    if (weightText !== '') {
-        const weight = parseFloat(weightText);
-        if (isNaN(weight) || weight <= 0) {
-            showToast('有効な体重を入力してください');
-            return;
-        }
-        const existingIndex = state.weightLogs.findIndex(w => w.date === date);
-        weightUpdated = existingIndex !== -1;
-        if (weightUpdated) {
-            state.weightLogs[existingIndex].weight = weight;
-        } else {
-            state.weightLogs.push({ date, weight });
-        }
-        state.weightLogs.sort((a, b) => new Date(a.date) - new Date(b.date));
-        weightSaved = true;
-    }
-
-    let foodSaved = false;
-    const hasSpecialFood = FOOD_ITEMS.some(item => {
-        const chk = document.getElementById(item.chkId);
-        return chk && chk.checked;
-    });
-
-    const foodIndex = state.foodLogs.findIndex(f => f.date === date);
-    const foodUpdated = foodIndex !== -1;
-    if (hasSpecialFood) {
-        const foodRecord = { date };
-        FOOD_ITEMS.forEach(item => {
-            const chk = document.getElementById(item.chkId);
-            const kcalInput = document.getElementById(item.kcalId);
-            const checked = !!(chk && chk.checked);
-            foodRecord[item.key] = checked;
-            let calories = null;
-            if (checked && kcalInput) {
-                const val = parseFloat(kcalInput.value);
-                calories = (!isNaN(val) && val > 0) ? val : null;
-            }
-            foodRecord[item.calKey] = calories;
-            if (item.nameKey) {
-                const nameInput = item.nameId ? document.getElementById(item.nameId) : null;
-                foodRecord[item.nameKey] = (checked && nameInput) ? nameInput.value.trim() : '';
-            }
-        });
-        if (foodIndex !== -1) {
-            state.foodLogs[foodIndex] = foodRecord;
-        } else {
-            state.foodLogs.push(foodRecord);
-        }
-        state.foodLogs.sort((a, b) => new Date(a.date) - new Date(b.date));
-        foodSaved = true;
-    } else if (foodIndex !== -1) {
-        state.foodLogs.splice(foodIndex, 1);
-        foodSaved = true;
-    }
-
-    if (!weightSaved && !foodSaved) {
-        showToast('体重または特別な飲食のいずれかを入力してください');
+    if (weightText === '') {
+        showToast('体重を入力してください');
         return;
     }
+    const weight = parseFloat(weightText);
+    if (isNaN(weight) || weight <= 0) {
+        showToast('有効な体重を入力してください');
+        return;
+    }
+    const existingIndex = state.weightLogs.findIndex(w => w.date === date);
+    const weightUpdated = existingIndex !== -1;
+    if (weightUpdated) {
+        state.weightLogs[existingIndex].weight = weight;
+    } else {
+        state.weightLogs.push({ date, weight });
+    }
+    state.weightLogs.sort((a, b) => new Date(a.date) - new Date(b.date));
 
     saveDataAndSync();
 
     // 既存日付への上書きだと誤操作に気づきやすいよう、新規/更新を区別した文言にする
-    const savedParts = [];
-    if (weightSaved) savedParts.push(weightUpdated ? '体重(更新)' : '体重');
-    if (foodSaved && hasSpecialFood) savedParts.push(foodUpdated ? '特別な飲食(更新)' : '特別な飲食');
-    if (savedParts.length > 0) {
-        showToast(`${savedParts.join('・')}を記録しました！`);
-    } else {
-        // 体重は未入力・特別な飲食はチェックを全て外して削除しただけのケース
-        showToast('特別な飲食の記録を削除しました');
-    }
+    showToast(`${weightUpdated ? '体重(更新)' : '体重'}を記録しました！`);
 
     // 単純に空欄へ戻すのではなく、今保存した内容で再同期する
     // (同じ日付を選んだままなら、保存直後のフォームには「たった今保存した内容」が
@@ -791,5 +678,4 @@ function saveDailyLog() {
     updateCardioHint(); // 体重が変わると有酸素の消費目安も変わるため
     updateDashboard();
     updateWeightHistoryList();
-    updateFoodHistoryList();
 }

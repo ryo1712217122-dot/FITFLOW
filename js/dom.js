@@ -42,7 +42,6 @@ const DOM = {
     workoutCalorieHint: document.getElementById('workout-calorie-hint'),
     todayBurnedKcal: document.getElementById('today-burned-kcal'),
     currentMaintenanceKcal: document.getElementById('current-maintenance-kcal'),
-    todayFoodKcal: document.getElementById('today-food-kcal'),
     cardioExistingHint: document.getElementById('cardio-existing-hint'),
     cardioExistingHintText: document.getElementById('cardio-existing-hint-text'),
 
@@ -59,8 +58,6 @@ const DOM = {
     progressionSelect: document.getElementById('progression-exercise-select'),
     noProgressionData: document.getElementById('no-progression-data'),
     noVolumeTrendData: document.getElementById('no-volume-trend-data'),
-    foodBreakdownMonth: document.getElementById('food-breakdown-month'),
-    noFoodBreakdownData: document.getElementById('no-food-breakdown-data'),
     historyCount: document.getElementById('history-count'),
     historyContainer: document.getElementById('history-container'),
 

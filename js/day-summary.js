@@ -1,6 +1,6 @@
 // FITFLOW - 日別サマリーモーダル
 //
-// カレンダーの日付をクリックすると、その日の筋トレ・有酸素・体重・特別な飲食の
+// カレンダーの日付をクリックすると、その日の筋トレ・有酸素・体重の
 // 記録を横断的にまとめて表示する。「入力した情報と履歴の日別対応が分かりにくい」
 // (履歴タブが種類別タブに分かれていて、ある1日に何を記録したか横断的に見れない)
 // という要望に応え、日付を起点に全種類の記録を一望できるようにする。
@@ -72,7 +72,6 @@ function renderDaySummaryBody(dateStr) {
     const dayWorkouts = state.workouts.filter(w => w.date === dateStr);
     const dayCardio = state.cardioLogs.find(c => c.date === dateStr);
     const dayWeight = state.weightLogs.find(w => w.date === dateStr);
-    const dayFood = state.foodLogs.find(f => f.date === dateStr);
 
     const sections = [];
 
@@ -133,31 +132,6 @@ function renderDaySummaryBody(dateStr) {
             </div>
         `;
         sections.push(daySummarySectionHtml('⚖️ 体重', weightHtml));
-    }
-
-    if (dayFood) {
-        const badgeItems = FOOD_ITEMS.filter(item => dayFood[item.key]).map(item => {
-            const cal = dayFood[item.calKey];
-            const kcalText = (typeof cal === 'number' && cal > 0) ? ` (${Math.round(cal)} kcal)` : '';
-            const label = (item.isCustom && dayFood[item.nameKey]) ? `✏️ ${dayFood[item.nameKey]}` : item.label;
-            return `<span class="badge">${escapeHtml(label)}${kcalText}</span>`;
-        }).join('');
-
-        if (badgeItems) {
-            const foodHtml = `
-                <div class="day-summary-item">
-                    <div class="day-summary-item-main">
-                        <div class="day-summary-badges">${badgeItems}</div>
-                    </div>
-                    <div class="day-summary-item-actions">
-                        <button type="button" class="btn-icon text-danger btn-day-summary-delete-food" title="削除する">
-                            <i data-lucide="trash-2"></i>
-                        </button>
-                    </div>
-                </div>
-            `;
-            sections.push(daySummarySectionHtml('🍽️ 特別な飲食', foodHtml));
-        }
     }
 
     if (sections.length === 0) {
@@ -221,15 +195,4 @@ function wireDaySummaryActions(dateStr) {
         });
     }
 
-    const deleteFoodBtn = DOM.daySummaryBody.querySelector('.btn-day-summary-delete-food');
-    if (deleteFoodBtn) {
-        deleteFoodBtn.addEventListener('click', () => {
-            const idx = state.foodLogs.findIndex(f => f.date === dateStr);
-            if (idx === -1) return;
-            showConfirmModal('記録の削除', `「${formatDateJp(dateStr)}」の特別な飲食記録を削除しますか？`, () => {
-                deleteFoodLog(idx);
-                renderDaySummaryBody(dateStr);
-            });
-        });
-    }
 }

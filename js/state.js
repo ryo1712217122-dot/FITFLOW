@@ -11,13 +11,11 @@ let state = {
     maintenanceCalories: DEFAULT_MAINTENANCE_CALORIES,
     sheetsUrl: '',
     planSettings: null,
-    foodLogs: [],
     charts: {
         progression: null,
         weight: null,
         calorieComparison: null,
-        volumeTrend: null,
-        foodBreakdown: null
+        volumeTrend: null
     }
 };
 
@@ -110,18 +108,9 @@ function loadData() {
         state.planSettings = Object.assign({}, DEFAULT_PLAN_SETTINGS);
     }
 
-    // 7. Food Logs
-    const foodData = localStorage.getItem('fitflow_food_logs');
-    if (foodData) {
-        try {
-            state.foodLogs = JSON.parse(foodData);
-        } catch (e) {
-            console.error('Error parsing food logs', e);
-            state.foodLogs = [];
-        }
-    } else {
-        state.foodLogs = [];
-    }
+    // 「特別な飲食」機能はv1.11.0で廃止した(クラウド同期側に保存されず、起動時の
+    // 自動同期でローカル記録が消えてしまっていた)。残っている保存データも読み込まずに破棄する。
+    localStorage.removeItem('fitflow_food_logs');
 
     saveData();
 }
@@ -138,7 +127,26 @@ function saveData() {
     // (実際に発生した不具合)。URLの保存は、ユーザーが明示的に保存ボタンを押した
     // 時にだけ行われるべきもの。
     localStorage.setItem('fitflow_plan_settings', JSON.stringify(state.planSettings));
-    localStorage.setItem('fitflow_food_logs', JSON.stringify(state.foodLogs));
+}
+
+// 一回限りのデータ移行。loadData()の後・画面描画/クラウド同期の前にmain.jsから呼ぶ。
+// 各移行はMIGRATION_FLAG_PREFIX付きのフラグで冪等化し、実際にデータを書き換えた時だけ
+// dirtyを立てて(=saveDataAndSync)クラウドにも反映させる。
+function runOneTimeMigrations() {
+    // 2026-07: ダンベルフライを誤って「アームカール」の名前で記録していた時期があるため、
+    // 種目名を一括で直す(クラウド側に正しい「アームカール」の記録は存在しないことを確認済み)。
+    // 注意: この移行は起動時のローカルデータのみが対象。フラグ設定後にクラウド同期や
+    // JSONインポートで「アームカール」を含むデータが流入しても改名されない
+    // (クラウド側に該当記録が無いことを確認済みの単一ユーザー用途での前提)。
+    const armcurlFlag = MIGRATION_FLAG_PREFIX + '2026_07_armcurl_to_dumbbell_fly';
+    if (!localStorage.getItem(armcurlFlag)) {
+        const renamed = renameExercisesInWorkouts(state.workouts, 'アームカール', 'ダンベルフライ');
+        if (renamed > 0) {
+            saveDataAndSync();
+            console.log(`🛠️ 種目名の移行: 「アームカール」${renamed}件を「ダンベルフライ」に修正しました`);
+        }
+        localStorage.setItem(armcurlFlag, 'true');
+    }
 }
 
 // GAS ウェブアプリURLの保存は、ユーザーが「接続情報を保存」ボタンを押した時だけ行う

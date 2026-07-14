@@ -141,20 +141,5 @@
     .btn-sm-select {
         max-width: 120px;
     }
-
-    /* チェック+ラベルの行と、kcal(・名前)入力の行を完全に分けて縦積みにし、
-       flexの折り返し計算に幅を委ねないことで横はみ出しを確実に防ぐ */
-    .food-chip-row {
-        flex-direction: column;
-        align-items: stretch;
-        width: 100%;
-        border-radius: 12px;
-    }
-
-    .food-kcal-input,
-    .food-custom-name-input {
-        width: 100%;
-        flex: none;
-    }
 }
 } /* end @layer responsive */

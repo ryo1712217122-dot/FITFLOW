@@ -17,17 +17,9 @@ const DEFAULT_WORKOUT_CATEGORY = 'その他 (Other)';
 // 有酸素の「距離×体重」と同様、種目や重量の違いを厳密には反映しない単純化モデル。
 const WORKOUT_CALORIES_PER_SET = 15;
 
-// 特別な飲食チップの定義 (チェック有無 + 任意のkcal数値をこの並びで扱う)
-// customがtrueの項目だけは固定ラベルの代わりに自由入力の名前(nameId/nameKey)を持つ
-const FOOD_ITEMS = [
-    { key: 'milktea', chkId: 'food-milktea-chk', kcalId: 'food-milktea-kcal', calKey: 'milkteaCalories', label: '🍵 紅茶・お菓子' },
-    { key: 'ramen', chkId: 'food-ramen-chk', kcalId: 'food-ramen-kcal', calKey: 'ramenCalories', label: '🍜 ラーメン' },
-    { key: 'drinking', chkId: 'food-drinking-chk', kcalId: 'food-drinking-kcal', calKey: 'drinkingCalories', label: '🍺 飲み会' },
-    { key: 'sweets', chkId: 'food-sweets-chk', kcalId: 'food-sweets-kcal', calKey: 'sweetsCalories', label: '🍰 スイーツ・デザート' },
-    { key: 'fastfood', chkId: 'food-fastfood-chk', kcalId: 'food-fastfood-kcal', calKey: 'fastfoodCalories', label: '🍔 ファーストフード' },
-    { key: 'teishoku', chkId: 'food-teishoku-chk', kcalId: 'food-teishoku-kcal', calKey: 'teishokuCalories', label: '🍣 寿司・定食' },
-    { key: 'custom', chkId: 'food-custom-chk', kcalId: 'food-custom-kcal', calKey: 'customCalories', label: '✏️ その他', nameId: 'food-custom-name', nameKey: 'customName', isCustom: true }
-];
+// 一回限りのデータ移行(migrations)の実行済みフラグに使うlocalStorageキーの接頭辞。
+// 各移行は「接頭辞 + 移行名」のキーが立っていればスキップされる(冪等性の担保)。
+const MIGRATION_FLAG_PREFIX = 'fitflow_migration_';
 
 const DEFAULT_PLAN_SETTINGS = {
     intakeNormal: 1750,

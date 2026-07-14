@@ -156,12 +156,6 @@
     padding: 0.75rem 1rem;
 }
 
-.food-breakdown-month {
-    font-size: 0.8rem;
-    color: var(--text-secondary);
-    font-weight: 600;
-}
-
 .history-exercise-name {
     font-weight: 600;
     font-size: 0.95rem;
@@ -200,7 +194,7 @@
     font-weight: 500;
 }
 
-/* サブナビ（筋トレ/有酸素/体重/特別な飲食のセグメントコントロール） */
+/* サブナビ（筋トレ/有酸素/体重のセグメントコントロール） */
 .history-sub-tabs {
     display: flex;
     gap: 0.5rem;
