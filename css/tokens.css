@@ -43,19 +43,12 @@
 
 /* Light Theme overrides if toggled */
 body.light-theme {
-    --bg-base: #f0f4f3;
-    --bg-surface: #ffffff;
-    --bg-surface-hover: #f7faf9;
-    --bg-sidebar: #1e2d33; /* Keep sidebar dark for contrast/premium feel */
-    --border-color: rgba(50, 72, 81, 0.08);
-    --border-focus: #34675c;
-
-    --text-primary: #1f2d33;
-    --text-secondary: #4e656d;
-    --text-muted: #7da3a1;
-
-    --color-primary: #34675c;
-    --color-secondary: #7da3a1;
+    /* 背景・枠線・文字色・アクセント(--bg-base / --bg-surface / --border-color /
+       --text-* / --color-primary/secondary 等)はここでは指定しない。
+       これらは applyThemePalette() が選択中パレット(A/B/C/D)の値を <html> にインラインで
+       適用する。body側で再宣言すると、bodyの方が近い祖先になるため <html> のパレット値を
+       上書きしてしまい、ライトモードでパレットを切り替えても背景が白一色のままになる(既知の不具合)。
+       ここにはパレットが扱わないライト専用のトークン(影・入力欄背景・success/danger等)だけを残す。 */
     --color-success: #86ac41;
     --color-danger: #e05a47;
 

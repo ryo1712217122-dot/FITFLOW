@@ -133,19 +133,27 @@ function saveData() {
 // 各移行はMIGRATION_FLAG_PREFIX付きのフラグで冪等化し、実際にデータを書き換えた時だけ
 // dirtyを立てて(=saveDataAndSync)クラウドにも反映させる。
 function runOneTimeMigrations() {
-    // 2026-07: ダンベルフライを誤って「アームカール」の名前で記録していた時期があるため、
-    // 種目名を一括で直す(クラウド側に正しい「アームカール」の記録は存在しないことを確認済み)。
+    // 2026-07: 実際にやっていた種目は「アームカール」だったが、一時期それを誤って
+    // 「ダンベルフライ」の名前で記録していたため、種目名を一括で正しい「アームカール」に直す。
+    //
+    // 経緯(重要): 前回はこれと逆方向の移行(「アームカール」→「ダンベルフライ」、フラグ
+    // 'fitflow_migration_2026_07_armcurl_to_dumbbell_fly')を入れていたが、前提の認識が
+    // 逆だった(誤記録側がダンベルフライ)。逆方向の移行を残したままだと、フラグ未設定の
+    // 新環境(新ブラウザ・localStorageクリア後)でクラウドから同期した正しい「アームカール」
+    // 記録を誤って「ダンベルフライ」に改名してしまうため、旧移行コードは削除した。
+    // 旧フラグ('..._armcurl_to_dumbbell_fly')は再利用せず、新しいフラグで冪等化する
+    // (旧フラグのlocalStorage掃除は不要)。
+    //
     // 注意: この移行は起動時のローカルデータのみが対象。フラグ設定後にクラウド同期や
-    // JSONインポートで「アームカール」を含むデータが流入しても改名されない
-    // (クラウド側に該当記録が無いことを確認済みの単一ユーザー用途での前提)。
-    const armcurlFlag = MIGRATION_FLAG_PREFIX + '2026_07_armcurl_to_dumbbell_fly';
-    if (!localStorage.getItem(armcurlFlag)) {
-        const renamed = renameExercisesInWorkouts(state.workouts, 'アームカール', 'ダンベルフライ');
+    // JSONインポートで「ダンベルフライ」を含むデータが流入しても改名されない(単一ユーザー用途の前提)。
+    const dumbbellFlyFlag = MIGRATION_FLAG_PREFIX + '2026_07_dumbbell_fly_to_armcurl';
+    if (!localStorage.getItem(dumbbellFlyFlag)) {
+        const renamed = renameExercisesInWorkouts(state.workouts, 'ダンベルフライ', 'アームカール');
         if (renamed > 0) {
             saveDataAndSync();
-            console.log(`🛠️ 種目名の移行: 「アームカール」${renamed}件を「ダンベルフライ」に修正しました`);
+            console.log(`🛠️ 種目名の移行: 「ダンベルフライ」${renamed}件を「アームカール」に修正しました`);
         }
-        localStorage.setItem(armcurlFlag, 'true');
+        localStorage.setItem(dumbbellFlyFlag, 'true');
     }
 }
 
