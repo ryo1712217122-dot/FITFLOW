@@ -155,6 +155,25 @@ function runOneTimeMigrations() {
         }
         localStorage.setItem(dumbbellFlyFlag, 'true');
     }
+
+    // 2026-07: 最適化計画の開始日(weightPlanStartDate)は、かつて保存・再計算のたびに
+    // その日の日付で上書きされるバグがあり、実際の計画開始とズレた値が残っている。
+    // 「記録の始まり=最初の体重ログの日付」(クラウド同期済みならスプレッドシートの
+    // WeightLogs先頭行と同じ)を開始日として一度だけ適用し直す。
+    const planStartFlag = MIGRATION_FLAG_PREFIX + '2026_07_fix_plan_start_date';
+    if (!localStorage.getItem(planStartFlag)) {
+        // 体重ログがまだ無い環境(初回起動直後・クラウド同期前)ではフラグを立てずに
+        // 見送り、ログが入った後の起動で適用する
+        if (state.weightLogs.length > 0 && state.planSettings) {
+            const firstWeightDate = state.weightLogs[0].date;
+            if (firstWeightDate && state.planSettings.weightPlanStartDate !== firstWeightDate) {
+                state.planSettings.weightPlanStartDate = firstWeightDate;
+                saveDataAndSync();
+                console.log(`🛠️ 最適化計画の開始日を最初の体重記録日(${firstWeightDate})に修正しました`);
+            }
+            localStorage.setItem(planStartFlag, 'true');
+        }
+    }
 }
 
 // GAS ウェブアプリURLの保存は、ユーザーが「接続情報を保存」ボタンを押した時だけ行う

@@ -1,5 +1,10 @@
 # GASバックエンド PlanSettings 永続化パッチ
 
+> **✅ 適用済み (2026-07-19)**: このパッチは clasp 経由で本番バックエンドに適用・
+> 再デプロイ済み(デプロイID同一のまま @2 に更新。GETレスポンスに planSettings が
+> 含まれることを確認済み)。バックエンドコードの正本は gas-scripts リポジトリの
+> `projects/fitflow-api/FITFLOW.js` で管理する。以下は適用内容の記録。
+
 ## 目的
 
 毎朝のブリーフィング(routine `morning-fitness-briefing`)を、アプリの「最適化計画」
