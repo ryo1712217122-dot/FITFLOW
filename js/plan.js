@@ -130,8 +130,12 @@ function renderPlanTab(isEditing = false) {
                         </div>
                     </div>
                     <div class="card-body">
-                        <p class="settings-desc">ロードマップ上の各目標体重 (kg) を設定します。</p>
+                        <p class="settings-desc">ロードマップ上の各目標体重 (kg) を設定します。計画開始日は保存・再計算では変わりません（変更したい場合のみここで編集）。</p>
                         <div class="plan-roadmap-edit-list">
+                            <div class="form-group">
+                                <label class="text-xs">計画開始日</label>
+                                <input type="date" id="edit-weight-plan-start-date" value="${s.weightPlanStartDate || ''}" class="width-full">
+                            </div>
                             <div class="form-group">
                                 <label class="text-xs">開始時体重 (kg)</label>
                                 <input type="number" step="0.1" id="edit-weight-start" value="${s.weightStart}" class="width-full">
@@ -295,6 +299,7 @@ function renderPlanTab(isEditing = false) {
                                 <div class="roadmap-dot"></div>
                                 <strong class="roadmap-label">開始時</strong>
                                 <div class="roadmap-value">${s.weightStart} kg</div>
+                                <p class="roadmap-note">開始日: ${s.weightPlanStartDate ? formatDateJp(s.weightPlanStartDate) : '未設定（計画を保存すると記録されます）'}</p>
                             </div>
                             <div class="roadmap-item primary">
                                 <div class="roadmap-dot"></div>
@@ -401,9 +406,11 @@ function savePlanSettings() {
     s.weight1Month = parseFloat(document.getElementById('edit-weight-1month').value) || 0.0;
     s.weight3Month = parseFloat(document.getElementById('edit-weight-3month').value) || 0.0;
     s.weightEquilibrium = parseFloat(document.getElementById('edit-weight-equilibrium').value) || 0.0;
-    // ロードマップを手動保存した時点を、予測の起点日として記録する
-    // (体重グラフで予測 vs 実績を重ねて表示する際、どの日から数えるかの基準になる)
-    s.weightPlanStartDate = getLocalDateString();
+    // 計画開始日は編集フォームの値をそのまま使う。空欄なら既存値を維持し、
+    // 一度も設定されていない場合のみ今日を初期値にする(保存のたびに今日へ
+    // リセットすると予測線の起点が実際の計画開始からズレてしまうため固定運用)
+    s.weightPlanStartDate = document.getElementById('edit-weight-plan-start-date').value ||
+        s.weightPlanStartDate || getLocalDateString();
 
     s.sleepTarget = parseFloat(document.getElementById('edit-sleep-target').value) || 0.0;
     s.snackRule = document.getElementById('edit-snack-rule').value.trim();
@@ -500,24 +507,46 @@ function recalculatePlanRoadmap() {
     const deficit = avgExpenditure - avgIntake;
 
     const KCAL_PER_KG = 7700;
-    let weight1Month = latestWeight;
-    let weight3Month = latestWeight;
-    if (deficit > 0) {
-        weight1Month = Math.round((latestWeight - (deficit * 30) / KCAL_PER_KG) * 10) / 10;
-        weight3Month = Math.round((latestWeight - (deficit * 90) / KCAL_PER_KG) * 10) / 10;
+
+    // 開始日は固定運用。開始日が既にある場合は開始時体重も「その日の体重」として
+    // 保持し、再計算は「今日の実測体重から、開始日起点の各マイルストーン日
+    // (開始+30日/開始+90日)時点の到達見込み」を求める。
+    // 開始日が未設定の場合のみ、今日を開始日・最新体重を開始時体重として初期化する。
+    let elapsedDays = 0;
+    if (s.weightPlanStartDate) {
+        const start = new Date(s.weightPlanStartDate + 'T00:00:00');
+        const todayDate = new Date(getLocalDateString() + 'T00:00:00');
+        if (!isNaN(start.getTime())) {
+            elapsedDays = Math.max(0, Math.round((todayDate - start) / (1000 * 60 * 60 * 24)));
+        }
+    } else {
+        s.weightPlanStartDate = getLocalDateString();
+        s.weightStart = latestWeight;
     }
 
-    s.weightStart = latestWeight;
+    // 既に過ぎたマイルストーン(開始+30日/開始+90日)は履歴として保持し、書き換えない。
+    // 現在体重で上書きすると、予測線(computePlannedWeightForDate)の過去区間が
+    // 「今日の実測」を通る形に歪み、再計算直後なのにペース遅れ表示になるため。
+    let weight1Month = elapsedDays < 30 ? latestWeight : s.weight1Month;
+    let weight3Month = elapsedDays < 90 ? latestWeight : s.weight3Month;
+    if (deficit > 0) {
+        if (elapsedDays < 30) {
+            weight1Month = Math.round((latestWeight - (deficit * (30 - elapsedDays)) / KCAL_PER_KG) * 10) / 10;
+        }
+        if (elapsedDays < 90) {
+            weight3Month = Math.round((latestWeight - (deficit * (90 - elapsedDays)) / KCAL_PER_KG) * 10) / 10;
+        }
+    }
+
     s.weight1Month = weight1Month;
     s.weight3Month = weight3Month;
-    s.weightPlanStartDate = getLocalDateString();
     state.planSettings = s;
     saveData();
 
     if (deficit > 0) {
-        showToast(`体重ロードマップを実績から再計算しました（開始時: ${latestWeight.toFixed(1)}kg → 1ヶ月目 ${weight1Month}kg / 3ヶ月目 ${weight3Month}kg）`);
+        showToast(`体重ロードマップを実績から再計算しました（現在 ${latestWeight.toFixed(1)}kg → 1ヶ月目時点 ${weight1Month}kg / 3ヶ月目時点 ${weight3Month}kg。開始日は固定のままです）`);
     } else {
-        showToast(`開始時体重を${latestWeight.toFixed(1)}kgに更新しました。現在の計画はカロリー収支が赤字でないため、1ヶ月目・3ヶ月目の目標は変更していません`);
+        showToast(`現在の計画はカロリー収支が赤字でないため、1ヶ月目・3ヶ月目の目標は現状体重${latestWeight.toFixed(1)}kgのまま横ばいとしました`);
     }
 
     renderPlanTab(false);
