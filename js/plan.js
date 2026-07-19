@@ -1,4 +1,4 @@
-// FITFLOW - 最適化計画タブ + ダッシュボードに置く計画サマリーウィジェット
+// FITFLOW - 最適化計画タブ
 // v2再構成でテンプレートのインラインstyleをすべてcss/pages/plan.cssのクラスに置き換えた。
 // 表示内容・計算式・編集/再計算の挙動は変更していない。
 
@@ -411,7 +411,6 @@ function savePlanSettings() {
     showToast('最適化計画の変更を保存しました');
 
     renderPlanTab(false);
-    renderPlanSidebarWidget();
     updateDashboard(); // 週間ランニング目標カードの目標値もその場で反映する
 }
 
@@ -469,7 +468,6 @@ function recalculatePlanExpenditure() {
     }
 
     renderPlanTab(false);
-    renderPlanSidebarWidget();
 }
 
 // 実績（最新体重・現在の消費/摂取カロリー予算）から体重ロードマップ（開始時・1ヶ月目・3ヶ月目）を再計算する
@@ -513,87 +511,4 @@ function recalculatePlanRoadmap() {
     }
 
     renderPlanTab(false);
-    renderPlanSidebarWidget();
-}
-
-// ダッシュボードに設置する計画サマリーウィジェット（元は記録するタブのサイドにあった）
-function renderPlanSidebarWidget() {
-    const container = document.getElementById('plan-sidebar-widget-container');
-    if (!container) return;
-
-    const s = state.planSettings || DEFAULT_PLAN_SETTINGS;
-
-    // 週平均カロリーの式はlib/data-utils.jsのcomputePlanCalorieAveragesに一本化している
-    const { avgIntake } = computePlanCalorieAverages(s);
-    const weekRunDistance = sumCardioDistanceForWeek(state.cardioLogs, getWeekStartDate(getLocalDateString()));
-
-    container.innerHTML = `
-        <div class="card plan-summary-widget">
-            <div class="card-header plan-summary-widget-header">
-                <div class="header-title plan-summary-widget-title-row">
-                    <i data-lucide="target"></i>
-                    <h3 class="plan-summary-widget-title">🎯 最適化計画要約</h3>
-                </div>
-            </div>
-            <div class="card-body plan-summary-widget-body">
-                <div class="plan-summary-section">
-                    <strong class="plan-summary-section-title">摂取カロリー（平均 ${avgIntake} kcal/日）</strong>
-                    <div class="plan-summary-list">
-                        <div class="plan-summary-row">
-                            <span>🌳 通常日 (週${s.daysNormal})</span>
-                            <span class="plan-summary-value">${s.intakeNormal} kcal</span>
-                        </div>
-                        <div class="plan-summary-row">
-                            <span>🍵 紅茶日 (週${s.daysMilkTea})</span>
-                            <span class="plan-summary-value">${s.intakeMilkTea} kcal</span>
-                        </div>
-                        <div class="plan-summary-row">
-                            <span>🍺 イベント日 (週${s.daysEvent})</span>
-                            <span class="plan-summary-value">${s.intakeEvent} kcal</span>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="plan-summary-section">
-                    <strong class="plan-summary-section-title">運動・睡眠予算</strong>
-                    <div class="plan-summary-list">
-                        <div class="plan-summary-row">
-                            <span>🏃 有酸素ラン (週${s.runCount}回)</span>
-                            <span class="plan-summary-value">4km / 回 (+${s.runBurn} kcal)</span>
-                        </div>
-                        <div class="plan-summary-row">
-                            <span>🎯 週間走行距離目標</span>
-                            <span class="plan-summary-value">${weekRunDistance.toFixed(1)} / ${s.weeklyRunDistanceTarget} km</span>
-                        </div>
-                        <div class="plan-summary-row">
-                            <span>🛌 睡眠時間 (目標)</span>
-                            <span class="plan-summary-value warning">最低 ${s.sleepTarget} 時間</span>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="plan-summary-section">
-                    <strong class="plan-summary-section-title">体重減少目標</strong>
-                    <div class="plan-summary-list">
-                        <div class="plan-summary-row">
-                            <span>1ヶ月目目標</span>
-                            <span class="plan-summary-value">${s.weight1Month} kg</span>
-                        </div>
-                        <div class="plan-summary-row">
-                            <span>3ヶ月目目標</span>
-                            <span class="plan-summary-value primary">${s.weight3Month} kg</span>
-                        </div>
-                        <div class="plan-summary-row">
-                            <span>最終均衡点</span>
-                            <span class="plan-summary-value secondary">${s.weightEquilibrium} kg</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    `;
-
-    if (window.lucide) {
-        lucide.createIcons();
-    }
 }

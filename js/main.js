@@ -21,7 +21,6 @@ document.addEventListener('DOMContentLoaded', () => {
     updateCardioHistoryList();
     updateWeightHistoryList();
     renderPlanTab();
-    renderPlanSidebarWidget();
 
     // 起動時にサイレントにクラウドから同期
     autoSyncFromCloud();
