@@ -79,11 +79,15 @@ function createHistoryCard(workout, prs) {
         workout.exercises.forEach((ex, exIdx) => {
             let setsListHtml = '';
             ex.sets.forEach((s, idx) => {
-                const est1RM = s.reps > 1 ? Math.round(s.weight * (1 + s.reps / 30)) : s.weight;
+                // innerHTMLへ埋め込む値はNumber()で数値化してから使う
+                // (スキーマ検証済みでも、描画層で文字列を直接埋め込まない方針)
+                const weight = Number(s.weight) || 0;
+                const reps = Number(s.reps) || 0;
+                const est1RM = reps > 1 ? Math.round(weight * (1 + reps / 30)) : weight;
                 setsListHtml += `
                     <div class="history-set-item">
                         <span>Set ${idx + 1}</span>
-                        <span class="history-set-detail">${s.weight} kg × ${s.reps} 回 <span class="text-muted">(1RM ~${est1RM}kg)</span></span>
+                        <span class="history-set-detail">${weight} kg × ${reps} 回 <span class="text-muted">(1RM ~${est1RM}kg)</span></span>
                     </div>
                 `;
             });
@@ -105,13 +109,13 @@ function createHistoryCard(workout, prs) {
         <div class="history-card-header">
             <div class="history-title-area">
                 <div class="history-title-row">
-                    <span class="history-mood-badge" title="調子: ${workout.mood}">${emoji}</span>
+                    <span class="history-mood-badge" title="調子: ${escapeHtml(workout.mood)}">${emoji}</span>
                 </div>
                 <div class="history-date-row">
                     <i data-lucide="calendar"></i>
-                    <span>${formattedDate} ${workout.time ? `&nbsp; ${workout.time}` : ''}</span>
+                    <span>${formattedDate} ${workout.time ? `&nbsp; ${escapeHtml(workout.time)}` : ''}</span>
                 </div>
-                ${workout.estimatedCalories ? `<div class="history-date-row"><i data-lucide="flame"></i><span>筋トレ消費目安: ${workout.estimatedCalories} kcal</span></div>` : ''}
+                ${workout.estimatedCalories ? `<div class="history-date-row"><i data-lucide="flame"></i><span>筋トレ消費目安: ${Math.round(Number(workout.estimatedCalories) || 0)} kcal</span></div>` : ''}
             </div>
             <div class="history-actions">
                 <button class="btn-icon text-primary btn-edit-history" title="編集する">

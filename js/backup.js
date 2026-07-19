@@ -150,10 +150,13 @@ function importWorkouts(event) {
 
 function mergeImportedData(workouts, weights, cardio, maintenance, planSettings = null) {
     // 1. Merge workouts by ID
+    // 注意: 条件にtitleを含めないこと。タイトル入力欄はフォームから撤去済みで現行の
+    // 記録は全件 title:'' のため、truthy判定にすると復元対象がすべて黙って捨てられる
+    // (実際に発生していたバグ。スキーマ検証はvalidateWorkoutsSchemaが済ませている)
     const workoutsMap = {};
     state.workouts.forEach(w => workoutsMap[w.id] = w);
     workouts.forEach(w => {
-        if (w.id && w.date && w.title && Array.isArray(w.exercises)) {
+        if (w.id && w.date && Array.isArray(w.exercises)) {
             workoutsMap[w.id] = w;
         }
     });
@@ -171,16 +174,18 @@ function mergeImportedData(workouts, weights, cardio, maintenance, planSettings 
     state.weightLogs = Object.entries(weightsMap).map(([date, weight]) => ({ date, weight }));
     state.weightLogs.sort((a, b) => new Date(a.date) - new Date(b.date));
 
-    // 3. Merge cardio
-    const cardioKeys = new Set(state.cardioLogs.map(c => `${c.date}_${c.distance}`));
+    // 3. Merge cardio by date
+    // 体重マージと同じく「1日1件」前提の日付キーで統一する(取り込み側優先)。
+    // 以前は date_distance の複合キーだったため、同じ日付で距離が違う行が併存し、
+    // 週間距離の二重計上や、日付検索で上書きする記録フォームとの不整合が起きえた
+    const cardioMap = {};
+    state.cardioLogs.forEach(c => cardioMap[c.date] = c);
     cardio.forEach(c => {
         if (c.date && typeof c.distance === 'number') {
-            const key = `${c.date}_${c.distance}`;
-            if (!cardioKeys.has(key)) {
-                state.cardioLogs.push(c);
-            }
+            cardioMap[c.date] = c;
         }
     });
+    state.cardioLogs = Object.values(cardioMap);
     state.cardioLogs.sort((a, b) => new Date(a.date) - new Date(b.date));
 
     // 4. Update maintenance

@@ -37,12 +37,11 @@ function loadData() {
         state.workouts = [];
     }
 
-    // Ensure legacy workouts missing a time property get a reasonable default
-    state.workouts.forEach((w, idx) => {
-        if (!w.time) {
-            const times = ['10:00', '19:00', '18:30', '20:00', '08:00'];
-            w.time = times[idx % times.length];
-        }
+    // 旧データでtimeが無い場合も架空の時刻で埋めない(以前は配列位置に応じた適当な時刻を
+    // 割り当てており、保存・同期でその架空の値が実データとして固定化されてしまっていた)。
+    // 空文字のまま保持し、表示側は「時刻なし」として扱う(履歴カードはtimeが空なら非表示)。
+    state.workouts.forEach(w => {
+        if (!w.time) w.time = '';
     });
 
     // 2. Weight Logs
@@ -160,17 +159,17 @@ function runOneTimeMigrations() {
     // その日の日付で上書きされるバグがあり、実際の計画開始とズレた値が残っている。
     // 「記録の始まり=最初の体重ログの日付」(クラウド同期済みならスプレッドシートの
     // WeightLogs先頭行と同じ)を開始日として一度だけ適用し直す。
+    // 判定ロジックはlib/data-utils.jsのdecidePlanStartDateMigrationに委譲(テスト対象)。
+    // markDone=falseは「体重ログがまだ無い環境」で、フラグを立てずに次回起動で再判定する。
     const planStartFlag = MIGRATION_FLAG_PREFIX + '2026_07_fix_plan_start_date';
     if (!localStorage.getItem(planStartFlag)) {
-        // 体重ログがまだ無い環境(初回起動直後・クラウド同期前)ではフラグを立てずに
-        // 見送り、ログが入った後の起動で適用する
-        if (state.weightLogs.length > 0 && state.planSettings) {
-            const firstWeightDate = state.weightLogs[0].date;
-            if (firstWeightDate && state.planSettings.weightPlanStartDate !== firstWeightDate) {
-                state.planSettings.weightPlanStartDate = firstWeightDate;
-                saveDataAndSync();
-                console.log(`🛠️ 最適化計画の開始日を最初の体重記録日(${firstWeightDate})に修正しました`);
-            }
+        const decision = decidePlanStartDateMigration(state.weightLogs, state.planSettings);
+        if (decision.apply) {
+            state.planSettings.weightPlanStartDate = decision.startDate;
+            saveDataAndSync();
+            console.log(`🛠️ 最適化計画の開始日を最初の体重記録日(${decision.startDate})に修正しました`);
+        }
+        if (decision.markDone) {
             localStorage.setItem(planStartFlag, 'true');
         }
     }

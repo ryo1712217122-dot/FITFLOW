@@ -86,13 +86,13 @@ function renderDaySummaryBody(dateStr) {
                             ${w.time ? `${escapeHtml(w.time)} ・ ` : ''}${exerciseCount}種目${exerciseNames ? `：${exerciseNames}` : ''}
                         </div>
                         ${w.impression ? `<div class="day-summary-item-sub">${escapeHtml(w.impression)}</div>` : ''}
-                        ${w.estimatedCalories ? `<div class="day-summary-item-sub">推定消費: ${w.estimatedCalories} kcal</div>` : ''}
+                        ${w.estimatedCalories ? `<div class="day-summary-item-sub">推定消費: ${Math.round(Number(w.estimatedCalories) || 0)} kcal</div>` : ''}
                     </div>
                     <div class="day-summary-item-actions">
-                        <button type="button" class="btn-icon text-primary btn-day-summary-edit-workout" data-id="${w.id}" title="編集する">
+                        <button type="button" class="btn-icon text-primary btn-day-summary-edit-workout" data-id="${escapeHtml(w.id)}" title="編集する">
                             <i data-lucide="edit-3"></i>
                         </button>
-                        <button type="button" class="btn-icon text-danger btn-day-summary-delete-workout" data-id="${w.id}" title="削除する">
+                        <button type="button" class="btn-icon text-danger btn-day-summary-delete-workout" data-id="${escapeHtml(w.id)}" title="削除する">
                             <i data-lucide="trash-2"></i>
                         </button>
                     </div>

@@ -8,18 +8,8 @@ function renderPlanTab(isEditing = false) {
 
     const s = state.planSettings || DEFAULT_PLAN_SETTINGS;
 
-    // Calculations
-    const totalDays = (parseInt(s.daysNormal) || 0) + (parseInt(s.daysMilkTea) || 0) + (parseInt(s.daysEvent) || 0);
-    const daysDenominator = totalDays > 0 ? totalDays : 7;
-    const avgIntake = Math.round(
-        ((parseInt(s.intakeNormal) || 0) * (parseInt(s.daysNormal) || 0) +
-         (parseInt(s.intakeMilkTea) || 0) * (parseInt(s.daysMilkTea) || 0) +
-         (parseInt(s.intakeEvent) || 0) * (parseInt(s.daysEvent) || 0)) / daysDenominator
-    );
-    const avgExpenditure = Math.round(
-        (parseFloat(s.baseBurn) || 0) + ((parseFloat(s.runBurn) || 0) * (parseFloat(s.runCount) || 0)) / 7
-    );
-    const deficit = avgExpenditure - avgIntake;
+    // 週平均カロリーの式はlib/data-utils.jsのcomputePlanCalorieAveragesに一本化している
+    const { avgIntake, avgExpenditure, deficit } = computePlanCalorieAverages(s);
     const weekRunDistance = sumCardioDistanceForWeek(state.cardioLogs, getWeekStartDate(getLocalDateString()));
 
     if (isEditing) {
@@ -493,20 +483,8 @@ function recalculatePlanRoadmap() {
     const s = state.planSettings || Object.assign({}, DEFAULT_PLAN_SETTINGS);
     const latestWeight = getLatestWeight();
 
-    // renderPlanTab と同じ式で、現在の計画設定に基づく週平均の摂取・消費カロリーを算出
-    const totalDays = (parseInt(s.daysNormal) || 0) + (parseInt(s.daysMilkTea) || 0) + (parseInt(s.daysEvent) || 0);
-    const daysDenominator = totalDays > 0 ? totalDays : 7;
-    const avgIntake = Math.round(
-        ((parseInt(s.intakeNormal) || 0) * (parseInt(s.daysNormal) || 0) +
-         (parseInt(s.intakeMilkTea) || 0) * (parseInt(s.daysMilkTea) || 0) +
-         (parseInt(s.intakeEvent) || 0) * (parseInt(s.daysEvent) || 0)) / daysDenominator
-    );
-    const avgExpenditure = Math.round(
-        (parseFloat(s.baseBurn) || 0) + ((parseFloat(s.runBurn) || 0) * (parseFloat(s.runCount) || 0)) / 7
-    );
-    const deficit = avgExpenditure - avgIntake;
-
-    const KCAL_PER_KG = 7700;
+    // 週平均カロリー(表示と同じ式)とマイルストーン予測はlib/data-utils.jsに委譲
+    const { deficit } = computePlanCalorieAverages(s);
 
     // 開始日は固定運用。開始日が既にある場合は開始時体重も「その日の体重」として
     // 保持し、再計算は「今日の実測体重から、開始日起点の各マイルストーン日
@@ -514,29 +492,14 @@ function recalculatePlanRoadmap() {
     // 開始日が未設定の場合のみ、今日を開始日・最新体重を開始時体重として初期化する。
     let elapsedDays = 0;
     if (s.weightPlanStartDate) {
-        const start = new Date(s.weightPlanStartDate + 'T00:00:00');
-        const todayDate = new Date(getLocalDateString() + 'T00:00:00');
-        if (!isNaN(start.getTime())) {
-            elapsedDays = Math.max(0, Math.round((todayDate - start) / (1000 * 60 * 60 * 24)));
-        }
+        elapsedDays = computeDaysSince(s.weightPlanStartDate, getLocalDateString());
     } else {
         s.weightPlanStartDate = getLocalDateString();
         s.weightStart = latestWeight;
     }
 
-    // 既に過ぎたマイルストーン(開始+30日/開始+90日)は履歴として保持し、書き換えない。
-    // 現在体重で上書きすると、予測線(computePlannedWeightForDate)の過去区間が
-    // 「今日の実測」を通る形に歪み、再計算直後なのにペース遅れ表示になるため。
-    let weight1Month = elapsedDays < 30 ? latestWeight : s.weight1Month;
-    let weight3Month = elapsedDays < 90 ? latestWeight : s.weight3Month;
-    if (deficit > 0) {
-        if (elapsedDays < 30) {
-            weight1Month = Math.round((latestWeight - (deficit * (30 - elapsedDays)) / KCAL_PER_KG) * 10) / 10;
-        }
-        if (elapsedDays < 90) {
-            weight3Month = Math.round((latestWeight - (deficit * (90 - elapsedDays)) / KCAL_PER_KG) * 10) / 10;
-        }
-    }
+    const { weight1Month, weight3Month } =
+        computeRoadmapMilestones(latestWeight, deficit, elapsedDays, s.weight1Month, s.weight3Month);
 
     s.weight1Month = weight1Month;
     s.weight3Month = weight3Month;
@@ -560,14 +523,8 @@ function renderPlanSidebarWidget() {
 
     const s = state.planSettings || DEFAULT_PLAN_SETTINGS;
 
-    // Calculations
-    const totalDays = (parseInt(s.daysNormal) || 0) + (parseInt(s.daysMilkTea) || 0) + (parseInt(s.daysEvent) || 0);
-    const daysDenominator = totalDays > 0 ? totalDays : 7;
-    const avgIntake = Math.round(
-        ((parseInt(s.intakeNormal) || 0) * (parseInt(s.daysNormal) || 0) +
-         (parseInt(s.intakeMilkTea) || 0) * (parseInt(s.daysMilkTea) || 0) +
-         (parseInt(s.intakeEvent) || 0) * (parseInt(s.daysEvent) || 0)) / daysDenominator
-    );
+    // 週平均カロリーの式はlib/data-utils.jsのcomputePlanCalorieAveragesに一本化している
+    const { avgIntake } = computePlanCalorieAverages(s);
     const weekRunDistance = sumCardioDistanceForWeek(state.cardioLogs, getWeekStartDate(getLocalDateString()));
 
     container.innerHTML = `
