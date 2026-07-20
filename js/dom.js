@@ -36,7 +36,9 @@ const DOM = {
     addExerciseBtn: document.getElementById('add-exercise-btn'),
     saveWorkoutBtn: document.getElementById('save-workout-btn'),
 
-    // Quick log extra fields (cardio, part of the unified workout-form)
+    // Cardio Logger (有酸素単独記録フォーム)
+    cardioForm: document.getElementById('cardio-form'),
+    cardioDate: document.getElementById('cardio-date'),
     logCardioDist: document.getElementById('log-cardio-dist'),
     cardioCalcHint: document.getElementById('cardio-calc-hint'),
     workoutCalorieHint: document.getElementById('workout-calorie-hint'),

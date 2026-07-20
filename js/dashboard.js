@@ -216,33 +216,23 @@ function renderCalendar() {
 
         const titleParts = [];
 
+        // 記録内容に応じた3段階の濃淡で塗り分ける(絵文字インジケーターは廃止して色で判別):
+        //   トレーニングした日(走った日を含む) = 濃 / 走っただけの日 = 中 / 体重を測っただけの日 = 薄
         const dayWorkouts = workoutsByDate[dateStr];
-        if (dayWorkouts && dayWorkouts.length > 0) {
-            dayCell.classList.add('workout-done');
+        const hasWorkout = dayWorkouts && dayWorkouts.length > 0;
+        const hasCardio = !!cardioByDate[dateStr];
+        const hasWeight = !!weightByDate[dateStr];
 
-            const dot = document.createElement('span');
-            dot.classList.add('workout-dot-indicator');
-            dayCell.appendChild(dot);
-
+        if (hasWorkout) {
+            dayCell.classList.add('cal-intensity-strong');
             titleParts.push(`トレーニング記録 ${dayWorkouts.length}件`);
+        } else if (hasCardio) {
+            dayCell.classList.add('cal-intensity-medium');
+        } else if (hasWeight) {
+            dayCell.classList.add('cal-intensity-light');
         }
-
-        const emojis = [];
-        if (cardioByDate[dateStr]) {
-            emojis.push('🏃');
-            titleParts.push('有酸素の記録あり');
-        }
-        if (weightByDate[dateStr]) {
-            emojis.push('⚖️');
-            titleParts.push('体重の記録あり');
-        }
-
-        if (emojis.length > 0) {
-            const indicator = document.createElement('span');
-            indicator.classList.add('calendar-day-indicator');
-            indicator.textContent = emojis.join('');
-            dayCell.appendChild(indicator);
-        }
+        if (hasCardio) titleParts.push('有酸素の記録あり');
+        if (hasWeight) titleParts.push('体重の記録あり');
 
         if (titleParts.length > 0) {
             dayCell.setAttribute('title', titleParts.join(' | '));
@@ -257,6 +247,19 @@ function renderCalendar() {
 // ==========================================
 
 function initDashboardControls() {
+    // 体重推移グラフの表示期間切替(1週間/1ヶ月)
+    document.querySelectorAll('.chart-period-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const days = parseInt(btn.getAttribute('data-days'));
+            if (!days || days === weightChartPeriodDays) return;
+            weightChartPeriodDays = days;
+            document.querySelectorAll('.chart-period-btn').forEach(b => {
+                b.classList.toggle('active', b === btn);
+            });
+            renderWeightChart();
+        });
+    });
+
     if (DOM.maintenanceInput) {
         DOM.maintenanceInput.value = state.maintenanceCalories;
     }
@@ -324,6 +327,9 @@ function calculateFluidMaintenance() {
     updateDashboard();
 }
 
+// 体重推移グラフの表示期間(日数)。ヘッダーの「1週間/1ヶ月」トグルで切り替える(デフォルト1ヶ月)
+let weightChartPeriodDays = 30;
+
 function renderWeightChart() {
     const theme = getChartThemeColors();
     const canvas = document.getElementById('weightChart');
@@ -331,7 +337,16 @@ function renderWeightChart() {
 
     const ctx = canvas.getContext('2d');
 
-    if (state.weightLogs.length === 0) {
+    // 表示期間: 今日からweightChartPeriodDays日分の日付ウィンドウで絞り込む
+    // (「最近N件」ではなく日数で切ることで、記録の抜けがあっても期間の意味が変わらない)
+    const windowStart = new Date(getLocalDateString() + 'T00:00:00');
+    windowStart.setDate(windowStart.getDate() - (weightChartPeriodDays - 1));
+    const startIndex = state.weightLogs.findIndex(l => {
+        const d = new Date(l.date + 'T00:00:00');
+        return !isNaN(d.getTime()) && d >= windowStart;
+    });
+
+    if (state.weightLogs.length === 0 || startIndex === -1) {
         DOM.noWeightData.style.display = 'block';
         if (state.charts.weight) {
             try { state.charts.weight.destroy(); } catch(e){}
@@ -343,12 +358,12 @@ function renderWeightChart() {
 
     DOM.noWeightData.style.display = 'none';
 
-    // 移動平均は表示ウィンドウより前の実績も踏まえて計算してから、表示件数分だけ切り出す
-    // (直近10件だけを渡すと、グラフ左端付近の平均が「本当は分かるはずの過去データ」を
+    // 移動平均は表示ウィンドウより前の実績も踏まえて計算してから、表示期間分だけ切り出す
+    // (期間内だけを渡すと、グラフ左端付近の平均が「本当は分かるはずの過去データ」を
     //  使えずに不正確になるため)
     const movingAverages = computeMovingAverage(state.weightLogs, WEIGHT_TREND_WINDOW_DAYS);
-    const recentLogs = state.weightLogs.slice(-MAX_RECENT_WEIGHT_LOGS);
-    const recentAverages = movingAverages.slice(-MAX_RECENT_WEIGHT_LOGS);
+    const recentLogs = state.weightLogs.slice(startIndex);
+    const recentAverages = movingAverages.slice(startIndex);
 
     const labels = recentLogs.map(l => {
         const parts = l.date.split('-');

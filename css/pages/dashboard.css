@@ -164,32 +164,29 @@
     font-weight: 700;
 }
 
-.calendar-day.workout-done {
-    background: var(--secondary-gradient);
+/* 記録内容による3段階の濃淡。パレット色(primary)の濃度だけで表現し、
+   どのテーマでも「濃いほど活動量が多い日」と直感的に読めるようにする。
+   トレーニングした日=濃 / 走っただけの日=中 / 体重を測っただけの日=薄 */
+.calendar-day.cal-intensity-strong {
+    background: color-mix(in srgb, var(--color-primary) 90%, transparent);
     color: #fff;
-    box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
+    font-weight: 700;
 }
 
-.calendar-day.workout-done.today {
-    background: var(--primary-gradient);
-    border: none;
+.calendar-day.cal-intensity-medium {
+    background: color-mix(in srgb, var(--color-primary) 45%, transparent);
+    color: var(--text-primary);
 }
 
-.calendar-day .workout-dot-indicator {
-    position: absolute;
-    bottom: 4px;
-    width: 4px;
-    height: 4px;
-    border-radius: 50%;
-    background-color: #fff;
+.calendar-day.cal-intensity-light {
+    background: color-mix(in srgb, var(--color-primary) 18%, transparent);
+    color: var(--text-primary);
 }
 
-.calendar-day-indicator {
-    position: absolute;
-    top: 2px;
-    right: 2px;
-    font-size: 0.6rem;
-    line-height: 1;
+.calendar-day.cal-intensity-strong.today,
+.calendar-day.cal-intensity-medium.today,
+.calendar-day.cal-intensity-light.today {
+    border: 2px solid var(--border-focus);
 }
 
 .calendar-legend {
@@ -213,12 +210,50 @@
     border-radius: 3px;
 }
 
-.legend-item .dot.done {
-    background: var(--secondary-gradient);
+.legend-item .dot.cal-strong {
+    background: color-mix(in srgb, var(--color-primary) 90%, transparent);
+}
+
+.legend-item .dot.cal-medium {
+    background: color-mix(in srgb, var(--color-primary) 45%, transparent);
+}
+
+.legend-item .dot.cal-light {
+    background: color-mix(in srgb, var(--color-primary) 18%, transparent);
 }
 
 .legend-item .dot.today {
     border: 1px solid var(--color-primary);
+}
+
+/* 体重推移グラフの期間切替(1週間/1ヶ月)トグル */
+.chart-period-toggle {
+    display: flex;
+    gap: 4px;
+    background: color-mix(in srgb, var(--color-primary) 8%, transparent);
+    border-radius: 8px;
+    padding: 3px;
+}
+
+.chart-period-btn {
+    border: none;
+    background: transparent;
+    color: var(--text-secondary);
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 4px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.chart-period-btn:hover {
+    color: var(--text-primary);
+}
+
+.chart-period-btn.active {
+    background: var(--color-primary);
+    color: #fff;
 }
 
 /* Calorie Balance Widget */

@@ -32,6 +32,9 @@ function initDaySummaryModal() {
             // 両方のフォームの日付をこの日に合わせ、既存記録があればすぐ見える状態にする
             if (DOM.workoutDate) {
                 DOM.workoutDate.value = dateStr;
+            }
+            if (DOM.cardioDate) {
+                DOM.cardioDate.value = dateStr;
                 syncCardioFormWithExistingDataForDate(dateStr);
             }
             if (DOM.weightQuickDate) {

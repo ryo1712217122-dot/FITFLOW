@@ -4,7 +4,6 @@
 const DEFAULT_MAINTENANCE_CALORIES = 2000;
 const DEFAULT_WEIGHT_KG = 70.0;
 const TARGET_MONTHLY_WORKOUTS = 12;
-const MAX_RECENT_WEIGHT_LOGS = 10;
 const CARDIO_DAYS_WINDOW = 7;
 // 体重推移グラフの移動平均・週間変化量サマリーで使う日数
 const WEIGHT_TREND_WINDOW_DAYS = 7;
@@ -20,6 +19,14 @@ const WORKOUT_CALORIES_PER_SET = 15;
 // 一回限りのデータ移行(migrations)の実行済みフラグに使うlocalStorageキーの接頭辞。
 // 各移行は「接頭辞 + 移行名」のキーが立っていればスキップされる(冪等性の担保)。
 const MIGRATION_FLAG_PREFIX = 'fitflow_migration_';
+
+// 減量シミュレーションの設定値。
+// 「少し甘えた日」「イベント日」は通常日に対する上乗せ幅(kcal)を固定し、
+// 週平均が目標摂取カロリーに一致するように通常日を逆算する(lib/data-utils.jsの
+// computeIntakeTiersForPace)。ペースの選択肢はkg/月。
+const SIM_INTAKE_DELTA_SWEET = 200;
+const SIM_INTAKE_DELTA_EVENT = 800;
+const SIM_PACE_OPTIONS = [0.5, 1, 2, 3];
 
 const DEFAULT_PLAN_SETTINGS = {
     intakeNormal: 1750,
@@ -42,6 +49,9 @@ const DEFAULT_PLAN_SETTINGS = {
     // 明示的に変更しない限り固定される(保存・再計算のたびに今日へ動いてしまうと、
     // 予測線の起点と実際の計画開始がズレるため)。
     weightPlanStartDate: null,
+    // シミュレーションで選択中の減量ペース(kg/月)。SIM_PACE_OPTIONSのいずれか
+    targetPaceKgMonth: 2,
+    // sleepTarget以下の3つは防衛ラインUIの廃止後もクラウド同期ペイロードの互換のためキーだけ残す
     sleepTarget: 6.5,
     snackRule: '間食は「明治おいしいミルク紅茶 450ml」を週2回まで。他の日は完全無糖。夜22時以降の白米大盛り化を阻止し、普通盛りでストップすること。',
     workoutRule: 'ジム通いを週1回に圧縮し、余った時間を睡眠時間の補填（+1.5時間×2日）に回します。週1回全力（レッグプレス200kg等）で筋肉量は十分維持されます。'

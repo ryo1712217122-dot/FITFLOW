@@ -165,23 +165,14 @@ function editWorkout(id) {
     if (formNavItem) formNavItem.click();
 
     const titleHeader = document.getElementById('logger-form-title');
-    if (titleHeader) titleHeader.textContent = 'ワークアウト記録の編集';
+    if (titleHeader) titleHeader.textContent = '🏋️ トレーニング記録の編集';
 
-    const recordGymWorkoutChk = document.getElementById('record-gym-workout-chk');
-    const gymWorkoutFieldsContainer = document.getElementById('gym-workout-fields-container');
-    if (recordGymWorkoutChk) recordGymWorkoutChk.checked = true;
-    if (gymWorkoutFieldsContainer) gymWorkoutFieldsContainer.style.display = 'block';
     if (DOM.saveWorkoutBtn) {
         DOM.saveWorkoutBtn.innerHTML = '<i data-lucide="save"></i> 編集を完了する';
     }
 
     if (DOM.workoutDate) DOM.workoutDate.value = workout.date;
     if (DOM.workoutTime) DOM.workoutTime.value = workout.time || '12:00';
-
-    // このワークアウトの日付にすでにある有酸素の記録をフォームに反映する
-    // (以前は無関係だと決めつけて有酸素欄を空にしていたが、それだと本当にその日に
-    //  記録済みの有酸素があっても見えず、気づかないまま再送信して食い違いが起きていた)
-    syncCardioFormWithExistingDataForDate(workout.date);
 
     if (DOM.workoutImpression) DOM.workoutImpression.value = workout.impression || '';
 

@@ -1,10 +1,15 @@
-// FITFLOW - 「記録する」タブ:
-//   フォームA(#workout-form)  : 有酸素 + 筋トレ（ジムに行った日に入力する部分）
-//   フォームB(#weight-quick-form): 体重（ジムに行かない日でも入力する部分）
+// FITFLOW - 「記録する」タブ: トレーニング・有酸素・体重の3つの独立したフォーム。
+//   パート1(#workout-form)     : トレーニング(筋トレ)
+//   パート2(#cardio-form)      : 有酸素(走行距離)
+//   パート3(#weight-quick-form): 体重
+// それぞれ一つずつ入力・保存できる(以前の「有酸素を保存して完了」のような合体送信は廃止)。
 //
 // 筋トレの種目は「まとめて最後に一括保存」ではなく、1種目入力し終えるごとに
 // その場で個別保存できる（ジムでのリアルタイム入力を想定）。編集中/記録中のワークアウトの
 // idはstate.editingWorkoutIdが指す（履歴からの編集・新規リアルタイム記録の両方で共用）。
+//
+// 日付のデフォルトはgetFitnessDateString(27時ルール: AM3時までは前日扱い)を使う。
+// 深夜のトレーニング後に記録しても「今日」に化けないようにするため。
 
 function initFormControls() {
     if (DOM.addExerciseBtn) {
@@ -16,18 +21,8 @@ function initFormControls() {
     if (DOM.workoutForm) {
         DOM.workoutForm.addEventListener('submit', (e) => {
             e.preventDefault();
-            saveCardioAndFinishSession();
+            finishTrainingSession();
         });
-    }
-
-    if (DOM.logCardioDist) {
-        DOM.logCardioDist.addEventListener('input', updateCardioHint);
-    }
-
-    // 日付を選び直した時、その日にすでにある有酸素の記録をフォームに反映する
-    // (未保存の入力があれば、破棄前に確認する = handleCardioDateChange)
-    if (DOM.workoutDate) {
-        DOM.workoutDate.addEventListener('change', handleCardioDateChange);
     }
 
     // 調子・メモは種目の保存に付随して保存されるが、種目を保存し直さずに
@@ -45,23 +40,34 @@ function initFormControls() {
         });
     }
 
+    // パート2: 有酸素
+    if (DOM.cardioForm) {
+        if (DOM.cardioDate) {
+            DOM.cardioDate.value = getFitnessDateString();
+            syncCardioFormWithExistingDataForDate(DOM.cardioDate.value);
+            // 日付を選び直した時、その日にすでにある有酸素の記録をフォームに反映する
+            // (未保存の入力があれば、破棄前に確認する = handleCardioDateChange)
+            DOM.cardioDate.addEventListener('change', handleCardioDateChange);
+        }
+        if (DOM.logCardioDist) {
+            DOM.logCardioDist.addEventListener('input', updateCardioHint);
+        }
+        DOM.cardioForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            saveCardioLog();
+        });
+    }
+
+    // パート3: 体重
     if (DOM.weightQuickForm) {
         if (DOM.weightQuickDate) {
-            DOM.weightQuickDate.value = getLocalDateString();
+            DOM.weightQuickDate.value = getFitnessDateString();
             syncDailyLogFormWithExistingDataForDate(DOM.weightQuickDate.value);
         }
         DOM.weightQuickDate.addEventListener('change', handleDailyLogDateChange);
         DOM.weightQuickForm.addEventListener('submit', (e) => {
             e.preventDefault();
             saveDailyLog();
-        });
-    }
-
-    const recordGymWorkoutChk = document.getElementById('record-gym-workout-chk');
-    const gymWorkoutFieldsContainer = document.getElementById('gym-workout-fields-container');
-    if (recordGymWorkoutChk && gymWorkoutFieldsContainer) {
-        recordGymWorkoutChk.addEventListener('change', () => {
-            gymWorkoutFieldsContainer.style.display = recordGymWorkoutChk.checked ? 'block' : 'none';
         });
     }
 }
@@ -71,31 +77,21 @@ function resetWorkoutForm() {
     if (DOM.workoutForm) DOM.workoutForm.reset();
 
     const now = new Date();
-    if (DOM.workoutDate) DOM.workoutDate.value = getLocalDateString(now);
-
-    // 今日の日付にすでにある有酸素の記録があればフォームに反映し、
-    // 無ければ空欄にする(既存記録の有無に関わらず一貫した状態にするため)
-    syncCardioFormWithExistingDataForDate(DOM.workoutDate ? DOM.workoutDate.value : '');
+    // 27時ルール: AM3時までは前日の日付をデフォルトにする(深夜トレ後の記録を想定)
+    if (DOM.workoutDate) DOM.workoutDate.value = getFitnessDateString(now);
 
     const hours = String(now.getHours()).padStart(2, '0');
     const minutes = String(now.getMinutes()).padStart(2, '0');
     if (DOM.workoutTime) DOM.workoutTime.value = `${hours}:${minutes}`;
 
     if (DOM.exerciseList) DOM.exerciseList.innerHTML = '';
-    if (DOM.saveWorkoutBtn) DOM.saveWorkoutBtn.innerHTML = '<i data-lucide="check"></i> 有酸素を保存して完了';
+    if (DOM.saveWorkoutBtn) DOM.saveWorkoutBtn.innerHTML = '<i data-lucide="check"></i> トレーニングを記録完了';
 
     const titleHeader = document.getElementById('logger-form-title');
-    if (titleHeader) titleHeader.textContent = '有酸素・筋トレの記録';
+    if (titleHeader) titleHeader.textContent = '🏋️ トレーニングの記録';
 
     addExerciseBlock();
     updateWorkoutCalorieHint();
-
-    const recordGymWorkoutChk = document.getElementById('record-gym-workout-chk');
-    const gymWorkoutFieldsContainer = document.getElementById('gym-workout-fields-container');
-    if (recordGymWorkoutChk && gymWorkoutFieldsContainer) {
-        gymWorkoutFieldsContainer.style.display = recordGymWorkoutChk.checked ? 'block' : 'none';
-    }
-    updateCardioHint();
 
     if (window.lucide) {
         lucide.createIcons();
@@ -484,77 +480,82 @@ function syncCardioFormWithExistingDataForDate(date) {
 
 // 日付選択(change)時のハンドラ。入力中の未保存の値が破棄されそうな場合は先に確認する。
 function handleCardioDateChange() {
-    const newDate = DOM.workoutDate.value;
+    const newDate = DOM.cardioDate.value;
     const currentVal = DOM.logCardioDist ? DOM.logCardioDist.value.trim() : '';
     const savedForOldDate = lastSyncedCardioDate ? state.cardioLogs.find(c => c.date === lastSyncedCardioDate) : null;
     const savedVal = savedForOldDate ? String(savedForOldDate.distance) : '';
     const isDirty = currentVal !== '' && currentVal !== savedVal;
 
     if (isDirty && !confirm('入力中の有酸素の記録が保存されていません。日付を変更すると入力内容が失われます。続けますか？')) {
-        if (lastSyncedCardioDate) DOM.workoutDate.value = lastSyncedCardioDate;
+        if (lastSyncedCardioDate) DOM.cardioDate.value = lastSyncedCardioDate;
         return;
     }
     syncCardioFormWithExistingDataForDate(newDate);
 }
 
-// 有酸素を保存し、開いているワークアウトセッション(種目は既に個別保存済み)を締めくくる。
-// 筋トレ種目自体はこの関数では扱わない(各種目ブロックの「保存」ボタンで個別に保存済みのため)。
-function saveCardioAndFinishSession() {
-    const date = DOM.workoutDate.value;
-
-    let cardioSaved = false;
-    let cardioUpdated = false;
-    if (DOM.logCardioDist) {
-        const cardioText = DOM.logCardioDist.value.trim();
-        if (cardioText !== '') {
-            const dist = parseFloat(cardioText);
-            if (isNaN(dist) || dist <= 0) {
-                showToast('有効な走行距離を入力してください');
-                return;
-            }
-            const calories = Math.round(dist * getLatestWeight());
-
-            // 体重ログと同様、同じ日付の既存エントリがあれば上書きする
-            const existingCardioIndex = state.cardioLogs.findIndex(c => c.date === date);
-            cardioUpdated = existingCardioIndex !== -1;
-            if (cardioUpdated) {
-                state.cardioLogs[existingCardioIndex] = { date, distance: dist, calories };
-            } else {
-                state.cardioLogs.push({ date, distance: dist, calories });
-            }
-            state.cardioLogs.sort((a, b) => new Date(a.date) - new Date(b.date));
-            cardioSaved = true;
-        }
-    }
-
-    const hasOpenWorkoutSession = !!state.editingWorkoutId;
-
-    if (!cardioSaved && !hasOpenWorkoutSession) {
-        showToast('有酸素を入力するか、種目を保存してください');
+// パート2: 有酸素を単独で保存する(同じ日付の既存エントリがあれば上書き)。
+function saveCardioLog() {
+    if (!DOM.cardioDate) return;
+    const date = DOM.cardioDate.value;
+    if (!date) {
+        showToast('日付を入力してください');
         return;
     }
 
-    // blurのタイミングに関わらず、完了時点の調子・メモを取りこぼさないよう念のため反映する
-    if (hasOpenWorkoutSession) {
-        const workout = state.workouts.find(w => w.id === state.editingWorkoutId);
-        if (workout) applyOpenWorkoutMetaFromForm(workout);
+    const cardioText = DOM.logCardioDist ? DOM.logCardioDist.value.trim() : '';
+    if (cardioText === '') {
+        showToast('走行距離を入力してください');
+        return;
     }
+    const dist = parseFloat(cardioText);
+    if (isNaN(dist) || dist <= 0) {
+        showToast('有効な走行距離を入力してください');
+        return;
+    }
+    const calories = Math.round(dist * getLatestWeight());
+
+    // 体重ログと同様、同じ日付の既存エントリがあれば上書きする
+    const existingCardioIndex = state.cardioLogs.findIndex(c => c.date === date);
+    const cardioUpdated = existingCardioIndex !== -1;
+    if (cardioUpdated) {
+        state.cardioLogs[existingCardioIndex] = { date, distance: dist, calories };
+    } else {
+        state.cardioLogs.push({ date, distance: dist, calories });
+    }
+    state.cardioLogs.sort((a, b) => new Date(a.date) - new Date(b.date));
 
     saveDataAndSync();
 
     // 既存日付への上書きだと誤操作に気づきやすいよう、新規/更新を区別した文言にする
-    // (ワークアウトの種目保存は既に「保存/更新」を区別しているのに合わせる)
-    const savedParts = [];
-    if (cardioSaved) savedParts.push(cardioUpdated ? '有酸素(更新)' : '有酸素');
-    if (hasOpenWorkoutSession) savedParts.push('筋トレ');
-    showToast(`${savedParts.join('・')}を記録しました！`);
+    showToast(`${cardioUpdated ? '有酸素(更新)' : '有酸素'}を記録しました！`);
+
+    // 保存直後のフォームには「たった今保存した内容」が表示され続けるようにする
+    syncCardioFormWithExistingDataForDate(date);
+
+    updateDashboard();
+    updateCardioHistoryList();
+}
+
+// パート1: 開いているトレーニングセッション(種目は既に個別保存済み)を締めくくる。
+// 種目自体はこの関数では扱わない(各種目ブロックの「保存」ボタンで個別に保存済みのため)。
+function finishTrainingSession() {
+    if (!state.editingWorkoutId) {
+        showToast('先に種目を1つ以上保存してください（種目ごとの「この種目を保存」ボタン）');
+        return;
+    }
+
+    // blurのタイミングに関わらず、完了時点の調子・メモを取りこぼさないよう念のため反映する
+    const workout = state.workouts.find(w => w.id === state.editingWorkoutId);
+    if (workout) applyOpenWorkoutMetaFromForm(workout);
+
+    saveDataAndSync();
+    showToast('トレーニングを記録しました！');
 
     state.editingWorkoutId = null;
     resetWorkoutForm();
 
     updateDashboard();
     updateHistoryList();
-    updateCardioHistoryList();
 
     const historyNavItem = document.querySelector('[data-tab="history"]');
     if (historyNavItem) {
@@ -571,6 +572,9 @@ function saveCardioAndFinishSession() {
 function refreshRecordFormsAfterExternalDataChange() {
     resetWorkoutForm();
 
+    if (DOM.cardioDate && DOM.cardioDate.value) {
+        syncCardioFormWithExistingDataForDate(DOM.cardioDate.value);
+    }
     if (DOM.weightQuickDate && DOM.weightQuickDate.value) {
         syncDailyLogFormWithExistingDataForDate(DOM.weightQuickDate.value);
     }

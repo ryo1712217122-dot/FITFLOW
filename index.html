@@ -16,17 +16,17 @@
     <script src="vendor/lucide-0.469.0.min.js"></script>
     <!-- CSSはカスケードレイヤーで管理。layers.cssの宣言順が優先度を決めるため、
          必ずこれを他のどのスタイルシートよりも先に読み込むこと（<link>の物理的な順番には依存しない）。 -->
-    <link rel="stylesheet" href="css/layers.css?v=1.14.1">
-    <link rel="stylesheet" href="css/tokens.css?v=1.14.1">
-    <link rel="stylesheet" href="css/base.css?v=1.14.1">
-    <link rel="stylesheet" href="css/layout.css?v=1.14.1">
-    <link rel="stylesheet" href="css/components.css?v=1.14.1">
-    <link rel="stylesheet" href="css/pages/record.css?v=1.14.1">
-    <link rel="stylesheet" href="css/pages/dashboard.css?v=1.14.1">
-    <link rel="stylesheet" href="css/pages/plan.css?v=1.14.1">
-    <link rel="stylesheet" href="css/pages/history.css?v=1.14.1">
-    <link rel="stylesheet" href="css/pages/settings.css?v=1.14.1">
-    <link rel="stylesheet" href="css/responsive.css?v=1.14.1">
+    <link rel="stylesheet" href="css/layers.css?v=1.15.0">
+    <link rel="stylesheet" href="css/tokens.css?v=1.15.0">
+    <link rel="stylesheet" href="css/base.css?v=1.15.0">
+    <link rel="stylesheet" href="css/layout.css?v=1.15.0">
+    <link rel="stylesheet" href="css/components.css?v=1.15.0">
+    <link rel="stylesheet" href="css/pages/record.css?v=1.15.0">
+    <link rel="stylesheet" href="css/pages/dashboard.css?v=1.15.0">
+    <link rel="stylesheet" href="css/pages/plan.css?v=1.15.0">
+    <link rel="stylesheet" href="css/pages/history.css?v=1.15.0">
+    <link rel="stylesheet" href="css/pages/settings.css?v=1.15.0">
+    <link rel="stylesheet" href="css/responsive.css?v=1.15.0">
 </head>
 <body>
     <div class="app-container">
@@ -38,7 +38,7 @@
                 </div>
                 <div class="brand-text">
                     <h1>FITFLOW</h1>
-                    <span class="app-version">v1.14.1</span>
+                    <span class="app-version">v1.15.0</span>
                 </div>
             </div>
 
@@ -79,7 +79,7 @@
             <!-- Top bar -->
             <header class="top-bar">
                 <div class="welcome">
-                    <h2 id="greeting-text">こんにちは！<span class="app-version-badge">v1.14.1</span></h2>
+                    <h2 id="greeting-text">こんにちは！<span class="app-version-badge">v1.15.0</span></h2>
                     <p id="date-text">2026年7月3日 金曜日</p>
                 </div>
                 <div class="header-right-controls">
@@ -96,15 +96,17 @@
                 </div>
             </header>
 
-            <!-- Quick Log Tab: 純粋な入力ページ（有酸素・筋トレ・体重のみ） -->
+            <!-- Quick Log Tab: トレーニング・有酸素・体重の3つの独立したフォーム。
+                 それぞれ一つずつ入力・保存できる(まとめて完了する送信は廃止)。
+                 日付のデフォルトは「27時ルール」(AM3時までは前日扱い)で入る。 -->
             <section id="quick-log" class="tab-content active">
                 <div class="quick-log-grid">
-                    <!-- ジムに行った日の記録: 有酸素 + 筋トレ種目をまとめて入力するフォーム -->
+                    <!-- パート1: トレーニング(筋トレ)の記録 -->
                     <form id="workout-form" class="card log-card main-logger col-span-2">
                         <div class="form-header-row">
-                            <h2 id="logger-form-title">有酸素・筋トレの記録</h2>
+                            <h2 id="logger-form-title">🏋️ トレーニングの記録</h2>
                         </div>
-                        <p class="form-hint form-section-intro">ジムに行った日に入力する部分です。種目は入力し終えるごとに、その場で個別に保存できます。</p>
+                        <p class="form-hint form-section-intro">種目は入力し終えるごとに、その場で個別に保存できます。深夜27時(AM3時)までは前日の日付が入ります。</p>
                         <div class="card-body">
                             <!-- Basic Date and Time -->
                             <div class="form-group">
@@ -112,10 +114,6 @@
                                 <div class="input-icon-wrapper">
                                     <i data-lucide="calendar" class="input-icon"></i>
                                     <input type="date" id="workout-date" required>
-                                </div>
-                                <div class="existing-data-hint is-hidden" id="cardio-existing-hint">
-                                    <i data-lucide="info"></i>
-                                    <span id="cardio-existing-hint-text"></span>
                                 </div>
                             </div>
 
@@ -127,32 +125,8 @@
                                 </div>
                             </div>
 
-                            <hr class="form-section-divider" />
-
-                            <!-- Cardio Input -->
-                            <div class="form-group">
-                                <label for="log-cardio-dist">今日の有酸素ランニング走行距離 (km) <span class="field-optional-hint">(任意)</span></label>
-                                <div class="input-icon-wrapper">
-                                    <i data-lucide="flame" class="input-icon"></i>
-                                    <input type="number" step="0.01" id="log-cardio-dist" placeholder="走った距離を入力してください...">
-                                </div>
-                                <div class="form-hint" id="cardio-calc-hint">
-                                    ※消費目安: 0 kcal (最新体重: -- kg)
-                                </div>
-                            </div>
-
-                            <hr class="form-section-divider" />
-
-                            <!-- Gym Workout Fields Toggle -->
-                            <div class="gym-workout-section-toggle">
-                                <label class="gym-workout-toggle-label">
-                                    <input type="checkbox" id="record-gym-workout-chk" checked>
-                                    <span>🏋️ 筋トレ（ジムでのトレーニング）も同時に記録する</span>
-                                </label>
-                            </div>
-
                             <div id="gym-workout-fields-container">
-                                <div class="form-group">
+                                <div class="form-group margin-top-1">
                                     <label>今日の調子</label>
                                     <div class="mood-selector">
                                         <label class="mood-option">
@@ -204,18 +178,55 @@
                             </div>
 
                             <button type="submit" class="btn btn-primary btn-full margin-top-1" id="save-workout-btn">
-                                <i data-lucide="check"></i> 有酸素を保存して完了
+                                <i data-lucide="check"></i> トレーニングを記録完了
                             </button>
                         </div>
                     </form>
 
-                    <!-- ジムに行かなくても記録する部分: 体重を入力するフォーム -->
+                    <!-- パート2: 有酸素の記録 / パート3: 体重の記録 -->
                     <div class="side-loggers-column">
+                        <form id="cardio-form" class="card log-card">
+                            <div class="card-header">
+                                <div class="header-title">
+                                    <i data-lucide="flame"></i>
+                                    <h3>🏃 有酸素の記録</h3>
+                                </div>
+                            </div>
+                            <p class="form-hint form-section-intro">走った日に入力する部分です。</p>
+                            <div class="card-body">
+                                <div class="form-group">
+                                    <label for="cardio-date">日付 <span class="required">*</span></label>
+                                    <div class="input-icon-wrapper">
+                                        <i data-lucide="calendar" class="input-icon"></i>
+                                        <input type="date" id="cardio-date" required>
+                                    </div>
+                                    <div class="existing-data-hint is-hidden" id="cardio-existing-hint">
+                                        <i data-lucide="info"></i>
+                                        <span id="cardio-existing-hint-text"></span>
+                                    </div>
+                                </div>
+                                <div class="form-group margin-top-1">
+                                    <label for="log-cardio-dist">走行距離 (km) <span class="required">*</span></label>
+                                    <div class="input-icon-wrapper">
+                                        <i data-lucide="flame" class="input-icon"></i>
+                                        <input type="number" step="0.01" id="log-cardio-dist" placeholder="走った距離を入力してください...">
+                                    </div>
+                                    <div class="form-hint" id="cardio-calc-hint">
+                                        ※消費目安: 0 kcal (最新体重: -- kg)
+                                    </div>
+                                </div>
+
+                                <button type="submit" class="btn btn-primary btn-full margin-top-1">
+                                    <i data-lucide="check"></i> 有酸素を記録
+                                </button>
+                            </div>
+                        </form>
+
                         <form id="weight-quick-form" class="card log-card">
                             <div class="card-header">
                                 <div class="header-title">
                                     <i data-lucide="scale"></i>
-                                    <h3>体重の記録</h3>
+                                    <h3>⚖️ 体重の記録</h3>
                                 </div>
                             </div>
                             <p class="form-hint form-section-intro">ジムに行かない日でも入力する部分です。</p>
@@ -232,7 +243,7 @@
                                     </div>
                                 </div>
                                 <div class="form-group margin-top-1">
-                                    <label for="weight-quick-val">体重 (kg) <span class="field-optional-hint">(任意)</span></label>
+                                    <label for="weight-quick-val">体重 (kg) <span class="required">*</span></label>
                                     <div class="input-icon-wrapper">
                                         <i data-lucide="scale" class="input-icon"></i>
                                         <input type="number" step="0.1" id="weight-quick-val" placeholder="体重計の数値を入力してください...">
@@ -346,7 +357,11 @@
                         <div class="card-header">
                             <div class="header-title">
                                 <i data-lucide="trending-up"></i>
-                                <h3>体重推移 (最近10件)</h3>
+                                <h3>体重推移</h3>
+                            </div>
+                            <div class="chart-period-toggle">
+                                <button type="button" class="chart-period-btn" id="weight-period-7d" data-days="7">1週間</button>
+                                <button type="button" class="chart-period-btn active" id="weight-period-30d" data-days="30">1ヶ月</button>
                             </div>
                             <span class="weight-change-summary" id="weight-change-summary"></span>
                         </div>
@@ -378,7 +393,9 @@
                             </div>
                         </div>
                         <div class="calendar-legend">
-                            <span class="legend-item"><span class="dot done"></span>トレーニング日</span>
+                            <span class="legend-item"><span class="dot cal-strong"></span>トレーニングした日</span>
+                            <span class="legend-item"><span class="dot cal-medium"></span>走っただけの日</span>
+                            <span class="legend-item"><span class="dot cal-light"></span>体重を測っただけの日</span>
                             <span class="legend-item"><span class="dot today"></span>本日</span>
                         </div>
                     </div>
@@ -692,26 +709,26 @@
     </div>
 
     <!-- lib/data-utils.js: DOM非依存の純粋関数（node --testでもテストされる）。他のどのjs/*.jsよりも先に読み込む -->
-    <script src="lib/data-utils.js?v=1.14.1"></script>
+    <script src="lib/data-utils.js?v=1.15.0"></script>
     <!-- js/*.js: すべてグローバルスコープに関数を定義するクラシックscript。
          ESモジュールにはしていない（index.htmlをダブルクリックしてfile://で開いても動作させるため）。
          依存関係は読み込み順で解決するので、この順番を変えないこと。 -->
-    <script src="js/config.js?v=1.14.1"></script>
-    <script src="js/state.js?v=1.14.1"></script>
-    <script src="js/utils.js?v=1.14.1"></script>
-    <script src="js/dom.js?v=1.14.1"></script>
-    <script src="js/notifications.js?v=1.14.1"></script>
-    <script src="js/theme.js?v=1.14.1"></script>
-    <script src="js/navigation.js?v=1.14.1"></script>
-    <script src="js/dashboard.js?v=1.14.1"></script>
-    <script src="js/record-form.js?v=1.14.1"></script>
-    <script src="js/history-workouts.js?v=1.14.1"></script>
-    <script src="js/history-logs.js?v=1.14.1"></script>
-    <script src="js/history-nav.js?v=1.14.1"></script>
-    <script src="js/day-summary.js?v=1.14.1"></script>
-    <script src="js/plan.js?v=1.14.1"></script>
-    <script src="js/sync.js?v=1.14.1"></script>
-    <script src="js/backup.js?v=1.14.1"></script>
-    <script src="js/main.js?v=1.14.1"></script>
+    <script src="js/config.js?v=1.15.0"></script>
+    <script src="js/state.js?v=1.15.0"></script>
+    <script src="js/utils.js?v=1.15.0"></script>
+    <script src="js/dom.js?v=1.15.0"></script>
+    <script src="js/notifications.js?v=1.15.0"></script>
+    <script src="js/theme.js?v=1.15.0"></script>
+    <script src="js/navigation.js?v=1.15.0"></script>
+    <script src="js/dashboard.js?v=1.15.0"></script>
+    <script src="js/record-form.js?v=1.15.0"></script>
+    <script src="js/history-workouts.js?v=1.15.0"></script>
+    <script src="js/history-logs.js?v=1.15.0"></script>
+    <script src="js/history-nav.js?v=1.15.0"></script>
+    <script src="js/day-summary.js?v=1.15.0"></script>
+    <script src="js/plan.js?v=1.15.0"></script>
+    <script src="js/sync.js?v=1.15.0"></script>
+    <script src="js/backup.js?v=1.15.0"></script>
+    <script src="js/main.js?v=1.15.0"></script>
 </body>
 </html>
