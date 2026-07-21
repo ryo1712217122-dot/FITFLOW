@@ -33,8 +33,10 @@
     --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     /* 押下時の即座なフィードバック用。ホバーより短く・オーバーシュートなし(非ジェスチャー操作のため) */
     --transition-press: transform 0.12s cubic-bezier(0.4, 0, 0.2, 1);
-    --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
-    --font-display: 'Outfit', sans-serif;
+    /* 'Inter'は日本語グリフを持たないため、日本語部分は明示的にM PLUS 1p(ゴシック体)へ
+       フォールバックさせる。OSのデフォルト(system-ui等)任せにすると端末ごとに書体がばらつくため。 */
+    --font-sans: 'Inter', 'M PLUS 1p', system-ui, -apple-system, sans-serif;
+    --font-display: 'Outfit', 'M PLUS 1p', sans-serif;
 
     --bg-input: rgba(0, 0, 0, 0.2);
     --bg-wrapper: rgba(0, 0, 0, 0.1);
