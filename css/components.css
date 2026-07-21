@@ -18,12 +18,12 @@
 .btn-primary {
     background: var(--primary-gradient);
     color: #fff;
-    box-shadow: 0 4px 15px rgba(236, 72, 153, 0.2);
+    box-shadow: 0 4px 15px color-mix(in srgb, var(--color-primary) 35%, transparent);
 }
 
 .btn-primary:hover {
     transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(236, 72, 153, 0.35);
+    box-shadow: 0 6px 20px color-mix(in srgb, var(--color-primary) 45%, transparent);
 }
 
 .btn-secondary {
@@ -44,7 +44,13 @@
 
 .btn-danger:hover {
     transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+    box-shadow: 0 4px 12px color-mix(in srgb, var(--color-danger) 40%, transparent);
+}
+
+/* 押下時: ホバーの浮き上がりより優先して、その場で沈み込むフィードバックを即座に返す */
+.btn:active {
+    transform: scale(0.96);
+    transition: var(--transition-press);
 }
 
 .btn-sm {
@@ -69,6 +75,11 @@
 .btn-icon:hover {
     color: var(--text-primary);
     background-color: rgba(255, 255, 255, 0.05);
+}
+
+.btn-icon:active {
+    transform: scale(0.9);
+    transition: var(--transition-press);
 }
 
 .btn-icon i {
@@ -257,7 +268,7 @@ input[type="number"]:focus,
 select:focus,
 textarea:focus {
     border-color: var(--border-focus);
-    box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.15);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--border-focus) 25%, transparent);
 }
 
 .input-icon-wrapper {
@@ -398,6 +409,7 @@ textarea:focus {
 .modal-content h3 {
     font-family: var(--font-display);
     font-size: 1.3rem;
+    letter-spacing: -0.015em;
     margin-bottom: 0.75rem;
 }
 

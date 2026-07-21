@@ -41,6 +41,7 @@
     margin: 0;
     font-size: 1.5rem;
     font-weight: 800;
+    letter-spacing: -0.02em;
     color: #fff;
 }
 
@@ -263,6 +264,7 @@
 .plan-sim-fact-value {
     font-size: 1.25rem;
     font-weight: 800;
+    letter-spacing: -0.015em;
     color: var(--color-primary);
 }
 
@@ -306,6 +308,11 @@
 
 .plan-sim-pace-btn:hover {
     color: var(--text-primary);
+}
+
+.plan-sim-pace-btn:active {
+    transform: scale(0.94);
+    transition: var(--transition-press);
 }
 
 .plan-sim-pace-btn.active {

@@ -60,6 +60,7 @@
     font-family: var(--font-display);
     font-size: 2rem;
     font-weight: 700;
+    letter-spacing: -0.02em;
     line-height: 1;
     margin-bottom: 0.25rem;
 }
@@ -86,6 +87,7 @@
     font-family: var(--font-display);
     font-size: 1.75rem;
     font-weight: 700;
+    letter-spacing: -0.02em;
     line-height: 1;
 }
 
@@ -150,6 +152,11 @@
 .calendar-day:hover {
     background-color: rgba(255, 255, 255, 0.06);
     color: var(--text-primary);
+}
+
+.calendar-day:not(.empty):active {
+    transform: scale(0.9);
+    transition: var(--transition-press);
 }
 
 .calendar-day.empty {
@@ -251,6 +258,11 @@
     color: var(--text-primary);
 }
 
+.chart-period-btn:active {
+    transform: scale(0.94);
+    transition: var(--transition-press);
+}
+
 .chart-period-btn.active {
     background: var(--color-primary);
     color: #fff;
@@ -290,6 +302,7 @@
     font-family: var(--font-display);
     font-weight: 700;
     font-size: 1.25rem;
+    letter-spacing: -0.015em;
     color: var(--color-primary);
 }
 

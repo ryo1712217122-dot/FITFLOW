@@ -42,7 +42,7 @@
 }
 
 .danger-card {
-    border-color: rgba(239, 68, 68, 0.2);
+    border-color: color-mix(in srgb, var(--color-danger) 20%, transparent);
 }
 
 .help-body h4 {
@@ -79,6 +79,12 @@
     background: rgba(0, 0, 0, 0.2);
     outline: none;
     -webkit-tap-highlight-color: transparent;
+    transition: var(--transition);
+}
+
+.theme-select-btn:active {
+    transform: scale(0.96);
+    transition: var(--transition-press);
 }
 
 .theme-select-btn.active {

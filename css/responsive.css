@@ -142,4 +142,47 @@
         max-width: 120px;
     }
 }
+
+/* モーション低減設定: スライド・スプリング・弾む動きを止め、状態変化は
+   ごく短いフェードだけ残す(完全に無音にはしない) */
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+
+    html, body {
+        scroll-behavior: auto !important;
+    }
+
+    .btn:active,
+    .btn-icon:active,
+    .nav-item:active,
+    .theme-select-btn:active,
+    .history-sub-tab-btn:active,
+    .chart-period-btn:active,
+    .plan-sim-pace-btn:active,
+    .calendar-day:active,
+    .mood-option:active .mood-btn,
+    .mood-option input:checked + .mood-btn,
+    .btn-primary:hover,
+    .btn-danger:hover,
+    .stat-card:hover .card-icon {
+        transform: none !important;
+    }
+}
+
+/* 半透明素材(モーダルの背景スクリム)を低減設定時はほぼ不透明にし、
+   ぼかしに頼らず視認性を確保する */
+@media (prefers-reduced-transparency: reduce) {
+    .modal {
+        backdrop-filter: none;
+        background-color: rgba(0, 0, 0, 0.85);
+    }
+
+    .sidebar {
+        backdrop-filter: none;
+    }
+}
 } /* end @layer responsive */

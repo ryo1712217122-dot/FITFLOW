@@ -34,7 +34,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    box-shadow: 0 4px 15px rgba(139, 92, 246, 0.4);
+    box-shadow: 0 4px 15px color-mix(in srgb, var(--color-primary) 40%, transparent);
 }
 
 .logo-icon i {
@@ -47,7 +47,7 @@
     font-family: var(--font-display);
     font-size: 1.5rem;
     font-weight: 800;
-    letter-spacing: 1px;
+    letter-spacing: -0.02em;
     background: var(--primary-gradient);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
@@ -85,10 +85,15 @@
     background-color: rgba(255, 255, 255, 0.03);
 }
 
+.nav-item:active {
+    transform: scale(0.97);
+    transition: var(--transition-press);
+}
+
 .nav-item.active {
     background: var(--primary-gradient);
     color: #fff;
-    box-shadow: 0 4px 15px rgba(139, 92, 246, 0.25);
+    box-shadow: 0 4px 15px color-mix(in srgb, var(--color-primary) 25%, transparent);
 }
 
 .nav-item.active i {
@@ -151,6 +156,7 @@ body:not(.light-theme) .light-icon { display: none; }
     font-family: var(--font-display);
     font-weight: 700;
     font-size: 1.75rem;
+    letter-spacing: -0.02em;
     margin-bottom: 0.25rem;
 }
 
