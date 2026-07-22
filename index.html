@@ -16,17 +16,17 @@
     <script src="vendor/lucide-0.469.0.min.js"></script>
     <!-- CSSはカスケードレイヤーで管理。layers.cssの宣言順が優先度を決めるため、
          必ずこれを他のどのスタイルシートよりも先に読み込むこと（<link>の物理的な順番には依存しない）。 -->
-    <link rel="stylesheet" href="css/layers.css?v=1.15.1">
-    <link rel="stylesheet" href="css/tokens.css?v=1.15.1">
-    <link rel="stylesheet" href="css/base.css?v=1.15.1">
-    <link rel="stylesheet" href="css/layout.css?v=1.15.1">
-    <link rel="stylesheet" href="css/components.css?v=1.15.1">
-    <link rel="stylesheet" href="css/pages/record.css?v=1.15.1">
-    <link rel="stylesheet" href="css/pages/dashboard.css?v=1.15.1">
-    <link rel="stylesheet" href="css/pages/plan.css?v=1.15.1">
-    <link rel="stylesheet" href="css/pages/history.css?v=1.15.1">
-    <link rel="stylesheet" href="css/pages/settings.css?v=1.15.1">
-    <link rel="stylesheet" href="css/responsive.css?v=1.15.1">
+    <link rel="stylesheet" href="css/layers.css?v=1.16.0">
+    <link rel="stylesheet" href="css/tokens.css?v=1.16.0">
+    <link rel="stylesheet" href="css/base.css?v=1.16.0">
+    <link rel="stylesheet" href="css/layout.css?v=1.16.0">
+    <link rel="stylesheet" href="css/components.css?v=1.16.0">
+    <link rel="stylesheet" href="css/pages/record.css?v=1.16.0">
+    <link rel="stylesheet" href="css/pages/dashboard.css?v=1.16.0">
+    <link rel="stylesheet" href="css/pages/plan.css?v=1.16.0">
+    <link rel="stylesheet" href="css/pages/history.css?v=1.16.0">
+    <link rel="stylesheet" href="css/pages/settings.css?v=1.16.0">
+    <link rel="stylesheet" href="css/responsive.css?v=1.16.0">
 </head>
 <body>
     <div class="app-container">
@@ -38,7 +38,7 @@
                 </div>
                 <div class="brand-text">
                     <h1>FITFLOW</h1>
-                    <span class="app-version">v1.15.1</span>
+                    <span class="app-version">v1.16.0</span>
                 </div>
             </div>
 
@@ -79,7 +79,7 @@
             <!-- Top bar -->
             <header class="top-bar">
                 <div class="welcome">
-                    <h2 id="greeting-text">こんにちは！<span class="app-version-badge">v1.15.1</span></h2>
+                    <h2 id="greeting-text">こんにちは！<span class="app-version-badge">v1.16.0</span></h2>
                     <p id="date-text">2026年7月3日 金曜日</p>
                 </div>
                 <div class="header-right-controls">
@@ -255,6 +255,105 @@
                                 </button>
                             </div>
                         </form>
+
+                        <form id="meal-form" class="card log-card">
+                            <div class="card-header">
+                                <div class="header-title">
+                                    <i data-lucide="utensils"></i>
+                                    <h3>🍽 食事の記録</h3>
+                                </div>
+                            </div>
+                            <p class="form-hint form-section-intro">その日食べたものの目安カロリーを一食ごとに入力します。外食・間食などカロリーがわかるものは「手動入力」、家で作ってもらった食事など正確な量がわからないものは「目安から選択」を使ってください。</p>
+                            <div class="card-body">
+                                <div class="form-group">
+                                    <label for="meal-date">日付 <span class="required">*</span></label>
+                                    <div class="input-icon-wrapper">
+                                        <i data-lucide="calendar" class="input-icon"></i>
+                                        <input type="date" id="meal-date" required>
+                                    </div>
+                                    <div class="existing-data-hint is-hidden" id="meal-existing-hint">
+                                        <i data-lucide="info"></i>
+                                        <span id="meal-existing-hint-text"></span>
+                                    </div>
+                                </div>
+
+                                <div class="form-group margin-top-1">
+                                    <div class="meal-field-header">
+                                        <label for="meal-breakfast">朝食 (kcal)</label>
+                                        <div class="chart-period-toggle meal-mode-toggle" data-meal="breakfast">
+                                            <button type="button" class="chart-period-btn meal-mode-btn active" data-mode="manual">手動入力</button>
+                                            <button type="button" class="chart-period-btn meal-mode-btn" data-mode="estimate">目安から選択</button>
+                                        </div>
+                                    </div>
+                                    <input type="number" min="0" step="10" id="meal-breakfast" placeholder="0">
+                                    <select id="meal-breakfast-estimate" class="is-hidden margin-top-0-5">
+                                        <option value="">目安を選択してください</option>
+                                        <option value="200">少なめ（約200kcal）</option>
+                                        <option value="400">普通（約400kcal）</option>
+                                        <option value="600">多め（約600kcal）</option>
+                                    </select>
+                                </div>
+
+                                <div class="form-group margin-top-1">
+                                    <div class="meal-field-header">
+                                        <label for="meal-lunch">昼食 (kcal)</label>
+                                        <div class="chart-period-toggle meal-mode-toggle" data-meal="lunch">
+                                            <button type="button" class="chart-period-btn meal-mode-btn active" data-mode="manual">手動入力</button>
+                                            <button type="button" class="chart-period-btn meal-mode-btn" data-mode="estimate">目安から選択</button>
+                                        </div>
+                                    </div>
+                                    <input type="number" min="0" step="10" id="meal-lunch" placeholder="0">
+                                    <select id="meal-lunch-estimate" class="is-hidden margin-top-0-5">
+                                        <option value="">目安を選択してください</option>
+                                        <option value="400">少なめ（約400kcal）</option>
+                                        <option value="650">普通（約650kcal）</option>
+                                        <option value="900">多め（約900kcal）</option>
+                                    </select>
+                                </div>
+
+                                <div class="form-group margin-top-1">
+                                    <div class="meal-field-header">
+                                        <label for="meal-dinner">夕食 (kcal)</label>
+                                        <div class="chart-period-toggle meal-mode-toggle" data-meal="dinner">
+                                            <button type="button" class="chart-period-btn meal-mode-btn active" data-mode="manual">手動入力</button>
+                                            <button type="button" class="chart-period-btn meal-mode-btn" data-mode="estimate">目安から選択</button>
+                                        </div>
+                                    </div>
+                                    <input type="number" min="0" step="10" id="meal-dinner" placeholder="0">
+                                    <select id="meal-dinner-estimate" class="is-hidden margin-top-0-5">
+                                        <option value="">目安を選択してください</option>
+                                        <option value="450">少なめ（約450kcal）</option>
+                                        <option value="700">普通（約700kcal）</option>
+                                        <option value="950">多め（約950kcal）</option>
+                                    </select>
+                                </div>
+
+                                <div class="form-group margin-top-1">
+                                    <div class="meal-field-header">
+                                        <label for="meal-snacks">間食 (kcal)</label>
+                                        <div class="chart-period-toggle meal-mode-toggle" data-meal="snacks">
+                                            <button type="button" class="chart-period-btn meal-mode-btn active" data-mode="manual">手動入力</button>
+                                            <button type="button" class="chart-period-btn meal-mode-btn" data-mode="estimate">目安から選択</button>
+                                        </div>
+                                    </div>
+                                    <input type="number" min="0" step="10" id="meal-snacks" placeholder="0">
+                                    <select id="meal-snacks-estimate" class="is-hidden margin-top-0-5">
+                                        <option value="">目安を選択してください</option>
+                                        <option value="100">少なめ（約100kcal）</option>
+                                        <option value="200">普通（約200kcal）</option>
+                                        <option value="350">多め（約350kcal）</option>
+                                    </select>
+                                </div>
+
+                                <div class="form-hint" id="meal-total-hint">
+                                    ※合計摂取目安: 0 kcal
+                                </div>
+
+                                <button type="submit" class="btn btn-primary btn-full margin-top-1">
+                                    <i data-lucide="check"></i> 食事を記録
+                                </button>
+                            </div>
+                        </form>
                     </div>
                     <!-- Global datalist for popular exercises list suggestions -->
                     <datalist id="popular-exercises">
@@ -319,6 +418,14 @@
                                 <div class="calorie-summary-tile">
                                     <span class="tile-label">本日の総消費（メンテナンス＋運動）</span>
                                     <span class="tile-value" id="today-burned-kcal">0 <span class="unit">kcal</span></span>
+                                </div>
+                                <div class="calorie-summary-tile">
+                                    <span class="tile-label">本日の摂取（食事記録の合計）</span>
+                                    <span class="tile-value" id="today-intake-kcal">0 <span class="unit">kcal</span></span>
+                                </div>
+                                <div class="calorie-summary-tile">
+                                    <span class="tile-label">本日の収支（消費−摂取）</span>
+                                    <span class="tile-value" id="today-calorie-diff-kcal">0 <span class="unit">kcal</span></span>
                                 </div>
                                 <div class="calorie-summary-tile">
                                     <span class="tile-label">メンテナンス基準</span>
@@ -709,26 +816,26 @@
     </div>
 
     <!-- lib/data-utils.js: DOM非依存の純粋関数（node --testでもテストされる）。他のどのjs/*.jsよりも先に読み込む -->
-    <script src="lib/data-utils.js?v=1.15.1"></script>
+    <script src="lib/data-utils.js?v=1.16.0"></script>
     <!-- js/*.js: すべてグローバルスコープに関数を定義するクラシックscript。
          ESモジュールにはしていない（index.htmlをダブルクリックしてfile://で開いても動作させるため）。
          依存関係は読み込み順で解決するので、この順番を変えないこと。 -->
-    <script src="js/config.js?v=1.15.1"></script>
-    <script src="js/state.js?v=1.15.1"></script>
-    <script src="js/utils.js?v=1.15.1"></script>
-    <script src="js/dom.js?v=1.15.1"></script>
-    <script src="js/notifications.js?v=1.15.1"></script>
-    <script src="js/theme.js?v=1.15.1"></script>
-    <script src="js/navigation.js?v=1.15.1"></script>
-    <script src="js/dashboard.js?v=1.15.1"></script>
-    <script src="js/record-form.js?v=1.15.1"></script>
-    <script src="js/history-workouts.js?v=1.15.1"></script>
-    <script src="js/history-logs.js?v=1.15.1"></script>
-    <script src="js/history-nav.js?v=1.15.1"></script>
-    <script src="js/day-summary.js?v=1.15.1"></script>
-    <script src="js/plan.js?v=1.15.1"></script>
-    <script src="js/sync.js?v=1.15.1"></script>
-    <script src="js/backup.js?v=1.15.1"></script>
-    <script src="js/main.js?v=1.15.1"></script>
+    <script src="js/config.js?v=1.16.0"></script>
+    <script src="js/state.js?v=1.16.0"></script>
+    <script src="js/utils.js?v=1.16.0"></script>
+    <script src="js/dom.js?v=1.16.0"></script>
+    <script src="js/notifications.js?v=1.16.0"></script>
+    <script src="js/theme.js?v=1.16.0"></script>
+    <script src="js/navigation.js?v=1.16.0"></script>
+    <script src="js/dashboard.js?v=1.16.0"></script>
+    <script src="js/record-form.js?v=1.16.0"></script>
+    <script src="js/history-workouts.js?v=1.16.0"></script>
+    <script src="js/history-logs.js?v=1.16.0"></script>
+    <script src="js/history-nav.js?v=1.16.0"></script>
+    <script src="js/day-summary.js?v=1.16.0"></script>
+    <script src="js/plan.js?v=1.16.0"></script>
+    <script src="js/sync.js?v=1.16.0"></script>
+    <script src="js/backup.js?v=1.16.0"></script>
+    <script src="js/main.js?v=1.16.0"></script>
 </body>
 </html>

@@ -41,6 +41,10 @@ function initDaySummaryModal() {
                 DOM.weightQuickDate.value = dateStr;
                 syncDailyLogFormWithExistingDataForDate(dateStr);
             }
+            if (DOM.mealDate) {
+                DOM.mealDate.value = dateStr;
+                syncMealFormWithExistingDataForDate(dateStr);
+            }
         });
     }
 }
@@ -75,6 +79,7 @@ function renderDaySummaryBody(dateStr) {
     const dayWorkouts = state.workouts.filter(w => w.date === dateStr);
     const dayCardio = state.cardioLogs.find(c => c.date === dateStr);
     const dayWeight = state.weightLogs.find(w => w.date === dateStr);
+    const dayMeal = state.mealLogs.find(m => m.date === dateStr);
 
     const sections = [];
 
@@ -119,6 +124,24 @@ function renderDaySummaryBody(dateStr) {
             </div>
         `;
         sections.push(daySummarySectionHtml('🏃 有酸素', cardioHtml));
+    }
+
+    if (dayMeal) {
+        const total = sumMealCalories(dayMeal);
+        const mealHtml = `
+            <div class="day-summary-item">
+                <div class="day-summary-item-main">
+                    <div class="day-summary-item-title">合計 ${total} kcal</div>
+                    <div class="day-summary-item-sub">朝食 ${dayMeal.breakfast} ・ 昼食 ${dayMeal.lunch} ・ 夕食 ${dayMeal.dinner} ・ 間食 ${dayMeal.snacks} (kcal)</div>
+                </div>
+                <div class="day-summary-item-actions">
+                    <button type="button" class="btn-icon text-danger btn-day-summary-delete-meal" title="削除する">
+                        <i data-lucide="trash-2"></i>
+                    </button>
+                </div>
+            </div>
+        `;
+        sections.push(daySummarySectionHtml('🍽 食事', mealHtml));
     }
 
     if (dayWeight) {
@@ -181,6 +204,18 @@ function wireDaySummaryActions(dateStr) {
             if (!entry) return;
             showConfirmModal('記録の削除', `「${formatDateJp(dateStr)}」の有酸素記録を削除しますか？`, () => {
                 deleteCardioLog(entry);
+                renderDaySummaryBody(dateStr);
+            });
+        });
+    }
+
+    const deleteMealBtn = DOM.daySummaryBody.querySelector('.btn-day-summary-delete-meal');
+    if (deleteMealBtn) {
+        deleteMealBtn.addEventListener('click', () => {
+            const entry = state.mealLogs.find(m => m.date === dateStr);
+            if (!entry) return;
+            showConfirmModal('記録の削除', `「${formatDateJp(dateStr)}」の食事記録を削除しますか？`, () => {
+                deleteMealLog(entry);
                 renderDaySummaryBody(dateStr);
             });
         });

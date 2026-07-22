@@ -30,6 +30,16 @@
     margin: -0.5rem 0 1rem;
 }
 
+/* 食事の記録: 各食事欄の「手動入力／目安から選択」切り替え(chart-period-toggleを流用) */
+.meal-field-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    margin-bottom: 0.4rem;
+}
+
 /* Mood Selector */
 .mood-selector {
     display: flex;

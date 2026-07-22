@@ -1,6 +1,11 @@
 // FITFLOW - Googleスプレッドシート(GAS)とのクラウド同期
 // ペイロード形式(workouts/weightLogs/cardioLogs/maintenanceCalories/foodLogs/planSettings)は
 // 外部のGoogle Apps Script側と契約があるため変更しないこと。
+// mealLogs(食事記録)は2026-07に追加したキーで、GAS側はまだ永続化していない
+// (対応パッチ: GAS_MEALLOGS_PATCH.md、未適用)。未対応のGASは受け取っても無視するだけなので
+// 送信自体は安全だが、doGetの応答にmealLogsが含まれないため、取り込み側は必ず
+// Array.isArray()で「キーが存在した時だけ」上書きすること(存在しない=空配列と解釈すると、
+// 自動同期のたびにローカルの食事記録が消える。foodLogs機能で実際に起きた不具合と同型)。
 
 let isSyncing = false;
 let syncTimeoutId = null;
@@ -51,7 +56,12 @@ function triggerSync(isSilent = false) {
         // 「特別な飲食」機能はv1.11.0で廃止したが、ペイロード形式はGAS側との契約のため
         // キー自体は空配列のまま残す(キーを消すとGAS側の実装によっては書き込みが失敗しうる)
         foodLogs: [],
-        planSettings: state.planSettings
+        planSettings: state.planSettings,
+        // mealLogs(食事記録: 朝食/昼食/夕食/間食)はGAS側がまだ永続化に対応していない
+        // (対応パッチはGAS_MEALLOGS_PATCH.md参照、未適用)。未対応のGASでもペイロードの
+        // 余分なキーはそのまま無視されるだけで送信自体は失敗しないため、先行して送っておく
+        // (パッチ適用後、再デプロイなしで自動的に保存されるようになる)。
+        mealLogs: state.mealLogs
     };
 
     fetchSheetsWithRetry(state.sheetsUrl, {
@@ -115,6 +125,12 @@ function autoSyncFromCloud() {
             const importedCardio = filterValidCardioLogs(data.cardioLogs || []);
             const importedMaint = data.maintenanceCalories || DEFAULT_MAINTENANCE_CALORIES;
             const importedPlan = data.planSettings || null;
+            // GAS側がmealLogsをまだ永続化していない間は data.mealLogs が丸ごと欠落する
+            // (未対応パッチ: GAS_MEALLOGS_PATCH.md)。他のフィールドと違いdata.mealLogs||[]で
+            // 受けてしまうと、キー欠落=空配列と解釈され、この自動同期のたびにローカルの
+            // 食事記録が空で上書きされて消えてしまう(過去のfoodLogs機能で実際に発生した不具合と同型)。
+            // 配列として実際に返ってきた時だけ取り込み、それ以外はローカルの値を保持する。
+            const importedMeals = Array.isArray(data.mealLogs) ? filterValidMealLogs(data.mealLogs) : null;
 
             if (!validateWorkoutsSchema(importedWorkouts)) {
                 console.warn("☁️ Cloud workouts failed schema validation.");
@@ -137,10 +153,12 @@ function autoSyncFromCloud() {
             state.cardioLogs = importedCardio;
             state.maintenanceCalories = importedMaint;
             if (importedPlan) state.planSettings = importedPlan;
+            if (importedMeals !== null) state.mealLogs = importedMeals;
 
             // Sort
             state.weightLogs.sort((a, b) => new Date(a.date) - new Date(b.date));
             state.cardioLogs.sort((a, b) => new Date(a.date) - new Date(b.date));
+            state.mealLogs.sort((a, b) => new Date(a.date) - new Date(b.date));
 
             // Save locally but keep clean state
             saveData();
@@ -185,6 +203,9 @@ function restoreFromSheets() {
             const importedCardio = filterValidCardioLogs(data.cardioLogs || []);
             const importedMaint = data.maintenanceCalories || DEFAULT_MAINTENANCE_CALORIES;
             const importedPlan = data.planSettings || null;
+            // GAS未対応の間はdata.mealLogsが丸ごと欠落する。手動マージなので副作用は
+            // 起きにくいが、autoSyncFromCloudと挙動を揃え、欠落時は空配列でマージしない
+            const importedMeals = Array.isArray(data.mealLogs) ? filterValidMealLogs(data.mealLogs) : [];
 
             if (!validateWorkoutsSchema(importedWorkouts)) {
                 showToast('受信したデータ形式が不正です');
@@ -195,7 +216,7 @@ function restoreFromSheets() {
                 'クラウドからの復元',
                 `スプレッドシートからデータを取得しました（ワークアウト: ${importedWorkouts.length}件, 体重ログ: ${importedWeights.length}件）。既存データにマージしますか？`,
                 () => {
-                    mergeImportedData(importedWorkouts, importedWeights, importedCardio, importedMaint, importedPlan);
+                    mergeImportedData(importedWorkouts, importedWeights, importedCardio, importedMaint, importedPlan, importedMeals);
                     localStorage.setItem(DIRTY_KEY, 'false'); // Mark clean on manual merge override
                 }
             );
@@ -253,6 +274,20 @@ function normalizeImportedData(data) {
                 c.calories = parseFloat(c.calories) || 0;
             }
             return c;
+        });
+    }
+
+    // Normalize meals
+    if (Array.isArray(data.mealLogs)) {
+        data.mealLogs = data.mealLogs.map(m => {
+            if (m) {
+                m.date = normalizeDate(m.date);
+                m.breakfast = parseFloat(m.breakfast) || 0;
+                m.lunch = parseFloat(m.lunch) || 0;
+                m.dinner = parseFloat(m.dinner) || 0;
+                m.snacks = parseFloat(m.snacks) || 0;
+            }
+            return m;
         });
     }
 
