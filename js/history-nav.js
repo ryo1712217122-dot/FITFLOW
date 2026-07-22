@@ -14,13 +14,15 @@ function initHistoryControls() {
     const tabWorkouts = document.getElementById('history-tab-workouts');
     const tabCardio = document.getElementById('history-tab-cardio');
     const tabWeight = document.getElementById('history-tab-weight');
+    const tabMeals = document.getElementById('history-tab-meals');
     const panelWorkouts = document.getElementById('history-workouts-panel');
     const panelCardio = document.getElementById('history-cardio-panel');
     const panelWeight = document.getElementById('history-weight-panel');
+    const panelMeals = document.getElementById('history-meals-panel');
 
-    if (tabWorkouts && tabCardio && tabWeight && panelWorkouts && panelCardio && panelWeight) {
-        const allTabs = [tabWorkouts, tabCardio, tabWeight];
-        const allPanels = [panelWorkouts, panelCardio, panelWeight];
+    if (tabWorkouts && tabCardio && tabWeight && tabMeals && panelWorkouts && panelCardio && panelWeight && panelMeals) {
+        const allTabs = [tabWorkouts, tabCardio, tabWeight, tabMeals];
+        const allPanels = [panelWorkouts, panelCardio, panelWeight, panelMeals];
         const switchSubTab = (activeTab, activePanel) => {
             allTabs.forEach(t => {
                 t.classList.remove('active');
@@ -48,6 +50,11 @@ function initHistoryControls() {
         tabWeight.addEventListener('click', () => {
             switchSubTab(tabWeight, panelWeight);
             updateWeightHistoryList();
+        });
+
+        tabMeals.addEventListener('click', () => {
+            switchSubTab(tabMeals, panelMeals);
+            updateMealHistoryList();
         });
     }
 }

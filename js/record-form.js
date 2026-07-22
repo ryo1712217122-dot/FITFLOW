@@ -666,31 +666,48 @@ function resetMealFieldModesToManual() {
     });
 }
 
-// 間食欄は「今回追加する分」を入力する欄で、保存済みの間食合計には含まれていない。
-// ヒント表示では保存後の見込み合計(=既存の間食合計＋今回の入力分)を計算する必要がある。
-function getExistingSnacksTotalForCurrentDate() {
-    if (!DOM.mealDate || !DOM.mealDate.value) return 0;
-    const existing = state.mealLogs.find(m => m.date === DOM.mealDate.value);
-    return existing ? (existing.snacks || 0) : 0;
+// フォームで選択中の日付にすでにある食事記録を返す(無ければnull)。
+function getExistingMealForCurrentDate() {
+    if (!DOM.mealDate || !DOM.mealDate.value) return null;
+    return state.mealLogs.find(m => m.date === DOM.mealDate.value) || null;
+}
+
+// 保存後の見込み値(朝食/昼食/夕食は「入力があればその値、空欄なら既存値のまま」、
+// 間食は「既存の合計＋今回の入力分」)をまとめて返す。ヒント表示・保存処理の両方で使う。
+function computeProjectedMealValues(formValues, existingMeal) {
+    const resolveOverwrite = (formVal, key) => formVal !== null ? formVal : (existingMeal ? (existingMeal[key] || 0) : 0);
+    const existingSnacksTotal = existingMeal ? (existingMeal.snacks || 0) : 0;
+    const snacksIncrement = formValues.snacks !== null ? formValues.snacks : 0;
+    return {
+        breakfast: resolveOverwrite(formValues.breakfast, 'breakfast'),
+        lunch: resolveOverwrite(formValues.lunch, 'lunch'),
+        dinner: resolveOverwrite(formValues.dinner, 'dinner'),
+        snacks: existingSnacksTotal + snacksIncrement,
+        existingSnacksTotal,
+        snacksIncrement
+    };
 }
 
 function updateMealTotalHint() {
     if (!DOM.mealTotalHint) return;
     const values = readMealFormValues();
-    const existingSnacksTotal = getExistingSnacksTotalForCurrentDate();
-    const projectedSnacks = existingSnacksTotal + values.snacks;
-    const sum = values.breakfast + values.lunch + values.dinner + projectedSnacks;
-    const snackNote = values.snacks > 0
-        ? `（間食は既存${existingSnacksTotal}kcal + 今回${values.snacks}kcal）`
+    const existingMeal = getExistingMealForCurrentDate();
+    const projected = computeProjectedMealValues(values, existingMeal);
+    const sum = projected.breakfast + projected.lunch + projected.dinner + projected.snacks;
+    const snackNote = projected.snacksIncrement > 0
+        ? `（間食は既存${projected.existingSnacksTotal}kcal + 今回${projected.snacksIncrement}kcal）`
         : '';
     DOM.mealTotalHint.textContent = `※保存後の合計摂取目安: ${sum} kcal${snackNote}`;
 }
 
-// フォームの4つの入力欄を数値として読み取る(空欄は0として扱う)。
+// フォームの4つの入力欄を数値として読み取る。空欄はnull(=未入力・変更しない)を返し、
+// 0や実際の数値と区別する(空欄をここで0に丸めてしまうと、朝食欄などを空欄のまま
+// 保存した時に既存の値が0で上書きされてしまう問題があったため)。
 function readMealFormValues() {
     const readOne = (input) => {
-        const v = input ? parseFloat(input.value) : NaN;
-        return isNaN(v) || v < 0 ? 0 : Math.round(v);
+        if (!input || input.value.trim() === '') return null;
+        const v = parseFloat(input.value);
+        return isNaN(v) || v < 0 ? null : Math.round(v);
     };
     return {
         breakfast: readOne(DOM.mealBreakfast),
@@ -723,7 +740,7 @@ function syncMealFormWithExistingDataForDate(date) {
         if (existingMeal) {
             const total = sumMealCalories(existingMeal);
             DOM.mealExistingHintText.textContent =
-                `この日はすでに食事の記録（合計 ${total} kcal、うち間食 ${existingMeal.snacks || 0} kcal）があります。朝食・昼食・夕食は上書き、間食は入力した分がここに追加されます。`;
+                `この日はすでに食事の記録（合計 ${total} kcal、うち間食 ${existingMeal.snacks || 0} kcal）があります。朝食・昼食・夕食は入力した項目だけ上書きされます（空欄のままなら変更されません）。間食は入力した分がここに追加されます。`;
             DOM.mealExistingHint.classList.remove('is-hidden');
         } else {
             DOM.mealExistingHint.classList.add('is-hidden');
@@ -734,18 +751,20 @@ function syncMealFormWithExistingDataForDate(date) {
 }
 
 // 日付選択(change)時のハンドラ。入力中の未保存の値が破棄されそうな場合は先に確認する。
-// 間食欄は同期直後は常に0(=今回まだ何も追加していない状態)が正しいため、
-// 他の3食と違って「保存済みの値」ではなく「0」と比較する。
+// 朝食/昼食/夕食は「空欄(null)なら未変更」「保存済みの値と同じならこちらも未変更」を
+// どちらも安全とみなす。間食欄は同期直後は常に空欄(=今回まだ何も追加していない状態)が
+// 正しいため、空欄または0(=入力したが加算なし)だけを安全とみなす。
 function handleMealDateChange() {
     const newDate = DOM.mealDate.value;
     const current = readMealFormValues();
-
     const savedForOldDate = lastSyncedMealDate ? state.mealLogs.find(m => m.date === lastSyncedMealDate) : null;
+
+    const fieldUnchanged = (val, key) => val === null || val === (savedForOldDate ? (savedForOldDate[key] || 0) : 0);
     const matchesSaved =
-        current.breakfast === (savedForOldDate ? (savedForOldDate.breakfast || 0) : 0) &&
-        current.lunch === (savedForOldDate ? (savedForOldDate.lunch || 0) : 0) &&
-        current.dinner === (savedForOldDate ? (savedForOldDate.dinner || 0) : 0) &&
-        current.snacks === 0;
+        fieldUnchanged(current.breakfast, 'breakfast') &&
+        fieldUnchanged(current.lunch, 'lunch') &&
+        fieldUnchanged(current.dinner, 'dinner') &&
+        (current.snacks === null || current.snacks === 0);
 
     if (!matchesSaved && !confirm('入力中の食事の記録が保存されていません。日付を変更すると入力内容が失われます。続けますか？')) {
         if (lastSyncedMealDate) DOM.mealDate.value = lastSyncedMealDate;
@@ -754,9 +773,10 @@ function handleMealDateChange() {
     syncMealFormWithExistingDataForDate(newDate);
 }
 
-// パート4: 食事を単独で保存する。朝食/昼食/夕食は同じ日付の既存エントリがあれば上書きするが、
-// 間食だけは時間帯ごとに複数回記録することが多いため、既存の間食合計に今回の入力分を
-// 加算する(「ある時間帯にひとつ登録して、次に登録する時には現在の登録に足し算される」仕様)。
+// パート4: 食事を単独で保存する。朝食/昼食/夕食は「入力した項目だけ上書き、空欄は
+// 既存値のまま維持」、間食は「時間帯ごとに複数回記録することが多いため、既存の間食合計に
+// 今回の入力分を加算」する(「ある時間帯にひとつ登録して、次に登録する時には現在の登録に
+// 足し算される」仕様)。全欄が空欄の場合のみ「入力してください」で弾く。
 function saveMealLog() {
     if (!DOM.mealDate) return;
     const date = DOM.mealDate.value;
@@ -766,17 +786,17 @@ function saveMealLog() {
     }
 
     const values = readMealFormValues();
-    const enteredTotal = values.breakfast + values.lunch + values.dinner + values.snacks;
-    if (enteredTotal <= 0) {
-        showToast('少なくとも1食分のカロリーを入力してください');
+    const hasAnyInput = values.breakfast !== null || values.lunch !== null || values.dinner !== null || values.snacks !== null;
+    if (!hasAnyInput) {
+        showToast('少なくとも1つの項目を入力してください');
         return;
     }
 
     const existingIndex = state.mealLogs.findIndex(m => m.date === date);
     const mealUpdated = existingIndex !== -1;
-    const existingSnacksTotal = mealUpdated ? (state.mealLogs[existingIndex].snacks || 0) : 0;
-    const newSnacksTotal = existingSnacksTotal + values.snacks;
-    const record = { date, breakfast: values.breakfast, lunch: values.lunch, dinner: values.dinner, snacks: newSnacksTotal };
+    const existingMeal = mealUpdated ? state.mealLogs[existingIndex] : null;
+    const projected = computeProjectedMealValues(values, existingMeal);
+    const record = { date, breakfast: projected.breakfast, lunch: projected.lunch, dinner: projected.dinner, snacks: projected.snacks };
     if (mealUpdated) {
         state.mealLogs[existingIndex] = record;
     } else {
@@ -786,13 +806,14 @@ function saveMealLog() {
 
     saveDataAndSync();
 
-    const snackSuffix = values.snacks > 0 ? `（間食 +${values.snacks}kcal）` : '';
+    const snackSuffix = projected.snacksIncrement > 0 ? `（間食 +${projected.snacksIncrement}kcal）` : '';
     showToast(`${mealUpdated ? '食事(更新)' : '食事'}を記録しました！${snackSuffix}`);
 
     // 保存直後のフォームには「たった今保存した内容」が表示され続けるようにする
     syncMealFormWithExistingDataForDate(date);
 
     updateDashboard();
+    updateMealHistoryList();
 }
 
 // 日別サマリーモーダルからの削除で使う(cardio/weightのdelete*Logと同じ形)。
@@ -803,6 +824,7 @@ function deleteMealLog(entry) {
         saveDataAndSync();
         showToast('食事記録を削除しました');
         updateDashboard();
+        updateMealHistoryList();
         if (DOM.mealDate && DOM.mealDate.value === entry.date) {
             syncMealFormWithExistingDataForDate(entry.date);
         }
