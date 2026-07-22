@@ -38,6 +38,17 @@
     gap: 1.25rem;
 }
 
+/* Meal History Card: 修正フォームの4項目(朝食/昼食/夕食/間食)グリッド */
+.meal-history-edit-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+    gap: 0.75rem;
+}
+
+.meal-history-edit-grid .form-group {
+    margin: 0;
+}
+
 /* Workout History Card */
 .workout-history-card {
     border-left: 4px solid var(--color-primary);

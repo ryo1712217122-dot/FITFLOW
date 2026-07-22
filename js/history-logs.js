@@ -210,3 +210,152 @@ function deleteWeightLog(entry) {
         updateWeightHistoryList();
     }
 }
+
+// 食事履歴一覧（「記録する」タブでは日付ごとの上書き/加算しかできないため、
+// 誤って記録した値をあとから直接修正・削除できる管理画面として用意する）
+function updateMealHistoryList() {
+    const container = document.getElementById('meal-history-container');
+    const countSpan = document.getElementById('meal-history-count');
+    if (!container || !countSpan) return;
+
+    const sortedLogs = sortedByDateDesc(state.mealLogs);
+
+    countSpan.textContent = sortedLogs.length;
+    container.innerHTML = '';
+
+    if (sortedLogs.length === 0) {
+        container.innerHTML = `
+            <div class="card empty-state">
+                <i data-lucide="utensils"></i>
+                <p>食事の記録はありません。</p>
+            </div>
+        `;
+        if (window.lucide) lucide.createIcons();
+        return;
+    }
+
+    sortedLogs.forEach((m) => {
+        const card = document.createElement('div');
+        card.classList.add('card', 'history-card', 'meal-history-card');
+
+        const formattedDate = formatDateJp(m.date);
+        const total = sumMealCalories(m);
+
+        card.innerHTML = `
+            <div class="history-card-header">
+                <div class="history-title-area">
+                    <div class="history-title-row">
+                        <span class="history-mood-badge">🍽</span>
+                        <h4>食事記録</h4>
+                    </div>
+                    <div class="history-date-row">
+                        <i data-lucide="calendar"></i>
+                        <span>${formattedDate}</span>
+                    </div>
+                </div>
+                <div class="history-actions">
+                    <button class="btn-icon btn-edit-meal" title="修正する">
+                        <i data-lucide="pencil"></i>
+                    </button>
+                    <button class="btn-icon text-danger btn-delete-meal" title="削除する">
+                        <i data-lucide="trash-2"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div class="meal-history-value-row" style="margin-top: 1rem;">
+                <div style="display: flex; gap: 1.5rem; flex-wrap: wrap;">
+                    <div>
+                        <span class="text-muted" style="font-size: 0.85rem; display: block;">朝食</span>
+                        <span style="font-weight: 600;">${Math.round(m.breakfast)} kcal</span>
+                    </div>
+                    <div>
+                        <span class="text-muted" style="font-size: 0.85rem; display: block;">昼食</span>
+                        <span style="font-weight: 600;">${Math.round(m.lunch)} kcal</span>
+                    </div>
+                    <div>
+                        <span class="text-muted" style="font-size: 0.85rem; display: block;">夕食</span>
+                        <span style="font-weight: 600;">${Math.round(m.dinner)} kcal</span>
+                    </div>
+                    <div>
+                        <span class="text-muted" style="font-size: 0.85rem; display: block;">間食</span>
+                        <span style="font-weight: 600;">${Math.round(m.snacks)} kcal</span>
+                    </div>
+                    <div>
+                        <span class="text-muted" style="font-size: 0.85rem; display: block;">合計</span>
+                        <span style="font-weight: 700; color: var(--color-primary);">${Math.round(total)} kcal</span>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        card.querySelector('.btn-edit-meal').addEventListener('click', () => {
+            const valueRow = card.querySelector('.meal-history-value-row');
+            valueRow.innerHTML = `
+                <div class="meal-history-edit-grid">
+                    <div class="form-group">
+                        <label>朝食</label>
+                        <input type="number" min="0" step="1" class="meal-edit-breakfast" value="${m.breakfast}">
+                    </div>
+                    <div class="form-group">
+                        <label>昼食</label>
+                        <input type="number" min="0" step="1" class="meal-edit-lunch" value="${m.lunch}">
+                    </div>
+                    <div class="form-group">
+                        <label>夕食</label>
+                        <input type="number" min="0" step="1" class="meal-edit-dinner" value="${m.dinner}">
+                    </div>
+                    <div class="form-group">
+                        <label>間食</label>
+                        <input type="number" min="0" step="1" class="meal-edit-snacks" value="${m.snacks}">
+                    </div>
+                </div>
+                <button type="button" class="btn btn-primary btn-sm margin-top-0-5 btn-save-meal-edit">保存</button>
+            `;
+            valueRow.querySelector('.meal-edit-breakfast').focus();
+            valueRow.querySelector('.btn-save-meal-edit').addEventListener('click', () => {
+                const readOne = (selector) => {
+                    const v = parseFloat(valueRow.querySelector(selector).value);
+                    return isNaN(v) || v < 0 ? 0 : Math.round(v);
+                };
+                const newValues = {
+                    breakfast: readOne('.meal-edit-breakfast'),
+                    lunch: readOne('.meal-edit-lunch'),
+                    dinner: readOne('.meal-edit-dinner'),
+                    snacks: readOne('.meal-edit-snacks')
+                };
+                editMealLog(m, newValues);
+            });
+        });
+
+        card.querySelector('.btn-delete-meal').addEventListener('click', () => {
+            showConfirmModal(
+                '記録の削除',
+                `この食事記録（${formattedDate}）を削除しますか？`,
+                () => {
+                    deleteMealLog(m);
+                }
+            );
+        });
+
+        container.appendChild(card);
+    });
+
+    if (window.lucide) {
+        lucide.createIcons();
+    }
+}
+
+// 履歴タブからの修正は「記録する」タブのフォームと違い、4項目とも指定した値で直接上書きする
+// (間食の加算式はあくまで日々の記録用の便宜であり、あとからの修正では
+//  「今表示されている数字を正しい値に直す」という直感的な挙動の方が適切なため)
+function editMealLog(entry, newValues) {
+    const index = state.mealLogs.indexOf(entry);
+    if (index >= 0) {
+        state.mealLogs[index] = { date: entry.date, ...newValues };
+        saveDataAndSync();
+        showToast('食事記録を修正しました');
+        updateDashboard();
+        updateMealHistoryList();
+    }
+}
