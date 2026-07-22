@@ -233,6 +233,10 @@
     margin-top: 0.1rem;
 }
 
+.margin-top-0-5 {
+    margin-top: 0.5rem !important;
+}
+
 .margin-top-1 {
     margin-top: 1rem !important;
 }

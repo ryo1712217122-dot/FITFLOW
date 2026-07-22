@@ -8,6 +8,7 @@ let state = {
     editingWorkoutId: null,
     weightLogs: [],
     cardioLogs: [],
+    mealLogs: [],
     maintenanceCalories: DEFAULT_MAINTENANCE_CALORIES,
     sheetsUrl: '',
     planSettings: null,
@@ -76,6 +77,22 @@ function loadData() {
     // Ensure cardio logs are sorted chronologically
     state.cardioLogs.sort((a, b) => new Date(a.date) - new Date(b.date));
 
+    // 3.5 Meal Logs (摂取カロリーの内訳: 朝食/昼食/夕食/間食。1日1件、cardioLogsと同じ形)
+    const mealData = localStorage.getItem('fitflow_meal_logs');
+    if (mealData) {
+        try {
+            state.mealLogs = JSON.parse(mealData);
+        } catch (e) {
+            console.error('Error parsing meal logs', e);
+            state.mealLogs = [];
+        }
+    } else {
+        state.mealLogs = [];
+    }
+
+    // Ensure meal logs are sorted chronologically
+    state.mealLogs.sort((a, b) => new Date(a.date) - new Date(b.date));
+
     // 4. Maintenance Calories
     const maintData = localStorage.getItem('fitflow_maintenance');
     if (maintData) {
@@ -118,6 +135,7 @@ function saveData() {
     localStorage.setItem('fitflow_workouts', JSON.stringify(state.workouts));
     localStorage.setItem('fitflow_weight_logs', JSON.stringify(state.weightLogs));
     localStorage.setItem('fitflow_cardio_logs', JSON.stringify(state.cardioLogs));
+    localStorage.setItem('fitflow_meal_logs', JSON.stringify(state.mealLogs));
     localStorage.setItem('fitflow_maintenance', state.maintenanceCalories.toString());
     // 注意: fitflow_sheets_url はここでは書き込まない(saveSheetsUrl()に分離している)。
     // saveData()はワークアウト記録などほぼ全ての保存操作のたびに呼ばれるため、

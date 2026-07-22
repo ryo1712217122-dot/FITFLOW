@@ -1,7 +1,8 @@
-// FITFLOW - 「記録する」タブ: トレーニング・有酸素・体重の3つの独立したフォーム。
+// FITFLOW - 「記録する」タブ: トレーニング・有酸素・体重・食事の4つの独立したフォーム。
 //   パート1(#workout-form)     : トレーニング(筋トレ)
 //   パート2(#cardio-form)      : 有酸素(走行距離)
 //   パート3(#weight-quick-form): 体重
+//   パート4(#meal-form)        : 食事(朝食/昼食/夕食/間食の摂取kcal目安)
 // それぞれ一つずつ入力・保存できる(以前の「有酸素を保存して完了」のような合体送信は廃止)。
 //
 // 筋トレの種目は「まとめて最後に一括保存」ではなく、1種目入力し終えるごとに
@@ -68,6 +69,23 @@ function initFormControls() {
         DOM.weightQuickForm.addEventListener('submit', (e) => {
             e.preventDefault();
             saveDailyLog();
+        });
+    }
+
+    // パート4: 食事
+    if (DOM.mealForm) {
+        if (DOM.mealDate) {
+            DOM.mealDate.value = getFitnessDateString();
+            syncMealFormWithExistingDataForDate(DOM.mealDate.value);
+            DOM.mealDate.addEventListener('change', handleMealDateChange);
+        }
+        [DOM.mealBreakfast, DOM.mealLunch, DOM.mealDinner, DOM.mealSnacks].forEach(input => {
+            if (input) input.addEventListener('input', updateMealTotalHint);
+        });
+        initMealModeToggles();
+        DOM.mealForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            saveMealLog();
         });
     }
 }
@@ -564,11 +582,11 @@ function finishTrainingSession() {
 }
 
 // クラウド同期のダウンロード・JSONインポートのマージ・全データ初期化など、
-// state.*(workouts/weightLogs/cardioLogs)が外部要因でまとめて置き換わった直後に呼ぶ。
+// state.*(workouts/weightLogs/cardioLogs/mealLogs)が外部要因でまとめて置き換わった直後に呼ぶ。
 // 「記録する」タブのフォームを表示したまま(古い値のまま)にしておくと、次にどちらかの
 // フォームを送信した時に、今取り込んだばかりのデータを古い値で上書きしてしまう
 // (実際に発生した不具合)。フォームAは進行中のセッションが裏で入れ替わっている可能性が
-// あるため安全にリセットし、フォームBは選択中の日付で最新のstateに合わせ直す。
+// あるため安全にリセットし、他のフォームは選択中の日付で最新のstateに合わせ直す。
 function refreshRecordFormsAfterExternalDataChange() {
     resetWorkoutForm();
 
@@ -577,6 +595,195 @@ function refreshRecordFormsAfterExternalDataChange() {
     }
     if (DOM.weightQuickDate && DOM.weightQuickDate.value) {
         syncDailyLogFormWithExistingDataForDate(DOM.weightQuickDate.value);
+    }
+    if (DOM.mealDate && DOM.mealDate.value) {
+        syncMealFormWithExistingDataForDate(DOM.mealDate.value);
+    }
+}
+
+// ==========================================
+// MEAL (食事: 朝食/昼食/夕食/間食の摂取kcal目安)
+// ==========================================
+
+// 食事キー(breakfast/lunch/dinner/snacks)から対応するnumber input/目安selectのDOM要素を返す。
+function getMealFieldEls(mealKey) {
+    const map = {
+        breakfast: { input: DOM.mealBreakfast, select: DOM.mealBreakfastEstimate },
+        lunch: { input: DOM.mealLunch, select: DOM.mealLunchEstimate },
+        dinner: { input: DOM.mealDinner, select: DOM.mealDinnerEstimate },
+        snacks: { input: DOM.mealSnacks, select: DOM.mealSnacksEstimate }
+    };
+    return map[mealKey] || {};
+}
+
+// 各食事欄の「手動入力」/「目安から選択」切り替え(chart-period-toggleのUIを流用)。
+// 外食・間食などカロリーがわかるものは手動入力、家で作ってもらった食事など正確な量が
+// わからないものは目安(少なめ/普通/多め)から選べるようにする。
+// 保存される実データは常にnumber inputの値(=readMealFormValues/saveMealLogは変更不要。
+// estimate selectはinputへ値を書き込むだけの入力補助であり、別の値として保持しない)。
+function initMealModeToggles() {
+    document.querySelectorAll('.meal-mode-toggle').forEach(toggle => {
+        const mealKey = toggle.getAttribute('data-meal');
+        const els = getMealFieldEls(mealKey);
+        if (!els.input || !els.select) return;
+
+        toggle.querySelectorAll('.meal-mode-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const mode = btn.getAttribute('data-mode');
+                toggle.querySelectorAll('.meal-mode-btn').forEach(b => b.classList.toggle('active', b === btn));
+                if (mode === 'estimate') {
+                    els.input.classList.add('is-hidden');
+                    els.select.classList.remove('is-hidden');
+                } else {
+                    els.select.classList.add('is-hidden');
+                    els.input.classList.remove('is-hidden');
+                    els.input.focus();
+                }
+            });
+        });
+
+        els.select.addEventListener('change', () => {
+            els.input.value = els.select.value;
+            updateMealTotalHint();
+        });
+    });
+}
+
+// 各食事欄の表示モードを「手動入力」に戻す(number inputを表示、目安selectを隠して選択を解除する)。
+// どのモードで入力したかは保存しないため、既存データの反映時には毎回これで初期状態に揃える
+// (前回このフォームで選んでいたモード・選択値を、別の日付に持ち越さないため)。
+function resetMealFieldModesToManual() {
+    document.querySelectorAll('.meal-mode-toggle').forEach(toggle => {
+        const mealKey = toggle.getAttribute('data-meal');
+        const els = getMealFieldEls(mealKey);
+        if (!els.input || !els.select) return;
+        toggle.querySelectorAll('.meal-mode-btn').forEach(b => {
+            b.classList.toggle('active', b.getAttribute('data-mode') === 'manual');
+        });
+        els.select.value = '';
+        els.select.classList.add('is-hidden');
+        els.input.classList.remove('is-hidden');
+    });
+}
+
+function updateMealTotalHint() {
+    if (!DOM.mealTotalHint) return;
+    const total = readMealFormValues();
+    const sum = total.breakfast + total.lunch + total.dinner + total.snacks;
+    DOM.mealTotalHint.textContent = `※合計摂取目安: ${sum} kcal`;
+}
+
+// フォームの4つの入力欄を数値として読み取る(空欄は0として扱う)。
+function readMealFormValues() {
+    const readOne = (input) => {
+        const v = input ? parseFloat(input.value) : NaN;
+        return isNaN(v) || v < 0 ? 0 : Math.round(v);
+    };
+    return {
+        breakfast: readOne(DOM.mealBreakfast),
+        lunch: readOne(DOM.mealLunch),
+        dinner: readOne(DOM.mealDinner),
+        snacks: readOne(DOM.mealSnacks)
+    };
+}
+
+// 直近でフォームに反映した日付。日付変更時の「未保存の入力を破棄してよいか」判定の基準にする。
+let lastSyncedMealDate = null;
+
+// フォームで選択された日付にすでにある食事の記録を、フォームへ反映する。
+// (cardio/weightと同じく、空欄のまま日付だけ変えて誤送信するとその日の記録を消してしまうため)
+function syncMealFormWithExistingDataForDate(date) {
+    if (!date) return;
+
+    resetMealFieldModesToManual();
+
+    const existingMeal = state.mealLogs.find(m => m.date === date);
+    if (DOM.mealBreakfast) DOM.mealBreakfast.value = existingMeal ? existingMeal.breakfast : '';
+    if (DOM.mealLunch) DOM.mealLunch.value = existingMeal ? existingMeal.lunch : '';
+    if (DOM.mealDinner) DOM.mealDinner.value = existingMeal ? existingMeal.dinner : '';
+    if (DOM.mealSnacks) DOM.mealSnacks.value = existingMeal ? existingMeal.snacks : '';
+    updateMealTotalHint();
+
+    if (DOM.mealExistingHint && DOM.mealExistingHintText) {
+        if (existingMeal) {
+            const total = sumMealCalories(existingMeal);
+            DOM.mealExistingHintText.textContent =
+                `この日はすでに食事の記録（合計 ${total} kcal）があります（内容を変更すると上書きされます）`;
+            DOM.mealExistingHint.classList.remove('is-hidden');
+        } else {
+            DOM.mealExistingHint.classList.add('is-hidden');
+        }
+    }
+
+    lastSyncedMealDate = date;
+}
+
+// 日付選択(change)時のハンドラ。入力中の未保存の値が破棄されそうな場合は先に確認する。
+function handleMealDateChange() {
+    const newDate = DOM.mealDate.value;
+    const current = readMealFormValues();
+    const currentIsDirty = current.breakfast > 0 || current.lunch > 0 || current.dinner > 0 || current.snacks > 0;
+
+    const savedForOldDate = lastSyncedMealDate ? state.mealLogs.find(m => m.date === lastSyncedMealDate) : null;
+    const matchesSaved = savedForOldDate &&
+        current.breakfast === (savedForOldDate.breakfast || 0) &&
+        current.lunch === (savedForOldDate.lunch || 0) &&
+        current.dinner === (savedForOldDate.dinner || 0) &&
+        current.snacks === (savedForOldDate.snacks || 0);
+
+    if (currentIsDirty && !matchesSaved && !confirm('入力中の食事の記録が保存されていません。日付を変更すると入力内容が失われます。続けますか？')) {
+        if (lastSyncedMealDate) DOM.mealDate.value = lastSyncedMealDate;
+        return;
+    }
+    syncMealFormWithExistingDataForDate(newDate);
+}
+
+// パート4: 食事を単独で保存する(同じ日付の既存エントリがあれば上書き)。
+function saveMealLog() {
+    if (!DOM.mealDate) return;
+    const date = DOM.mealDate.value;
+    if (!date) {
+        showToast('日付を入力してください');
+        return;
+    }
+
+    const values = readMealFormValues();
+    const total = values.breakfast + values.lunch + values.dinner + values.snacks;
+    if (total <= 0) {
+        showToast('少なくとも1食分のカロリーを入力してください');
+        return;
+    }
+
+    const existingIndex = state.mealLogs.findIndex(m => m.date === date);
+    const mealUpdated = existingIndex !== -1;
+    if (mealUpdated) {
+        state.mealLogs[existingIndex] = { date, ...values };
+    } else {
+        state.mealLogs.push({ date, ...values });
+    }
+    state.mealLogs.sort((a, b) => new Date(a.date) - new Date(b.date));
+
+    saveDataAndSync();
+
+    showToast(`${mealUpdated ? '食事(更新)' : '食事'}を記録しました！`);
+
+    // 保存直後のフォームには「たった今保存した内容」が表示され続けるようにする
+    syncMealFormWithExistingDataForDate(date);
+
+    updateDashboard();
+}
+
+// 日別サマリーモーダルからの削除で使う(cardio/weightのdelete*Logと同じ形)。
+function deleteMealLog(entry) {
+    const index = state.mealLogs.indexOf(entry);
+    if (index >= 0) {
+        state.mealLogs.splice(index, 1);
+        saveDataAndSync();
+        showToast('食事記録を削除しました');
+        updateDashboard();
+        if (DOM.mealDate && DOM.mealDate.value === entry.date) {
+            syncMealFormWithExistingDataForDate(entry.date);
+        }
     }
 }
 

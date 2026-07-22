@@ -44,6 +44,8 @@ const DOM = {
     workoutCalorieHint: document.getElementById('workout-calorie-hint'),
     todayBurnedKcal: document.getElementById('today-burned-kcal'),
     currentMaintenanceKcal: document.getElementById('current-maintenance-kcal'),
+    todayIntakeKcal: document.getElementById('today-intake-kcal'),
+    todayCalorieDiffKcal: document.getElementById('today-calorie-diff-kcal'),
     cardioExistingHint: document.getElementById('cardio-existing-hint'),
     cardioExistingHintText: document.getElementById('cardio-existing-hint-text'),
 
@@ -53,6 +55,21 @@ const DOM = {
     weightQuickVal: document.getElementById('weight-quick-val'),
     dailyLogExistingHint: document.getElementById('daily-log-existing-hint'),
     dailyLogExistingHintText: document.getElementById('daily-log-existing-hint-text'),
+
+    // Meal Logger (食事単独記録フォーム: 朝食/昼食/夕食/間食)
+    mealForm: document.getElementById('meal-form'),
+    mealDate: document.getElementById('meal-date'),
+    mealBreakfast: document.getElementById('meal-breakfast'),
+    mealLunch: document.getElementById('meal-lunch'),
+    mealDinner: document.getElementById('meal-dinner'),
+    mealSnacks: document.getElementById('meal-snacks'),
+    mealBreakfastEstimate: document.getElementById('meal-breakfast-estimate'),
+    mealLunchEstimate: document.getElementById('meal-lunch-estimate'),
+    mealDinnerEstimate: document.getElementById('meal-dinner-estimate'),
+    mealSnacksEstimate: document.getElementById('meal-snacks-estimate'),
+    mealTotalHint: document.getElementById('meal-total-hint'),
+    mealExistingHint: document.getElementById('meal-existing-hint'),
+    mealExistingHintText: document.getElementById('meal-existing-hint-text'),
 
     // History
     searchInput: document.getElementById('search-input'),

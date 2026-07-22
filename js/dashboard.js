@@ -55,6 +55,21 @@ function updateDashboard() {
     if (DOM.todayBurnedKcal) {
         DOM.todayBurnedKcal.innerHTML = `${Math.round(todayTotalExpenditure)} <span class="unit">kcal</span>`;
     }
+
+    // 本日の摂取（食事記録の合計）と収支（消費−摂取）
+    const todayMeal = state.mealLogs.find(m => m.date === todayStr);
+    const todayIntake = sumMealCalories(todayMeal);
+    const todayDiff = computeCalorieDiff(todayIntake, todayTotalExpenditure);
+    if (DOM.todayIntakeKcal) {
+        DOM.todayIntakeKcal.innerHTML = `${todayIntake} <span class="unit">kcal</span>`;
+    }
+    if (DOM.todayCalorieDiffKcal) {
+        const sign = todayDiff > 0 ? '+' : '';
+        DOM.todayCalorieDiffKcal.innerHTML = `${sign}${todayDiff} <span class="unit">kcal</span>`;
+        // 収支が負(摂取超過)の時だけ危険色にする。摂取が未記録(todayIntake===0)の日は
+        // 収支=総消費と一致し常に正になるため、誤って危険表示にはならない
+        DOM.todayCalorieDiffKcal.classList.toggle('tile-value-danger', todayDiff < 0);
+    }
     if (DOM.currentMaintenanceKcal) {
         DOM.currentMaintenanceKcal.innerHTML = `${state.maintenanceCalories} <span class="unit">kcal</span>`;
     }
@@ -523,6 +538,14 @@ function renderCalorieChart() {
     // 表しているため、常に「大幅な消費不足」に見えてしまい誤解を招く。
     const totalExpenditure = datesYmd.map((ymd, i) => maintenanceLimit[i] + activeCalories[i]);
 
+    // 摂取カロリー(食事記録)。未記録の日は0(=線が0に落ちる)のままにする
+    // (「記録していない=食べていない」ではないが、そう見せてしまうより、
+    //  記録した日だけ正しく比較できる方を優先する。将来的には未記録日を欠測扱いにしたい)
+    const intakeCalories = datesYmd.map(ymd => {
+        const meal = state.mealLogs.find(m => m.date === ymd);
+        return sumMealCalories(meal);
+    });
+
     if (state.charts.calorieComparison) {
         try { state.charts.calorieComparison.destroy(); } catch(e){}
     }
@@ -549,6 +572,18 @@ function renderCalorieChart() {
                     fill: false,
                     pointRadius: 0,
                     pointHoverRadius: 0
+                },
+                {
+                    label: '摂取カロリー（食事記録）',
+                    data: intakeCalories,
+                    type: 'line',
+                    borderColor: getComputedStyle(document.documentElement).getPropertyValue('--color-warning').trim() || '#d9a05b',
+                    backgroundColor: 'transparent',
+                    borderWidth: 2,
+                    fill: false,
+                    pointRadius: 3,
+                    pointHoverRadius: 4,
+                    tension: 0.2
                 }
             ]
         },
