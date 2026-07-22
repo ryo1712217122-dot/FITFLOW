@@ -185,9 +185,11 @@ function renderPlanTab(isEditing = false) {
                             <p class="plan-hero-subtitle">実績データに基づく減量シミュレーションとロードマップ</p>
                         </div>
                     </div>
-                    <button class="btn btn-primary btn-sm" id="btn-trigger-plan-edit" type="button">
-                        <i data-lucide="edit"></i> 計画を編集
-                    </button>
+                    <div class="plan-hero-actions">
+                        <button class="btn btn-primary btn-sm" id="btn-trigger-plan-edit" type="button">
+                            <i data-lucide="edit"></i> 計画を編集
+                        </button>
+                    </div>
                 </div>
             </div>
 
@@ -206,7 +208,7 @@ function renderPlanTab(isEditing = false) {
                             <span class="plan-sim-fact-value">${latestWeight.toFixed(1)} kg</span>
                         </div>
                         <div class="plan-sim-fact">
-                            <span class="plan-sim-fact-label">メンテナンスカロリー(推定)</span>
+                            <span class="plan-sim-fact-label">推定TDEE(メンテナンス+運動)</span>
                             <span class="plan-sim-fact-value">${profile.tdee} kcal/日</span>
                             <span class="plan-sim-fact-sub">基礎${profile.bmr}×活動${profile.pal}（${profile.palDesc}・直近30日${profile.workoutsLast30Days}回）${profile.runCount > 0 ? ` + ラン週${profile.runCount}回` : ''}</span>
                         </div>
