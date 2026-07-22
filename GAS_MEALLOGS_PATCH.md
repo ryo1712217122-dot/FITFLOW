@@ -1,8 +1,9 @@
 # GASバックエンド MealLogs 永続化パッチ
 
-> **⏳ 未適用**: アプリ側(js/sync.js)はこのパッチの有無どちらでも壊れないように実装済み
-> (GETレスポンスに `mealLogs` が無い場合、ローカルの食事記録を上書きせず保持する)。
-> 適用するとクラウド同期・複数端末間で食事記録も共有されるようになる。
+> **✅ 適用済み (2026-07-22)**: clasp経由で本番バックエンドに適用・再デプロイ済み
+> (デプロイID同一のまま@4に更新。GETレスポンスに `mealLogs` キーが含まれることを確認済み)。
+> バックエンドコードの正本は gas-scripts リポジトリの `projects/fitflow-api/FITFLOW.js` で管理する。
+> 以下は適用内容の記録。
 
 ## 目的
 
@@ -10,27 +11,22 @@ v1.16.0で追加した「食事の記録」フォーム(朝食/昼食/夕食/間
 既存の Workouts / WeightLogs / CardioLogs と同様にクラウド(スプレッドシート)へ
 バックアップ・復元できるようにするためのパッチ。
 
-現状、アプリは同期時に `mealLogs` をペイロードに含めて送っているが、
-スプレッドシート「FITFLOW api」には対応するシートが無く、**mealLogs はシートに
-保存されない**。バックエンドは未知のペイロードキーを無視するだけなので送信自体は
-失敗しないが、`doGet` のレスポンスにも `mealLogs` が含まれないため、食事記録は
-この端末のlocalStorageにしか残らない(＝この端末を消すと復元できない)。
+適用前は、アプリが同期時に `mealLogs` をペイロードに含めて送っていても、
+スプレッドシート「FITFLOW api」に対応するシートが無く、**mealLogs はシートに
+保存されなかった**。適用後は `doPost` のたびに `MealLogs` シートへ書き込まれ、
+`doGet` のレスポンスにも `mealLogs` が含まれるようになる。
 
-**未適用の間は従来通り動き続ける**(壊れない。食事記録はローカル保存のみ)。
+## 適用内容
 
-## 適用手順
+`gas-scripts` リポジトリの `projects/fitflow-api/FITFLOW.js` に対して、以下を行った
+(`clasp push` → 既存の本番WebデプロイをデプロイID同一のまま新バージョンへ再デプロイ)。
 
-スプレッドシート「FITFLOW api」→ 拡張機能 → Apps Script で
-コンテナバインドのスクリプトエディタを開き、以下を行う
-(gas-scripts リポジトリの `projects/fitflow-api/FITFLOW.js` が正本。
-`clasp push` で反映してもよい)。
-
-1. 下の2関数をそのまま追加する
+1. 下の2関数を追加(`writePlanSettings_`/`readPlanSettings_` の直後)
 2. `doPost` の backup 処理(5. PlanSettings の直後)に1行追加:
    `writeMealLogs_(ss, params.mealLogs);`
 3. `doGet` が返す `result` オブジェクトに1行追加:
    `result.mealLogs = readMealLogs_(ss);`
-   (`result.planSettings = readPlanSettings_(ss);` の直後が自然)
+   (`result.planSettings = readPlanSettings_(ss);` の直後)
 
 ```javascript
 // ==========================================
@@ -75,12 +71,18 @@ function readMealLogs_(ss) {
 
 ## 動作確認
 
-1. パッチ適用後、FITFLOWアプリで「食事の記録」を1件保存し、同期を走らせる
-   (自動同期、または「同期と設定」タブの手動バックアップ)
-2. スプレッドシートに `MealLogs` シートができ、入力した行が入っていることを確認
-3. 別端末(またはlocalStorageをクリアした状態)でアプリを開き、クラウドから
-   自動同期した際に食事記録が復元されることを確認
-4. 既存の Workouts / WeightLogs / CardioLogs / PlanSettings の同期が壊れていないことを確認
+1. 適用直後、デプロイ済みWebアプリの `doGet` エンドポイントに実際にリクエストし、
+   レスポンスJSONに `"mealLogs":[]` が含まれることを確認済み(2026-07-22。
+   まだ`MealLogs`シートを作っていない状態なので空配列)。既存の
+   workouts/weightLogs/cardioLogs/planSettings も従来通り返っており、
+   他のデータへの影響が無いことも合わせて確認した
+   (書き込み側は本番データを壊すリスクを避けるため、テストPOSTは送らず、
+   既存の`writeTable_`を流用しているだけの実装であることのコードレビューで代替した)。
+2. 今後、FITFLOWアプリで「食事の記録」を保存し同期が走ると、
+   スプレッドシートに `MealLogs` シートが自動作成され、入力した行が入るはず
+   (この時点ではまだ未確認。次回の実同期で確認する)。
+3. 別端末(またはlocalStorageをクリアした状態)でアプリを開いた際、クラウドから
+   自動同期で食事記録が復元されることも、同様に次回の実同期で確認する。
 
 ## 備考
 
@@ -88,5 +90,3 @@ function readMealLogs_(ss) {
   なっており、このパッチの適用前後どちらでも安全(未適用時はローカルの食事記録を保持する)。
   これは過去に「特別な飲食」機能(foodLogs)がGAS未対応のまま`data.foodLogs || []`で
   受けてしまい、自動同期のたびにローカル記録が消えていた不具合の再発防止。
-- スクリプトIDを教えてもらえれば `clasp push` での適用まで代行可能
-  (gas-scripts リポジトリと同じ clasp 認証を使用。GAS_PLANSETTINGS_PATCH.md と同じ手順)。
