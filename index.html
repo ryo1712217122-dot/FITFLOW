@@ -263,7 +263,7 @@
                                     <h3>🍽 食事の記録</h3>
                                 </div>
                             </div>
-                            <p class="form-hint form-section-intro">その日食べたものの目安カロリーを一食ごとに入力します。外食・間食などカロリーがわかるものは「手動入力」、家で作ってもらった食事など正確な量がわからないものは「目安から選択」を使ってください。</p>
+                            <p class="form-hint form-section-intro">その日食べたものの目安カロリーを一食ごとに入力します。外食・間食などカロリーがわかるものは「手動入力」、家で作ってもらった食事など正確な量がわからないものは「目安から選択」を使ってください。間食は登録するたびに、その日の間食合計へ加算されます。</p>
                             <div class="card-body">
                                 <div class="form-group">
                                     <label for="meal-date">日付 <span class="required">*</span></label>
@@ -330,7 +330,7 @@
 
                                 <div class="form-group margin-top-1">
                                     <div class="meal-field-header">
-                                        <label for="meal-snacks">間食 (kcal)</label>
+                                        <label for="meal-snacks">間食（今回の分、kcal）</label>
                                         <div class="chart-period-toggle meal-mode-toggle" data-meal="snacks">
                                             <button type="button" class="chart-period-btn meal-mode-btn active" data-mode="manual">手動入力</button>
                                             <button type="button" class="chart-period-btn meal-mode-btn" data-mode="estimate">目安から選択</button>
@@ -343,6 +343,7 @@
                                         <option value="200">普通（約200kcal）</option>
                                         <option value="350">多め（約350kcal）</option>
                                     </select>
+                                    <p class="form-hint">※他の3食と違い、登録するたびにその日の間食合計へ加算されます（3時のおやつ、夜食…と分けて記録できます）。</p>
                                 </div>
 
                                 <div class="form-hint" id="meal-total-hint">
