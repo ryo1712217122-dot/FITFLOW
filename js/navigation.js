@@ -25,6 +25,8 @@ function initNavigation() {
                 updateHistoryList();
                 updateCardioHistoryList();
                 updateWeightHistoryList();
+                updateMealHistoryList();
+                updateCalorieBalanceHistoryList();
             } else if (tabId === 'quick-log') {
                 if (!state.editingWorkoutId) {
                     resetWorkoutForm();
@@ -52,6 +54,6 @@ function initDateTexts() {
     else greeting = 'こんばんは！今日もお疲れ様です🌙';
 
     if (DOM.greetingText) {
-        DOM.greetingText.innerHTML = `${greeting} <span class="app-version-badge">v1.17.1</span>`;
+        DOM.greetingText.innerHTML = `${greeting} <span class="app-version-badge">v1.18.0</span>`;
     }
 }

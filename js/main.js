@@ -21,6 +21,7 @@ document.addEventListener('DOMContentLoaded', () => {
     updateCardioHistoryList();
     updateWeightHistoryList();
     updateMealHistoryList();
+    updateCalorieBalanceHistoryList();
     renderPlanTab();
 
     // 起動時にサイレントにクラウドから同期

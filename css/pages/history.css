@@ -17,6 +17,60 @@
     margin-bottom: 2rem;
 }
 
+/* 種目ごとの自己ベスト一覧 */
+.exercise-pr-card {
+    margin-bottom: 1.5rem;
+}
+
+.exercise-pr-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.exercise-pr-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0.6rem 0.85rem;
+    background-color: rgba(0, 0, 0, 0.15);
+    border-radius: var(--radius-sm);
+}
+
+.exercise-pr-name {
+    font-weight: 600;
+    flex: 1;
+}
+
+.exercise-pr-value {
+    font-family: var(--font-display);
+    font-weight: 700;
+    color: var(--color-primary);
+}
+
+.exercise-pr-date {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    white-space: nowrap;
+}
+
+/* カロリー収支履歴カード: 摂取/消費/収支を横並びで表示 */
+.calorie-balance-value-row {
+    display: flex;
+    gap: 1.5rem;
+    flex-wrap: wrap;
+    margin-top: 1rem;
+}
+
+.calorie-balance-value-row .value-positive {
+    color: var(--color-primary);
+}
+
+.calorie-balance-value-row .value-negative {
+    color: var(--color-danger);
+}
+
 .history-list-header {
     display: flex;
     justify-content: space-between;
