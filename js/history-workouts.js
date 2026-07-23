@@ -39,13 +39,40 @@ function updateHistoryList() {
         });
     }
 
-    // 種目選択・重量推移・週次ボリュームはすべてstate.workouts全体を見るため、
+    // 種目選択・重量推移・週次ボリューム・自己ベスト一覧はすべてstate.workouts全体を見るため、
     // 検索/絞り込みでfilteredが0件になっても更新は継続する
     updateProgressionSelect();
     renderVolumeTrendChart();
+    renderExercisePRList();
     if (window.lucide) {
         lucide.createIcons();
     }
+}
+
+// 種目名ごとの現時点での自己ベスト(最大重量)を一覧表示する。
+// computeExercisePRsが「履歴上どの記録がPR更新の瞬間だったか」を示すのに対し、
+// こちらは「今の自己ベストがいくつか」を種目名でまとめた一覧。
+function renderExercisePRList() {
+    const container = document.getElementById('exercise-pr-list');
+    const emptyMsg = document.getElementById('no-exercise-pr-data');
+    if (!container || !emptyMsg) return;
+
+    const bests = computeExerciseBests(state.workouts);
+
+    if (bests.length === 0) {
+        container.innerHTML = '';
+        emptyMsg.classList.remove('is-hidden');
+        return;
+    }
+    emptyMsg.classList.add('is-hidden');
+
+    container.innerHTML = bests.map(b => `
+        <div class="exercise-pr-item">
+            <span class="exercise-pr-name">${escapeHtml(b.name)}</span>
+            <span class="exercise-pr-value">${b.weight}kg × ${b.reps}回</span>
+            <span class="exercise-pr-date">${formatDateJp(b.date)}</span>
+        </div>
+    `).join('');
 }
 
 function createHistoryCard(workout, prs) {

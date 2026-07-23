@@ -222,6 +222,7 @@ function mergeImportedData(workouts, weights, cardio, maintenance, planSettings 
     updateCardioHistoryList();
     updateWeightHistoryList();
     updateMealHistoryList();
+    updateCalorieBalanceHistoryList();
     renderPlanTab();
     // 「記録する」タブのフォームも取り込んだ最新データに合わせ直す
     // (古い表示のまま送信すると、今取り込んだデータを消してしまうため)
@@ -250,6 +251,7 @@ function clearAllWorkouts() {
     updateCardioHistoryList();
     updateWeightHistoryList();
     updateMealHistoryList();
+    updateCalorieBalanceHistoryList();
     renderPlanTab();
     // 「記録する」タブのフォームに削除済みの値が残ったままにならないようにする
     refreshRecordFormsAfterExternalDataChange();

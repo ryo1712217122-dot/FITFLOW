@@ -170,6 +170,7 @@ function autoSyncFromCloud() {
             updateCardioHistoryList();
             updateWeightHistoryList();
             updateMealHistoryList();
+            updateCalorieBalanceHistoryList();
             renderPlanTab();
             // 「記録する」タブのフォームも取り込んだ最新データに合わせ直す
             // (古い表示のまま送信すると、今取り込んだデータを消してしまうため)

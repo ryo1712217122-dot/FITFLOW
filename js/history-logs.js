@@ -359,3 +359,75 @@ function editMealLog(entry, newValues) {
         updateMealHistoryList();
     }
 }
+
+// カロリー収支履歴一覧: 食事・有酸素・筋トレの記録から日ごとの摂取/消費/収支をまとめて表示する。
+// 元データ(食事/有酸素/筋トレ)を横断して算出する派生ビューのため、ここに編集・削除は無い
+// (直したい場合は元データの各タブで修正すれば、次に開いた時にこの一覧へ反映される)。
+function updateCalorieBalanceHistoryList() {
+    const container = document.getElementById('calorie-balance-history-container');
+    const countSpan = document.getElementById('calorie-balance-history-count');
+    if (!container || !countSpan) return;
+
+    const balances = computeDailyCalorieBalances(
+        state.mealLogs, state.cardioLogs, state.workouts, state.maintenanceCalories, WORKOUT_CALORIES_PER_SET
+    ).slice().reverse(); // 新しい日付順
+
+    countSpan.textContent = balances.length;
+    container.innerHTML = '';
+
+    if (balances.length === 0) {
+        container.innerHTML = `
+            <div class="card empty-state">
+                <i data-lucide="activity"></i>
+                <p>食事・有酸素・筋トレの記録がまだありません。</p>
+            </div>
+        `;
+        if (window.lucide) lucide.createIcons();
+        return;
+    }
+
+    balances.forEach((b) => {
+        const card = document.createElement('div');
+        card.classList.add('card', 'history-card', 'calorie-balance-history-card');
+
+        const formattedDate = formatDateJp(b.date);
+        const diffClass = b.diff < 0 ? 'value-negative' : 'value-positive';
+        const diffSign = b.diff > 0 ? '+' : '';
+
+        card.innerHTML = `
+            <div class="history-card-header">
+                <div class="history-title-area">
+                    <div class="history-title-row">
+                        <span class="history-mood-badge">⚖️</span>
+                        <h4>カロリー収支</h4>
+                    </div>
+                    <div class="history-date-row">
+                        <i data-lucide="calendar"></i>
+                        <span>${formattedDate}</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="calorie-balance-value-row">
+                <div>
+                    <span class="text-muted" style="font-size: 0.85rem; display: block;">摂取</span>
+                    <span style="font-weight: 600;">${Math.round(b.intake)} kcal</span>
+                </div>
+                <div>
+                    <span class="text-muted" style="font-size: 0.85rem; display: block;">消費</span>
+                    <span style="font-weight: 600;">${Math.round(b.expenditure)} kcal</span>
+                </div>
+                <div>
+                    <span class="text-muted" style="font-size: 0.85rem; display: block;">収支(消費-摂取)</span>
+                    <span style="font-weight: 700;" class="${diffClass}">${diffSign}${Math.round(b.diff)} kcal</span>
+                </div>
+            </div>
+        `;
+
+        container.appendChild(card);
+    });
+
+    if (window.lucide) {
+        lucide.createIcons();
+    }
+}
