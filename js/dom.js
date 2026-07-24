@@ -71,6 +71,14 @@ const DOM = {
     mealExistingHint: document.getElementById('meal-existing-hint'),
     mealExistingHintText: document.getElementById('meal-existing-hint-text'),
 
+    // Drinking Logger (飲み会単独記録フォーム: 日付のみ)
+    drinkingForm: document.getElementById('drinking-form'),
+    drinkingDate: document.getElementById('drinking-date'),
+    drinkingSubmitBtn: document.getElementById('drinking-submit-btn'),
+    drinkingExistingHint: document.getElementById('drinking-existing-hint'),
+    drinkingExistingHintText: document.getElementById('drinking-existing-hint-text'),
+    drinkingImpactSummary: document.getElementById('drinking-impact-summary'),
+
     // History
     searchInput: document.getElementById('search-input'),
     filterMood: document.getElementById('filter-mood'),

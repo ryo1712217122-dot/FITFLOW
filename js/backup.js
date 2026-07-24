@@ -74,6 +74,7 @@ function exportWorkouts() {
         weightLogs: state.weightLogs,
         cardioLogs: state.cardioLogs,
         mealLogs: state.mealLogs,
+        drinkingLogs: state.drinkingLogs,
         maintenanceCalories: state.maintenanceCalories,
         planSettings: state.planSettings
     };
@@ -103,6 +104,7 @@ function importWorkouts(event) {
             let importedWeights = [];
             let importedCardio = [];
             let importedMeals = [];
+            let importedDrinking = [];
             let importedMaint = DEFAULT_MAINTENANCE_CALORIES;
             let importedPlan = null;
 
@@ -116,6 +118,7 @@ function importWorkouts(event) {
                 importedWeights = parsed.weightLogs || [];
                 importedCardio = parsed.cardioLogs || [];
                 importedMeals = parsed.mealLogs || [];
+                importedDrinking = parsed.drinkingLogs || [];
                 importedMaint = parsed.maintenanceCalories || DEFAULT_MAINTENANCE_CALORIES;
                 importedPlan = parsed.planSettings || null;
             } else {
@@ -131,12 +134,13 @@ function importWorkouts(event) {
             importedWeights = filterValidWeightLogs(importedWeights);
             importedCardio = filterValidCardioLogs(importedCardio);
             importedMeals = filterValidMealLogs(importedMeals);
+            importedDrinking = filterValidDrinkingLogs(importedDrinking);
 
             showConfirmModal(
                 'データの復元',
                 `ファイルを読み込みました（ワークアウト: ${importedWorkouts.length}件, 体重ログ: ${importedWeights.length}件）。既存データにマージしますか？`,
                 () => {
-                    mergeImportedData(importedWorkouts, importedWeights, importedCardio, importedMaint, importedPlan, importedMeals);
+                    mergeImportedData(importedWorkouts, importedWeights, importedCardio, importedMaint, importedPlan, importedMeals, importedDrinking);
                 }
             );
         } catch (err) {
@@ -152,7 +156,7 @@ function importWorkouts(event) {
 // filterValidWeightLogs, filterValidCardioLogs, sortedByDateDesc, getLatestWeightFromLogs）は
 // lib/data-utils.js に切り出し、index.htmlでこのファイルより先に読み込んでいる
 
-function mergeImportedData(workouts, weights, cardio, maintenance, planSettings = null, meals = []) {
+function mergeImportedData(workouts, weights, cardio, maintenance, planSettings = null, meals = [], drinking = []) {
     // 1. Merge workouts by ID
     // 注意: 条件にtitleを含めないこと。タイトル入力欄はフォームから撤去済みで現行の
     // 記録は全件 title:'' のため、truthy判定にすると復元対象がすべて黙って捨てられる
@@ -203,6 +207,16 @@ function mergeImportedData(workouts, weights, cardio, maintenance, planSettings 
     state.mealLogs = Object.values(mealsMap);
     state.mealLogs.sort((a, b) => new Date(a.date) - new Date(b.date));
 
+    // 3.6 Merge drinking logs by date (「1日1件」の日付集合として和を取る)
+    // 注意: {date}以外のフィールドを将来追加する場合、下のmapはdateしか再構築しないため
+    // 他のフィールドが落ちる。その際はmealsMapのような「日付キー→エントリ」方式に変えること。
+    const drinkingSet = new Set(state.drinkingLogs.map(d => d.date));
+    (drinking || []).forEach(d => {
+        if (d && d.date) drinkingSet.add(d.date);
+    });
+    state.drinkingLogs = Array.from(drinkingSet).map(date => ({ date }));
+    state.drinkingLogs.sort((a, b) => new Date(a.date) - new Date(b.date));
+
     // 4. Update maintenance
     if (typeof maintenance === 'number' && maintenance > 0) {
         state.maintenanceCalories = maintenance;
@@ -234,6 +248,7 @@ function clearAllWorkouts() {
     state.weightLogs = [];
     state.cardioLogs = [];
     state.mealLogs = [];
+    state.drinkingLogs = [];
     state.maintenanceCalories = DEFAULT_MAINTENANCE_CALORIES;
     state.planSettings = Object.assign({}, DEFAULT_PLAN_SETTINGS);
 

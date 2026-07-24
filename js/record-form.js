@@ -1,8 +1,9 @@
-// FITFLOW - 「記録する」タブ: トレーニング・有酸素・体重・食事の4つの独立したフォーム。
+// FITFLOW - 「記録する」タブ: トレーニング・有酸素・体重・食事・飲み会の5つの独立したフォーム。
 //   パート1(#workout-form)     : トレーニング(筋トレ)
 //   パート2(#cardio-form)      : 有酸素(走行距離)
 //   パート3(#weight-quick-form): 体重
 //   パート4(#meal-form)        : 食事(朝食/昼食/夕食/間食の摂取kcal目安)
+//   パート5(#drinking-form)    : 飲み会(日付のみ。体重変化の文脈として体重グラフに重ねる)
 // それぞれ一つずつ入力・保存できる(以前の「有酸素を保存して完了」のような合体送信は廃止)。
 //
 // 筋トレの種目は「まとめて最後に一括保存」ではなく、1種目入力し終えるごとに
@@ -86,6 +87,22 @@ function initFormControls() {
         DOM.mealForm.addEventListener('submit', (e) => {
             e.preventDefault();
             saveMealLog();
+        });
+    }
+
+    // パート5: 飲み会
+    if (DOM.drinkingForm) {
+        if (DOM.drinkingDate) {
+            DOM.drinkingDate.value = getFitnessDateString();
+            syncDrinkingFormWithExistingDataForDate(DOM.drinkingDate.value);
+            // 入力は日付だけで「未保存の入力が失われる」ことがないため、確認なしで同期のみ
+            DOM.drinkingDate.addEventListener('change', () => {
+                syncDrinkingFormWithExistingDataForDate(DOM.drinkingDate.value);
+            });
+        }
+        DOM.drinkingForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            saveDrinkingLog();
         });
     }
 }
@@ -599,6 +616,60 @@ function refreshRecordFormsAfterExternalDataChange() {
     if (DOM.mealDate && DOM.mealDate.value) {
         syncMealFormWithExistingDataForDate(DOM.mealDate.value);
     }
+    if (DOM.drinkingDate && DOM.drinkingDate.value) {
+        syncDrinkingFormWithExistingDataForDate(DOM.drinkingDate.value);
+    }
+}
+
+// ==========================================
+// DRINKING (飲み会: 日付のみの記録)
+// ==========================================
+
+// 選択中の日付がすでに飲み会として記録済みかに応じて、ヒントと送信ボタンの文言を切り替える。
+// 送信は「未記録なら記録、記録済みなら取り消し」のトグル動作(入力欄が日付しかないため、
+// 体重フォームのような上書き保存の概念がなく、削除だけ別UIにするより一箇所で完結させる)。
+function syncDrinkingFormWithExistingDataForDate(date) {
+    const exists = !!date && state.drinkingLogs.some(d => d.date === date);
+
+    if (DOM.drinkingExistingHint && DOM.drinkingExistingHintText) {
+        if (exists) {
+            DOM.drinkingExistingHintText.textContent = 'この日はすでに飲み会として記録済みです（ボタンで記録を取り消せます）';
+            DOM.drinkingExistingHint.classList.remove('is-hidden');
+        } else {
+            DOM.drinkingExistingHint.classList.add('is-hidden');
+        }
+    }
+
+    if (DOM.drinkingSubmitBtn) {
+        DOM.drinkingSubmitBtn.innerHTML = exists
+            ? '<i data-lucide="x"></i> この日の飲み会記録を取り消す'
+            : '<i data-lucide="check"></i> 飲み会を記録';
+        if (window.lucide) lucide.createIcons();
+    }
+}
+
+function saveDrinkingLog() {
+    if (!DOM.drinkingDate) return;
+    const date = DOM.drinkingDate.value;
+    if (!date) {
+        showToast('日付を入力してください');
+        return;
+    }
+
+    const existingIndex = state.drinkingLogs.findIndex(d => d.date === date);
+    if (existingIndex !== -1) {
+        state.drinkingLogs.splice(existingIndex, 1);
+        showToast('飲み会の記録を取り消しました');
+    } else {
+        state.drinkingLogs.push({ date });
+        state.drinkingLogs.sort((a, b) => new Date(a.date) - new Date(b.date));
+        showToast('🍻 飲み会を記録しました！翌日の体重変化に注目です');
+    }
+
+    saveDataAndSync();
+    syncDrinkingFormWithExistingDataForDate(date);
+    updateDashboard();
+    updateWeightHistoryList();
 }
 
 // ==========================================
