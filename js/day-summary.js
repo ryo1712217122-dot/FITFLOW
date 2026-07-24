@@ -80,6 +80,7 @@ function renderDaySummaryBody(dateStr) {
     const dayCardio = state.cardioLogs.find(c => c.date === dateStr);
     const dayWeight = state.weightLogs.find(w => w.date === dateStr);
     const dayMeal = state.mealLogs.find(m => m.date === dateStr);
+    const dayDrinking = state.drinkingLogs.find(d => d.date === dateStr);
 
     const sections = [];
 
@@ -158,6 +159,19 @@ function renderDaySummaryBody(dateStr) {
             </div>
         `;
         sections.push(daySummarySectionHtml('⚖️ 体重', weightHtml));
+    }
+
+    if (dayDrinking) {
+        // 取り消しは「記録する」タブの飲み会フォーム(同じ日付を選んで送信)で行うため、ここは表示のみ
+        const drinkingHtml = `
+            <div class="day-summary-item">
+                <div class="day-summary-item-main">
+                    <div class="day-summary-item-title">この日は飲み会でした</div>
+                    <div class="day-summary-item-sub">取り消しは「記録する」タブの飲み会フォームで同じ日付を選んで行えます</div>
+                </div>
+            </div>
+        `;
+        sections.push(daySummarySectionHtml('🍻 飲み会', drinkingHtml));
     }
 
     if (sections.length === 0) {

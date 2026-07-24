@@ -116,11 +116,14 @@ function updateWeightHistoryList() {
         return;
     }
 
+    const drinkingSet = new Set(state.drinkingLogs.map(d => d.date));
+
     sortedLogs.forEach((w) => {
         const card = document.createElement('div');
         card.classList.add('card', 'history-card', 'weight-history-card');
 
         const formattedDate = formatDateJp(w.date);
+        const isDrinkingDay = drinkingSet.has(w.date);
 
         card.innerHTML = `
             <div class="history-card-header">
@@ -128,6 +131,7 @@ function updateWeightHistoryList() {
                     <div class="history-title-row">
                         <span class="history-mood-badge">⚖️</span>
                         <h4>体重記録</h4>
+                        ${isDrinkingDay ? '<span class="history-mood-badge" title="この日は飲み会でした">🍻</span>' : ''}
                     </div>
                     <div class="history-date-row">
                         <i data-lucide="calendar"></i>

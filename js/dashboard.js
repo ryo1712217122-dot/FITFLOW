@@ -368,6 +368,7 @@ function renderWeightChart() {
             state.charts.weight = null;
         }
         if (DOM.weightChangeSummary) DOM.weightChangeSummary.textContent = '';
+        if (DOM.drinkingImpactSummary) DOM.drinkingImpactSummary.textContent = '';
         return;
     }
 
@@ -400,6 +401,17 @@ function renderWeightChart() {
         }
     }
 
+    // 飲み会翌日の平均体重変化(表示ウィンドウに関わらず全記録から集計)
+    if (DOM.drinkingImpactSummary) {
+        const impact = computeDrinkingWeightImpact(state.weightLogs, state.drinkingLogs);
+        if (impact === null) {
+            DOM.drinkingImpactSummary.textContent = '';
+        } else {
+            const impactSign = impact.avgDelta > 0 ? '+' : '';
+            DOM.drinkingImpactSummary.textContent = `🍻 飲み会翌日は平均 ${impactSign}${impact.avgDelta.toFixed(1)}kg (${impact.count}回)`;
+        }
+    }
+
     const colorPrimary = getComputedStyle(document.documentElement).getPropertyValue('--color-primary').trim() || '#86ac41';
     const colorSecondary = getComputedStyle(document.documentElement).getPropertyValue('--color-secondary').trim() || '#7da3a1';
     const colorWarning = getComputedStyle(document.documentElement).getPropertyValue('--color-warning').trim() || '#d9a05b';
@@ -407,6 +419,11 @@ function renderWeightChart() {
     if (state.charts.weight) {
         try { state.charts.weight.destroy(); } catch(e){}
     }
+
+    // 飲み会だった日は点の色・大きさを変えて目立たせる(飲み会前後の体重変化を追いやすくする)
+    const drinkingSet = new Set(state.drinkingLogs.map(d => d.date));
+    const pointColors = recentLogs.map(l => drinkingSet.has(l.date) ? colorWarning : colorPrimary);
+    const pointRadii = recentLogs.map(l => drinkingSet.has(l.date) ? 6 : 4);
 
     const datasets = [
         {
@@ -417,8 +434,8 @@ function renderWeightChart() {
             borderWidth: 2.5,
             tension: 0.3,
             fill: true,
-            pointBackgroundColor: colorPrimary,
-            pointRadius: 4
+            pointBackgroundColor: pointColors,
+            pointRadius: pointRadii
         },
         {
             label: `${WEIGHT_TREND_WINDOW_DAYS}日移動平均`,
@@ -476,6 +493,15 @@ function renderWeightChart() {
                     display: true,
                     position: 'top',
                     labels: { color: theme.text, font: { size: 10 } }
+                },
+                tooltip: {
+                    callbacks: {
+                        // 飲み会だった日はツールチップにも明示する(点の色だけだと意味が伝わらないため)
+                        afterTitle: (items) => {
+                            const log = items.length > 0 ? recentLogs[items[0].dataIndex] : null;
+                            return log && drinkingSet.has(log.date) ? '🍻 飲み会' : '';
+                        }
+                    }
                 }
             },
             scales: {

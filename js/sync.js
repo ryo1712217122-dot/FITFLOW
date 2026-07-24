@@ -61,7 +61,10 @@ function triggerSync(isSilent = false) {
         // (対応パッチはGAS_MEALLOGS_PATCH.md参照、未適用)。未対応のGASでもペイロードの
         // 余分なキーはそのまま無視されるだけで送信自体は失敗しないため、先行して送っておく
         // (パッチ適用後、再デプロイなしで自動的に保存されるようになる)。
-        mealLogs: state.mealLogs
+        mealLogs: state.mealLogs,
+        // drinkingLogs(飲み会記録)も同様にGAS側が未対応の間は無視されるだけなので先行して送る
+        // (対応パッチ: GAS_DRINKINGLOGS_PATCH.md)。取り込み側の注意点はmealLogsと同じ。
+        drinkingLogs: state.drinkingLogs
     };
 
     fetchSheetsWithRetry(state.sheetsUrl, {
@@ -131,6 +134,8 @@ function autoSyncFromCloud() {
             // 食事記録が空で上書きされて消えてしまう(過去のfoodLogs機能で実際に発生した不具合と同型)。
             // 配列として実際に返ってきた時だけ取り込み、それ以外はローカルの値を保持する。
             const importedMeals = Array.isArray(data.mealLogs) ? filterValidMealLogs(data.mealLogs) : null;
+            // drinkingLogsもmealLogsと同じ理由で「配列として実際に返ってきた時だけ」取り込む
+            const importedDrinking = Array.isArray(data.drinkingLogs) ? filterValidDrinkingLogs(data.drinkingLogs) : null;
 
             if (!validateWorkoutsSchema(importedWorkouts)) {
                 console.warn("☁️ Cloud workouts failed schema validation.");
@@ -154,11 +159,13 @@ function autoSyncFromCloud() {
             state.maintenanceCalories = importedMaint;
             if (importedPlan) state.planSettings = importedPlan;
             if (importedMeals !== null) state.mealLogs = importedMeals;
+            if (importedDrinking !== null) state.drinkingLogs = importedDrinking;
 
             // Sort
             state.weightLogs.sort((a, b) => new Date(a.date) - new Date(b.date));
             state.cardioLogs.sort((a, b) => new Date(a.date) - new Date(b.date));
             state.mealLogs.sort((a, b) => new Date(a.date) - new Date(b.date));
+            state.drinkingLogs.sort((a, b) => new Date(a.date) - new Date(b.date));
 
             // Save locally but keep clean state
             saveData();
@@ -208,6 +215,7 @@ function restoreFromSheets() {
             // GAS未対応の間はdata.mealLogsが丸ごと欠落する。手動マージなので副作用は
             // 起きにくいが、autoSyncFromCloudと挙動を揃え、欠落時は空配列でマージしない
             const importedMeals = Array.isArray(data.mealLogs) ? filterValidMealLogs(data.mealLogs) : [];
+            const importedDrinking = Array.isArray(data.drinkingLogs) ? filterValidDrinkingLogs(data.drinkingLogs) : [];
 
             if (!validateWorkoutsSchema(importedWorkouts)) {
                 showToast('受信したデータ形式が不正です');
@@ -218,7 +226,7 @@ function restoreFromSheets() {
                 'クラウドからの復元',
                 `スプレッドシートからデータを取得しました（ワークアウト: ${importedWorkouts.length}件, 体重ログ: ${importedWeights.length}件）。既存データにマージしますか？`,
                 () => {
-                    mergeImportedData(importedWorkouts, importedWeights, importedCardio, importedMaint, importedPlan, importedMeals);
+                    mergeImportedData(importedWorkouts, importedWeights, importedCardio, importedMaint, importedPlan, importedMeals, importedDrinking);
                     localStorage.setItem(DIRTY_KEY, 'false'); // Mark clean on manual merge override
                 }
             );
@@ -290,6 +298,16 @@ function normalizeImportedData(data) {
                 m.snacks = parseFloat(m.snacks) || 0;
             }
             return m;
+        });
+    }
+
+    // Normalize drinking logs
+    if (Array.isArray(data.drinkingLogs)) {
+        data.drinkingLogs = data.drinkingLogs.map(d => {
+            if (d) {
+                d.date = normalizeDate(d.date);
+            }
+            return d;
         });
     }
 
