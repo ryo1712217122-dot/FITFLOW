@@ -1,16 +1,12 @@
 # GASバックエンド DrinkingLogs 永続化パッチ
 
-> **🟡 コード適用済み・再デプロイ待ち (2026-07-25)**: 下記の内容は gas-scripts リポジトリの
-> `projects/fitflow-api/FITFLOW.js` に反映し `clasp push` 済み。ただし本番WebアプリのデプロイID
-> （AKfycbzvGub8...）は固定バージョン @4 を指したままのため、以下の再デプロイを実行するまで
-> 本番の `/exec` エンドポイントには反映されない:
-> ```bash
-> cd workspace/gas-scripts/projects/fitflow-api
-> clasp deploy --deploymentId AKfycbzvGub8qkPOxTPDcoDbGfiT-U3tdky93ZRMr1SriYq8L4mfPENtZr5iAYyPSJ-xxaZ8 \
->   --description "DrinkingLogs(飲み会記録)の永続化パッチを追加"
-> ```
-> 実行後、doGetレスポンスに `"drinkingLogs"` キーが含まれることを確認すること（下記「動作確認」参照）。
-> 未反映の間もアプリ側は安全に動作する（送信キーは無視され、取り込みは存在チェック済み）。
+> **✅ 適用済み (2026-07-25)**: clasp経由で本番バックエンドに適用・再デプロイ済み
+> （デプロイID AKfycbzvGub8... 同一のまま @5 に更新）。適用直後に本番 `doGet` へ実リクエストし、
+> レスポンスに `"drinkingLogs":[]`（まだDrinkingLogsシート未作成のため空配列）が含まれること、
+> 既存の workouts(12件)/weightLogs(17件)/cardioLogs(12件)/mealLogs(3件)/planSettings/
+> maintenanceCalories が従来通り返ることを確認済み。
+> バックエンドコードの正本は gas-scripts リポジトリの `projects/fitflow-api/FITFLOW.js`（edc576e）。
+> 以下は適用内容の記録。
 
 ## 目的
 
