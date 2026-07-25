@@ -54,6 +54,10 @@ function initDateTexts() {
     else greeting = 'こんばんは！今日もお疲れ様です🌙';
 
     if (DOM.greetingText) {
-        DOM.greetingText.innerHTML = `${greeting} <span class="app-version-badge">v1.18.0</span>`;
+        // バージョンはここにハードコードせず、サイドバーの表記(index.htmlの.app-version)を
+        // 単一ソースとして読む(v1.19.0リリース時、ここの直書きだけ旧版のまま残った実害があった)
+        const versionEl = document.querySelector('.app-version');
+        const versionBadge = versionEl ? ` <span class="app-version-badge">${versionEl.textContent}</span>` : '';
+        DOM.greetingText.innerHTML = `${greeting}${versionBadge}`;
     }
 }
