@@ -369,7 +369,9 @@ function renderPlanTab(isEditing = false) {
                 const s2 = state.planSettings || Object.assign({}, DEFAULT_PLAN_SETTINGS);
                 s2.targetPaceKgMonth = parseFloat(btn.getAttribute('data-pace')) || 2;
                 state.planSettings = s2;
-                saveData();
+                // saveData()だけだとdirtyが立たず、クラウド同期ユーザーは次回起動時の
+                // 自動プル(planSettings丸ごと置換)で選択が黙って巻き戻る。同期にも乗せる
+                saveDataAndSync();
                 renderPlanTab(false);
             });
         });
@@ -385,7 +387,8 @@ function renderPlanTab(isEditing = false) {
                 const s2 = state.planSettings || Object.assign({}, DEFAULT_PLAN_SETTINGS);
                 s2.tdeeSource = btn.getAttribute('data-tdee-source') === 'measured' ? 'measured' : 'estimated';
                 state.planSettings = s2;
-                saveData();
+                // ペース切替と同じくdirtyを立てて同期に乗せる(起動時プルでの巻き戻り防止)
+                saveDataAndSync();
                 renderPlanTab(false);
             });
         });
@@ -495,6 +498,9 @@ function adoptSimulationPlan() {
     s.intakeNormal = sim.intakeNormal;
     s.intakeMilkTea = sim.intakeSweet;
     s.intakeEvent = sim.intakeEvent;
+    // 消費カロリー予算(baseBurn/runBurn)は常に推定式ベース。実測TDEEは「摂取と体重変化の
+    // 差し引き」しか分からず、基礎消費と運動消費への内訳分解ができないため。
+    // 実測TDEE選択時は摂取目標=実測基準・消費予算=推定式基準の混在になる(意図した仕様)
     s.baseBurn = profile.baseBurn;
     if (profile.runCount > 0) {
         s.runBurn = profile.runBurn;
