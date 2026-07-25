@@ -51,6 +51,9 @@ const DEFAULT_PLAN_SETTINGS = {
     weightPlanStartDate: null,
     // シミュレーションで選択中の減量ペース(kg/月)。SIM_PACE_OPTIONSのいずれか
     targetPaceKgMonth: 2,
+    // シミュレーションのTDEEをどちらから取るか: 'estimated'(推定式) / 'measured'(実測=食事記録と
+    // 体重推移からの逆算)。'measured'選択中でもデータ不足時は推定式にフォールバックする
+    tdeeSource: 'estimated',
     // sleepTarget以下の3つは防衛ラインUIの廃止後もクラウド同期ペイロードの互換のためキーだけ残す
     sleepTarget: 6.5,
     snackRule: '間食は「明治おいしいミルク紅茶 450ml」を週2回まで。他の日は完全無糖。夜22時以降の白米大盛り化を阻止し、普通盛りでストップすること。',

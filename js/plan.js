@@ -163,9 +163,10 @@ function renderPlanTab(isEditing = false) {
         const todayStr = getLocalDateString();
         const profile = computeActivityProfile(latestWeight, state.workouts, state.cardioLogs, todayStr);
         const pace = getSimulationPace(s);
+        const tdeeChoice = getEffectiveTdee(profile, s);
         // 通常日の下限にはBMRを渡す(下限に当たると実効アンダーカロリーが目標より小さくなる)
         const sim = computeIntakeTiersForPace(
-            profile.tdee, pace, s.daysNormal, s.daysMilkTea, s.daysEvent,
+            tdeeChoice.tdee, pace, s.daysNormal, s.daysMilkTea, s.daysEvent,
             SIM_INTAKE_DELTA_SWEET, SIM_INTAKE_DELTA_EVENT, profile.bmr);
         const proj1M = projectWeightAfterDays(latestWeight, sim.effectiveDailyDeficit, 30);
         const proj3M = projectWeightAfterDays(latestWeight, sim.effectiveDailyDeficit, 90);
@@ -208,9 +209,13 @@ function renderPlanTab(isEditing = false) {
                             <span class="plan-sim-fact-value">${latestWeight.toFixed(1)} kg</span>
                         </div>
                         <div class="plan-sim-fact">
-                            <span class="plan-sim-fact-label">推定TDEE(メンテナンス+運動)</span>
-                            <span class="plan-sim-fact-value">${profile.tdee} kcal/日</span>
-                            <span class="plan-sim-fact-sub">基礎${profile.bmr}×活動${profile.pal}（${profile.palDesc}・直近30日${profile.workoutsLast30Days}回）${profile.runCount > 0 ? ` + ラン週${profile.runCount}回` : ''}</span>
+                            <span class="plan-sim-fact-label">TDEE(1日の総消費)</span>
+                            <span class="plan-sim-fact-value">${tdeeChoice.tdee} kcal/日</span>
+                            <div class="chart-period-toggle plan-tdee-toggle">
+                                <button type="button" class="chart-period-btn plan-tdee-btn${tdeeChoice.source === 'estimated' ? ' active' : ''}" data-tdee-source="estimated">推定 ${profile.tdee}</button>
+                                <button type="button" class="chart-period-btn plan-tdee-btn${tdeeChoice.source === 'measured' ? ' active' : ''}" data-tdee-source="measured"${tdeeChoice.measured ? '' : ' disabled'}>実測 ${tdeeChoice.measured ? tdeeChoice.measured.tdee : '—'}</button>
+                            </div>
+                            <span class="plan-sim-fact-sub">${tdeeSubtextHtml(tdeeChoice, profile)}</span>
                         </div>
                     </div>
 
@@ -374,6 +379,16 @@ function renderPlanTab(isEditing = false) {
                 adoptSimulationPlan();
             });
         }
+        // TDEEの推定/実測切り替え(ペース切り替えと同じく、選択を保存して再描画)
+        container.querySelectorAll('.plan-tdee-btn:not([disabled])').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const s2 = state.planSettings || Object.assign({}, DEFAULT_PLAN_SETTINGS);
+                s2.tdeeSource = btn.getAttribute('data-tdee-source') === 'measured' ? 'measured' : 'estimated';
+                state.planSettings = s2;
+                saveData();
+                renderPlanTab(false);
+            });
+        });
     }
 
     if (window.lucide) {
@@ -422,6 +437,38 @@ function getSimulationPace(planSettings) {
     return SIM_PACE_OPTIONS.includes(pace) ? pace : 2;
 }
 
+// シミュレーションで使うTDEEを決める。planSettings.tdeeSourceが'measured'なら
+// 実測TDEE(食事記録と体重推移からの逆算)を使い、データ不足でnullの場合は
+// 推定式(computeActivityProfile)に自動フォールバックする。
+// renderPlanTab(表示)とadoptSimulationPlan(計画反映)の両方がこれを通ることで、
+// 画面に見えている数字と計画に書き込まれる数字が必ず一致する。
+function getEffectiveTdee(profile, planSettings) {
+    const measured = computeMeasuredTdee(state.weightLogs, state.mealLogs, getLocalDateString());
+    const wantMeasured = !!(planSettings && planSettings.tdeeSource === 'measured');
+    if (wantMeasured && measured) {
+        return { tdee: measured.tdee, source: 'measured', measured, fellBack: false };
+    }
+    return { tdee: profile.tdee, source: 'estimated', measured, fellBack: wantMeasured && !measured };
+}
+
+// TDEE表示の補足文。推定は内訳、実測は算出根拠(期間・記録数・平均摂取・体重ペース)を示す
+function tdeeSubtextHtml(tdeeChoice, profile) {
+    if (tdeeChoice.source === 'measured') {
+        const m = tdeeChoice.measured;
+        const weeklyKg = Math.round(m.slopeKgPerDay * 7 * 100) / 100;
+        const sign = weeklyKg > 0 ? '+' : '';
+        return `直近${m.windowDays}日の実測: 平均摂取${m.avgIntake}kcal(${m.mealDays}日分)、体重${sign}${weeklyKg}kg/週(${m.weightPoints}点)から逆算`;
+    }
+    const base = `基礎${profile.bmr}×活動${profile.pal}（${profile.palDesc}・直近30日${profile.workoutsLast30Days}回）${profile.runCount > 0 ? ` + ラン週${profile.runCount}回` : ''}`;
+    if (tdeeChoice.fellBack) {
+        return `${base}<br>⚠️ 実測TDEEはデータ不足のため使えません（直近28日に食事記録10日分・体重8点/14日以上が必要）。推定値で計算中`;
+    }
+    if (!tdeeChoice.measured) {
+        return `${base}<br>※食事と体重の記録が貯まると、実測TDEE(あなた個人の実測値)に切り替えられます`;
+    }
+    return base;
+}
+
 // シミュレーション結果を計画へ反映する。旧「実績から再計算」2ボタン(消費予算・ロードマップ)を
 // 統合した唯一の自動更新経路で、以下をまとめて書き込む:
 //   - 目標摂取カロリー3区分(通常・少し甘えた日・イベント日)
@@ -439,9 +486,10 @@ function adoptSimulationPlan() {
 
     const profile = computeActivityProfile(latestWeight, state.workouts, state.cardioLogs, todayStr);
     const pace = getSimulationPace(s);
-    // 表示側(renderPlanTab)と同じ条件で計算する(通常日の下限=BMR)
+    // 表示側(renderPlanTab)と同じ条件で計算する(TDEEの推定/実測選択・通常日の下限=BMR)
+    const tdeeChoice = getEffectiveTdee(profile, s);
     const sim = computeIntakeTiersForPace(
-        profile.tdee, pace, s.daysNormal, s.daysMilkTea, s.daysEvent,
+        tdeeChoice.tdee, pace, s.daysNormal, s.daysMilkTea, s.daysEvent,
         SIM_INTAKE_DELTA_SWEET, SIM_INTAKE_DELTA_EVENT, profile.bmr);
 
     s.intakeNormal = sim.intakeNormal;
@@ -470,7 +518,7 @@ function adoptSimulationPlan() {
     state.planSettings = s;
     saveDataAndSync();
 
-    showToast(`シミュレーション結果を計画に反映しました（通常${sim.intakeNormal} / 甘え${sim.intakeSweet} / イベント${sim.intakeEvent} kcal、月${pace}kgペース）`);
+    showToast(`シミュレーション結果を計画に反映しました（通常${sim.intakeNormal} / 甘え${sim.intakeSweet} / イベント${sim.intakeEvent} kcal、月${pace}kgペース、${tdeeChoice.source === 'measured' ? '実測' : '推定'}TDEE${tdeeChoice.tdee}基準）`);
     renderPlanTab(false);
     updateDashboard();
 }
