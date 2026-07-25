@@ -290,6 +290,17 @@
     color: var(--text-muted);
 }
 
+/* TDEEの推定/実測切り替え(chart-period-toggleの見た目を流用) */
+.plan-tdee-toggle {
+    margin: 0.35rem 0 0.15rem;
+    align-self: flex-start;
+}
+
+.plan-tdee-btn[disabled] {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
 .plan-sim-pace-row {
     display: flex;
     align-items: center;
