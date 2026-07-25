@@ -170,6 +170,13 @@ function renderPlanTab(isEditing = false) {
             SIM_INTAKE_DELTA_SWEET, SIM_INTAKE_DELTA_EVENT, profile.bmr);
         const proj1M = projectWeightAfterDays(latestWeight, sim.effectiveDailyDeficit, 30);
         const proj3M = projectWeightAfterDays(latestWeight, sim.effectiveDailyDeficit, 90);
+        // 通常日が下限(BMR)に張り付くとeffectiveDailyDeficitが0以下になり、予測体重が
+        // 現在体重以上になることがある。"-"を直書きすると "--0.5kg" のような表示になるため、
+        // 増減の符号は差分から求める
+        const formatProjectedDelta = (projected) => {
+            const delta = Math.round((projected - latestWeight) * 10) / 10;
+            return `${delta > 0 ? '+' : ''}${delta.toFixed(1)}kg`;
+        };
         const paceButtonsHtml = SIM_PACE_OPTIONS.map(p => `
             <button type="button" class="plan-sim-pace-btn${p === pace ? ' active' : ''}" data-pace="${p}">月${p}kg</button>
         `).join('');
@@ -251,11 +258,11 @@ function renderPlanTab(isEditing = false) {
                     <div class="plan-summary-box margin-top-1">
                         <div class="plan-summary-box-row">
                             <span>1ヶ月後の予測体重</span>
-                            <span>${proj1M.toFixed(1)} kg（-${(latestWeight - proj1M).toFixed(1)}kg）</span>
+                            <span>${proj1M.toFixed(1)} kg（${formatProjectedDelta(proj1M)}）</span>
                         </div>
                         <div class="plan-summary-box-row">
                             <span>3ヶ月後の予測体重</span>
-                            <span>${proj3M.toFixed(1)} kg（-${(latestWeight - proj3M).toFixed(1)}kg）</span>
+                            <span>${proj3M.toFixed(1)} kg（${formatProjectedDelta(proj3M)}）</span>
                         </div>
                     </div>
 

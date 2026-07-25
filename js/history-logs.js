@@ -37,7 +37,7 @@ function updateCardioHistoryList() {
                     <div class="history-title-row">
                         <span class="history-mood-badge">🏃</span>
                         <h4>ランニング記録</h4>
-                        <span class="category-tag" style="background-color: #86ac41; color: #fff;">有酸素</span>
+                        <span class="category-tag category-tag-cardio">有酸素</span>
                     </div>
                     <div class="history-date-row">
                         <i data-lucide="calendar"></i>
@@ -51,14 +51,14 @@ function updateCardioHistoryList() {
                 </div>
             </div>
 
-            <div style="margin-top: 1rem; display: flex; gap: 2rem;">
+            <div class="cardio-history-value-row">
                 <div>
-                    <span class="text-muted" style="font-size: 0.85rem; display: block;">走行距離</span>
-                    <span style="font-weight: 700; font-size: 1.2rem; color: var(--color-primary);">${c.distance.toFixed(2)} <span style="font-size: 0.85rem; font-weight: normal;">km</span></span>
+                    <span class="history-metric-label">走行距離</span>
+                    <span class="history-metric-value-lg">${c.distance.toFixed(2)} <span class="history-metric-unit">km</span></span>
                 </div>
                 <div>
-                    <span class="text-muted" style="font-size: 0.85rem; display: block;">消費エネルギー</span>
-                    <span style="font-weight: 700; font-size: 1.2rem; color: #86ac41;">${Math.round(c.calories)} <span style="font-size: 0.85rem; font-weight: normal;">kcal</span></span>
+                    <span class="history-metric-label">消費エネルギー</span>
+                    <span class="history-metric-value-lg">${Math.round(c.calories)} <span class="history-metric-unit">kcal</span></span>
                 </div>
             </div>
         `;
@@ -148,18 +148,18 @@ function updateWeightHistoryList() {
                 </div>
             </div>
 
-            <div class="weight-history-value-row" style="margin-top: 1rem;">
-                <span class="text-muted" style="font-size: 0.85rem; display: block;">体重</span>
-                <span class="weight-value-display" style="font-weight: 700; font-size: 1.2rem; color: var(--color-primary);">${w.weight.toFixed(1)} <span style="font-size: 0.85rem; font-weight: normal;">kg</span></span>
+            <div class="weight-history-value-row">
+                <span class="history-metric-label">体重</span>
+                <span class="weight-value-display history-metric-value-lg">${w.weight.toFixed(1)} <span class="history-metric-unit">kg</span></span>
             </div>
         `;
 
         card.querySelector('.btn-edit-weight').addEventListener('click', () => {
             const valueRow = card.querySelector('.weight-history-value-row');
             valueRow.innerHTML = `
-                <span class="text-muted" style="font-size: 0.85rem; display: block;">体重を修正</span>
-                <div style="display: flex; align-items: center; gap: 0.5rem; margin-top: 0.25rem;">
-                    <input type="number" step="0.1" class="weight-edit-input" value="${w.weight}" style="max-width: 120px;">
+                <span class="history-metric-label">体重を修正</span>
+                <div class="weight-edit-row">
+                    <input type="number" step="0.1" class="weight-edit-input" value="${w.weight}">
                     <button type="button" class="btn btn-primary btn-sm btn-save-weight-edit">保存</button>
                 </div>
             `;
@@ -267,27 +267,27 @@ function updateMealHistoryList() {
                 </div>
             </div>
 
-            <div class="meal-history-value-row" style="margin-top: 1rem;">
-                <div style="display: flex; gap: 1.5rem; flex-wrap: wrap;">
+            <div class="meal-history-value-row">
+                <div class="history-metric-row">
                     <div>
-                        <span class="text-muted" style="font-size: 0.85rem; display: block;">朝食</span>
-                        <span style="font-weight: 600;">${Math.round(m.breakfast)} kcal</span>
+                        <span class="history-metric-label">朝食</span>
+                        <span class="history-metric-value">${Math.round(m.breakfast)} kcal</span>
                     </div>
                     <div>
-                        <span class="text-muted" style="font-size: 0.85rem; display: block;">昼食</span>
-                        <span style="font-weight: 600;">${Math.round(m.lunch)} kcal</span>
+                        <span class="history-metric-label">昼食</span>
+                        <span class="history-metric-value">${Math.round(m.lunch)} kcal</span>
                     </div>
                     <div>
-                        <span class="text-muted" style="font-size: 0.85rem; display: block;">夕食</span>
-                        <span style="font-weight: 600;">${Math.round(m.dinner)} kcal</span>
+                        <span class="history-metric-label">夕食</span>
+                        <span class="history-metric-value">${Math.round(m.dinner)} kcal</span>
                     </div>
                     <div>
-                        <span class="text-muted" style="font-size: 0.85rem; display: block;">間食</span>
-                        <span style="font-weight: 600;">${Math.round(m.snacks)} kcal</span>
+                        <span class="history-metric-label">間食</span>
+                        <span class="history-metric-value">${Math.round(m.snacks)} kcal</span>
                     </div>
                     <div>
-                        <span class="text-muted" style="font-size: 0.85rem; display: block;">合計</span>
-                        <span style="font-weight: 700; color: var(--color-primary);">${Math.round(total)} kcal</span>
+                        <span class="history-metric-label">合計</span>
+                        <span class="history-metric-total">${Math.round(total)} kcal</span>
                     </div>
                 </div>
             </div>
@@ -414,16 +414,16 @@ function updateCalorieBalanceHistoryList() {
 
             <div class="calorie-balance-value-row">
                 <div>
-                    <span class="text-muted" style="font-size: 0.85rem; display: block;">摂取</span>
-                    <span style="font-weight: 600;">${Math.round(b.intake)} kcal</span>
+                    <span class="history-metric-label">摂取</span>
+                    <span class="history-metric-value">${Math.round(b.intake)} kcal</span>
                 </div>
                 <div>
-                    <span class="text-muted" style="font-size: 0.85rem; display: block;">消費</span>
-                    <span style="font-weight: 600;">${Math.round(b.expenditure)} kcal</span>
+                    <span class="history-metric-label">消費</span>
+                    <span class="history-metric-value">${Math.round(b.expenditure)} kcal</span>
                 </div>
                 <div>
-                    <span class="text-muted" style="font-size: 0.85rem; display: block;">収支(消費-摂取)</span>
-                    <span style="font-weight: 700;" class="${diffClass}">${diffSign}${Math.round(b.diff)} kcal</span>
+                    <span class="history-metric-label">収支(消費-摂取)</span>
+                    <span class="history-metric-value-bold ${diffClass}">${diffSign}${Math.round(b.diff)} kcal</span>
                 </div>
             </div>
         `;

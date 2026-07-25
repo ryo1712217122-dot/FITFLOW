@@ -31,6 +31,15 @@ function initNavigation() {
                 if (!state.editingWorkoutId) {
                     resetWorkoutForm();
                 }
+            } else if (tabId === 'plan') {
+                // 減量シミュレーション(TDEE・目標摂取カロリー・予測体重)は最新体重と
+                // 直近の記録から毎回算出しているため、開くたびに再計算する。
+                // これをしないと、体重を記録し直してもリロードするまで古い数字のままになる
+                // (ダッシュボードだけ更新され、計画タブが取り残される不具合があった)。
+                // ただし編集フォームを開いている最中は、入力中の値を捨てないよう再描画しない。
+                if (!document.getElementById('btn-save-plan-edit')) {
+                    renderPlanTab(false);
+                }
             }
 
             window.scrollTo({ top: 0, behavior: 'smooth' });

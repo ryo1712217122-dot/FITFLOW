@@ -1,12 +1,19 @@
 // FITFLOW - トースト通知・確認モーダル
 
+// 表示中トーストの自動非表示タイマー。連続してshowToast()した時に、
+// 前回のタイマーが残っていると2つ目のトーストが表示から3秒経たずに消えてしまうため、
+// 新しいトーストを出すたびに前のタイマーを破棄する。
+let toastHideTimeoutId = null;
+
 function showToast(message) {
     if (!DOM.toast) return;
     DOM.toast.querySelector('.toast-message').textContent = message;
     DOM.toast.classList.remove('hidden');
 
-    setTimeout(() => {
+    if (toastHideTimeoutId) clearTimeout(toastHideTimeoutId);
+    toastHideTimeoutId = setTimeout(() => {
         DOM.toast.classList.add('hidden');
+        toastHideTimeoutId = null;
     }, 3000);
 }
 

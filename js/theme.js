@@ -53,6 +53,10 @@ function applyThemePalette(themeId) {
 }
 
 function setThemePalette(themeId) {
+    // applyThemePaletteと同じく未知のIDはAにフォールバックする
+    // (ここだけ素引きしていると THEME_PALETTES[themeId].name でTypeErrorになる)
+    const palette = THEME_PALETTES[themeId] || THEME_PALETTES.A;
+
     localStorage.setItem('fitflow_theme_id', themeId);
     applyThemePalette(themeId);
 
@@ -61,5 +65,5 @@ function setThemePalette(themeId) {
     if (state.charts.weight) renderWeightChart();
     if (state.charts.calorieComparison) renderCalorieChart();
 
-    showToast(`テーマを「${THEME_PALETTES[themeId].name}」に変更しました`);
+    showToast(`テーマを「${palette.name}」に変更しました`);
 }

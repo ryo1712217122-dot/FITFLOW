@@ -297,39 +297,20 @@ function initDashboardControls() {
     }
 }
 
+// メンテナンスカロリー(生活代謝の基準線)を実績から再計算する。
+// 算出式はlib/data-utils.jsのcomputeActivityProfileに一本化している
+// (以前はここにBMR 23×体重・PAL閾値(直近30日で12/8/4回)を別実装で持っており、
+//  計画タブのTDEE推定と同じ意味の値が2箇所で微妙に食い違う状態だった)。
+//
+// 採用するのはprofile.tdeeではなくprofile.baseBurn。
+// state.maintenanceCaloriesは「運動分を含まない基準線」であり、
+// ダッシュボードでは maintenance + 有酸素 + 筋トレ で総消費を組み立てるため、
+// ここに有酸素分を含むtdeeを入れると運動消費を二重計上してしまう
+// (computeActivityProfileも tdee = baseBurn + runBurn×runCount/7 として分解している)。
 function calculateFluidMaintenance() {
     const latestWeight = getLatestWeight();
-
-    // Count workouts in the last 30 days
-    const today = new Date();
-    const thirtyDaysAgo = new Date();
-    thirtyDaysAgo.setDate(today.getDate() - 30);
-
-    const workoutsLast30Days = state.workouts.filter(w => {
-        if (!w.date) return false;
-        const wDate = new Date(w.date + 'T00:00:00');
-        return wDate >= thirtyDaysAgo && wDate <= today;
-    }).length;
-
-    // 1. Basal Metabolic Rate (BMR) = 23 * Weight (kg)
-    const bmr = 23 * latestWeight;
-
-    // 2. Physical Activity Level (PAL) multiplier based on workout frequency in last 30 days
-    let pal = 1.2; // Sedentary
-    let freqDesc = 'ほとんど運動なし (週0回未満)';
-
-    if (workoutsLast30Days >= 12) { // 3+ times a week
-        pal = 1.725; // Very active
-        freqDesc = '活発な運動 (週3回以上)';
-    } else if (workoutsLast30Days >= 8) { // 2 times a week
-        pal = 1.55; // Moderately active
-        freqDesc = '適度な運動 (週2回程度)';
-    } else if (workoutsLast30Days >= 4) { // 1 time a week
-        pal = 1.375; // Lightly active
-        freqDesc = '軽い運動 (週1回程度)';
-    }
-
-    const calculatedCalories = Math.round(bmr * pal);
+    const profile = computeActivityProfile(latestWeight, state.workouts, state.cardioLogs, getLocalDateString());
+    const calculatedCalories = profile.baseBurn;
 
     // Apply to input and state
     if (DOM.maintenanceInput) {
@@ -338,7 +319,7 @@ function calculateFluidMaintenance() {
     state.maintenanceCalories = calculatedCalories;
     saveDataAndSync();
 
-    showToast(`メンテナンスカロリーを再計算しました：${calculatedCalories} kcal (${freqDesc}, 最新体重: ${latestWeight.toFixed(1)}kg)`);
+    showToast(`メンテナンスカロリーを再計算しました：${calculatedCalories} kcal (${profile.palDesc}・直近30日${profile.workoutsLast30Days}回, 最新体重: ${latestWeight.toFixed(1)}kg)`);
     updateDashboard();
 }
 

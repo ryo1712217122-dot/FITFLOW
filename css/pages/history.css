@@ -55,6 +55,71 @@
     white-space: nowrap;
 }
 
+/* 履歴カードの数値表示(有酸素・体重・食事・カロリー収支で共通)。
+   以前は各カードのテンプレートにインラインstyleで直書きされており、
+   同じ見た目の指定が12箇所に散っていた上、色が #86ac41 固定でテーマパレットに
+   追従していなかったため、クラスへ集約している。 */
+.history-metric-label {
+    display: block;
+    font-size: 0.85rem;
+    color: var(--text-muted);
+}
+
+.history-metric-value {
+    font-weight: 600;
+}
+
+.history-metric-value-bold {
+    font-weight: 700;
+}
+
+/* 走行距離・体重など、そのカードの主役になる数値 */
+.history-metric-value-lg {
+    font-weight: 700;
+    font-size: 1.2rem;
+    color: var(--color-primary);
+}
+
+.history-metric-total {
+    font-weight: 700;
+    color: var(--color-primary);
+}
+
+.history-metric-unit {
+    font-size: 0.85rem;
+    font-weight: normal;
+}
+
+/* 数値を横並びに並べる行 */
+.history-metric-row {
+    display: flex;
+    gap: 1.5rem;
+    flex-wrap: wrap;
+}
+
+.cardio-history-value-row {
+    display: flex;
+    gap: 2rem;
+    margin-top: 1rem;
+}
+
+.weight-history-value-row,
+.meal-history-value-row {
+    margin-top: 1rem;
+}
+
+/* 体重履歴のインライン修正フォーム */
+.weight-edit-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 0.25rem;
+}
+
+.weight-edit-input {
+    max-width: 120px;
+}
+
 /* カロリー収支履歴カード: 摂取/消費/収支を横並びで表示 */
 .calorie-balance-value-row {
     display: flex;
@@ -150,6 +215,12 @@
     padding: 0.2rem 0.6rem;
     border-radius: 20px;
     background-color: rgba(255, 255, 255, 0.08);
+}
+
+/* 有酸素カードの「有酸素」タグ。以前は #86ac41 直書きでパレットA固定だった */
+.category-tag-cardio {
+    background-color: var(--color-primary);
+    color: #fff;
 }
 
 .history-date-row {

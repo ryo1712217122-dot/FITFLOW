@@ -87,7 +87,9 @@ function triggerSync(isSilent = false) {
             }
             if (!isSilent) showToast('スプレッドシートへの同期が成功しました！');
         } else {
-            if (!isSilent) showToast('同期エラー: ' + (data.error || '不明なエラー'));
+            // dataがnull/非オブジェクトで返ることもあるため、直接data.errorを読まない
+            // (読むとTypeErrorになり、原因の分からない汎用エラーにすり替わってしまう)
+            if (!isSilent) showToast('同期エラー: ' + ((data && data.error) || '不明なエラー'));
         }
 
         if (pendingSync) {
@@ -203,7 +205,12 @@ function restoreFromSheets() {
         method: 'GET',
         mode: 'cors'
     })
-    .then(res => res.json())
+    // autoSyncFromCloudと同じくHTTPステータスも見る(GASがエラーHTMLを返した場合、
+    // res.json()のパースエラーで「復元に失敗しました」に落ちるが、原因が分かるようにする)
+    .then(res => {
+        if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+        return res.json();
+    })
     .then(data => {
         if (data && !data.error) {
             data = normalizeImportedData(data);
@@ -231,7 +238,8 @@ function restoreFromSheets() {
                 }
             );
         } else {
-            showToast('復元エラー: ' + (data.error || 'データが空です'));
+            // triggerSyncと同じ理由でdata.errorを直接読まない
+            showToast('復元エラー: ' + ((data && data.error) || 'データが空です'));
         }
     })
     .catch(err => {

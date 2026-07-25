@@ -65,8 +65,8 @@ function initFormControls() {
         if (DOM.weightQuickDate) {
             DOM.weightQuickDate.value = getFitnessDateString();
             syncDailyLogFormWithExistingDataForDate(DOM.weightQuickDate.value);
+            DOM.weightQuickDate.addEventListener('change', handleDailyLogDateChange);
         }
-        DOM.weightQuickDate.addEventListener('change', handleDailyLogDateChange);
         DOM.weightQuickForm.addEventListener('submit', (e) => {
             e.preventDefault();
             saveDailyLog();
@@ -746,8 +746,12 @@ function getExistingMealForCurrentDate() {
 // 保存後の見込み値(朝食/昼食/夕食は「入力があればその値、空欄なら既存値のまま」、
 // 間食は「既存の合計＋今回の入力分」)をまとめて返す。ヒント表示・保存処理の両方で使う。
 function computeProjectedMealValues(formValues, existingMeal) {
-    const resolveOverwrite = (formVal, key) => formVal !== null ? formVal : (existingMeal ? (existingMeal[key] || 0) : 0);
-    const existingSnacksTotal = existingMeal ? (existingMeal.snacks || 0) : 0;
+    // 既存値はNumber()で受ける。取り込み境界(filterValidMealLogs)で数値へ正規化済みだが、
+    // 間食の加算が文字列連結("300"+50="30050")になる事故は影響が大きいため、
+    // 計算側でも念のため数値化しておく
+    const readExisting = (key) => existingMeal ? (Number(existingMeal[key]) || 0) : 0;
+    const resolveOverwrite = (formVal, key) => formVal !== null ? formVal : readExisting(key);
+    const existingSnacksTotal = readExisting('snacks');
     const snacksIncrement = formValues.snacks !== null ? formValues.snacks : 0;
     return {
         breakfast: resolveOverwrite(formValues.breakfast, 'breakfast'),

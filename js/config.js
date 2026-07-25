@@ -3,7 +3,6 @@
 
 const DEFAULT_MAINTENANCE_CALORIES = 2000;
 const DEFAULT_WEIGHT_KG = 70.0;
-const TARGET_MONTHLY_WORKOUTS = 12;
 const CARDIO_DAYS_WINDOW = 7;
 // 体重推移グラフの移動平均・週間変化量サマリーで使う日数
 const WEIGHT_TREND_WINDOW_DAYS = 7;
