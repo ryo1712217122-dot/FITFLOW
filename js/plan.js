@@ -2,443 +2,316 @@
 // v2再構成でテンプレートのインラインstyleをすべてcss/pages/plan.cssのクラスに置き換えた。
 // 表示内容・計算式・編集/再計算の挙動は変更していない。
 
-function renderPlanTab(isEditing = false) {
+// 計画タブは「今の実績から計算した現状」を見る画面。表示するのは
+//   現在の体重 / TDEE(推定・実測の切替) / 減量ペース / 目標摂取カロリー / ロードマップ
+// の5つだけに絞っている。
+//
+// 一括の「計画を編集」画面は廃止した(v1.21.0)。ほとんどの値は実績から自動算出でき、
+// 手で決める必要がある少数の設定だけを、その値が表示されている場所の隣に
+// 個別の編集ボタンとして置いている(下のopenInlineEditor)。
+//
+// かつてあった「摂取・消費カロリー目標」カード(保存済みのplanSettingsを並べる表示)も
+// 廃止した。シミュレーションカードと同じ数字を二重に見せているだけだったため。
+// planSettingsの各キー自体はクラウド同期のペイロード互換と体重グラフの予測線のために残る。
+function renderPlanTab() {
     const container = document.getElementById('plan-container');
     if (!container) return;
 
     const s = state.planSettings || DEFAULT_PLAN_SETTINGS;
 
-    // 週平均カロリーの式はlib/data-utils.jsのcomputePlanCalorieAveragesに一本化している
-    const { avgIntake, avgExpenditure, deficit } = computePlanCalorieAverages(s);
-    const weekRunDistance = sumCardioDistanceForWeek(state.cardioLogs, getWeekStartDate(getLocalDateString()));
+    // 減量シミュレーション: 最新体重と直近の記録(筋トレ頻度・有酸素)から
+    // メンテナンスカロリーを推定し、選択中のペースで目標摂取3区分と予測体重を出す
+    const latestWeight = getLatestWeight();
+    const todayStr = getLocalDateString();
+    const profile = computeActivityProfile(latestWeight, state.workouts, state.cardioLogs, todayStr);
+    const pace = getSimulationPace(s);
+    const tdeeChoice = getEffectiveTdee(profile, s);
+    // 通常日の下限にはBMRを渡す(下限に当たると実効アンダーカロリーが目標より小さくなる)
+    const sim = computeIntakeTiersForPace(
+        tdeeChoice.tdee, pace, s.daysNormal, s.daysMilkTea, s.daysEvent,
+        SIM_INTAKE_DELTA_SWEET, SIM_INTAKE_DELTA_EVENT, profile.bmr);
 
-    if (isEditing) {
-        container.innerHTML = `
-            <div class="card plan-hero">
-                <div class="card-body plan-hero-body">
-                    <div class="plan-hero-left">
-                        <div class="plan-hero-icon">
-                            <i data-lucide="target"></i>
-                        </div>
-                        <div>
-                            <h2 class="plan-hero-title">最適化計画の編集</h2>
-                            <p class="plan-hero-subtitle">計画パラメーターをカスタマイズします。</p>
-                        </div>
-                    </div>
-                    <div class="plan-hero-actions">
-                        <button class="btn btn-secondary btn-sm" id="btn-cancel-plan-edit" type="button">キャンセル</button>
-                        <button class="btn btn-primary btn-sm" id="btn-save-plan-edit" type="button">設定を保存</button>
-                    </div>
+    const paceButtonsHtml = SIM_PACE_OPTIONS.map(p => `
+        <button type="button" class="plan-sim-pace-btn${p === pace ? ' active' : ''}" data-pace="${p}">月${p}kg</button>
+    `).join('');
+
+    // ロードマップは保存済みのマイルストーンではなく、選択中のペースからその場で計算する
+    // (ペースを変えた瞬間に全段が追従し、画面の数字と予測が食い違わない)
+    const roadmap = computeWeightRoadmap(latestWeight, sim.effectiveDailyDeficit);
+    const roadmapHtml = roadmap.map(r => `
+        <div class="roadmap-row${r.isMajor ? ' major' : ''}">
+            <span class="roadmap-row-label">${r.label}</span>
+            <span class="roadmap-row-weight">${r.weight.toFixed(1)} kg</span>
+            <span class="roadmap-row-delta">${r.days === 0 ? '—' : `${r.delta > 0 ? '+' : ''}${r.delta.toFixed(1)} kg`}</span>
+        </div>
+    `).join('');
+
+    container.innerHTML = `
+        <div class="card plan-hero compact">
+            <div class="card-body plan-hero-body">
+                <div class="plan-hero-left">
+                    <i data-lucide="target" class="plan-hero-icon-inline"></i>
+                    <h2 class="plan-hero-title">最適化ライフスタイル計画</h2>
                 </div>
             </div>
+        </div>
 
-            <div class="settings-grid">
-                <!-- Calorie Target Edit Card -->
-                <div class="card">
-                    <div class="card-header">
-                        <div class="header-title">
-                            <i data-lucide="flame"></i>
-                            <h3>摂取・消費カロリー目標の設定</h3>
-                        </div>
-                    </div>
-                    <div class="card-body">
-                        <h4 class="plan-section-heading">摂取カロリー目標設定</h4>
-                        <div class="plan-tier-list">
-                            <div class="plan-tier-box tier-normal">
-                                <strong class="plan-tier-title">① 通常日</strong>
-                                <div class="plan-tier-fields">
-                                    <div class="form-group">
-                                        <label class="text-2xs">目標カロリー (kcal)</label>
-                                        <input type="number" id="edit-intake-normal" value="${s.intakeNormal}" class="width-full">
-                                    </div>
-                                    <div class="form-group">
-                                        <label class="text-2xs">週の日数</label>
-                                        <input type="number" id="edit-days-normal" value="${s.daysNormal}" class="width-full">
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="plan-tier-box tier-milktea">
-                                <strong class="plan-tier-title">② 少し甘えた日</strong>
-                                <div class="plan-tier-fields">
-                                    <div class="form-group">
-                                        <label class="text-2xs">目標カロリー (kcal)</label>
-                                        <input type="number" id="edit-intake-milktea" value="${s.intakeMilkTea}" class="width-full">
-                                    </div>
-                                    <div class="form-group">
-                                        <label class="text-2xs">週の日数</label>
-                                        <input type="number" id="edit-days-milktea" value="${s.daysMilkTea}" class="width-full">
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="plan-tier-box tier-event">
-                                <strong class="plan-tier-title">③ イベント日（ラーメン/飲み会）</strong>
-                                <div class="plan-tier-fields">
-                                    <div class="form-group">
-                                        <label class="text-2xs">目標カロリー (kcal)</label>
-                                        <input type="number" id="edit-intake-event" value="${s.intakeEvent}" class="width-full">
-                                    </div>
-                                    <div class="form-group">
-                                        <label class="text-2xs">週の日数</label>
-                                        <input type="number" id="edit-days-event" value="${s.daysEvent}" class="width-full">
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <h4 class="plan-section-heading secondary">消費カロリー目標設定</h4>
-                        <div class="plan-burn-box">
-                            <div class="form-group">
-                                <label class="text-2xs">ベース消費 (kcal/日 - 研究室・バイト含む)</label>
-                                <input type="number" id="edit-base-burn" value="${s.baseBurn}" class="width-full">
-                            </div>
-                            <div class="plan-tier-fields">
-                                <div class="form-group">
-                                    <label class="text-2xs">ラン1回の消費 (kcal)</label>
-                                    <input type="number" id="edit-run-burn" value="${s.runBurn}" class="width-full">
-                                </div>
-                                <div class="form-group">
-                                    <label class="text-2xs">週のラン回数</label>
-                                    <input type="number" id="edit-run-count" value="${s.runCount}" class="width-full">
-                                </div>
-                            </div>
-                            <div class="form-group">
-                                <label class="text-2xs">週間ランニング目標距離 (km)</label>
-                                <input type="number" step="0.1" id="edit-weekly-run-distance-target" value="${s.weeklyRunDistanceTarget}" class="width-full">
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Roadmap Edit Card -->
-                <div class="card">
-                    <div class="card-header">
-                        <div class="header-title">
-                            <i data-lucide="trending-down"></i>
-                            <h3>体重減少ロードマップの設定</h3>
-                        </div>
-                    </div>
-                    <div class="card-body">
-                        <p class="settings-desc">ロードマップ上の各目標体重 (kg) を設定します。計画開始日は保存・再計算では変わりません（変更したい場合のみここで編集）。</p>
-                        <div class="plan-roadmap-edit-list">
-                            <div class="form-group">
-                                <label class="text-xs">計画開始日</label>
-                                <input type="date" id="edit-weight-plan-start-date" value="${s.weightPlanStartDate || ''}" class="width-full">
-                            </div>
-                            <div class="form-group">
-                                <label class="text-xs">開始時体重 (kg)</label>
-                                <input type="number" step="0.1" id="edit-weight-start" value="${s.weightStart}" class="width-full">
-                            </div>
-                            <div class="form-group">
-                                <label class="text-xs">1ヶ月目目標 (kg)</label>
-                                <input type="number" step="0.1" id="edit-weight-1month" value="${s.weight1Month}" class="width-full">
-                            </div>
-                            <div class="form-group">
-                                <label class="text-xs">3ヶ月目目標 (kg)</label>
-                                <input type="number" step="0.1" id="edit-weight-3month" value="${s.weight3Month}" class="width-full">
-                            </div>
-                            <div class="form-group">
-                                <label class="text-xs">最終均衡点目標 (kg)</label>
-                                <input type="number" step="0.1" id="edit-weight-equilibrium" value="${s.weightEquilibrium}" class="width-full">
-                            </div>
-                        </div>
-                    </div>
+        <!-- 減量シミュレーション: 実績→TDEE→減量ペース→目標摂取3区分 -->
+        <div class="card">
+            <div class="card-header">
+                <div class="header-title">
+                    <i data-lucide="calculator"></i>
+                    <h3>減量シミュレーション（現在の体重と記録から算出）</h3>
                 </div>
             </div>
-
-        `;
-
-        // Bind button actions
-        document.getElementById('btn-cancel-plan-edit').addEventListener('click', () => {
-            renderPlanTab(false);
-        });
-        document.getElementById('btn-save-plan-edit').addEventListener('click', () => {
-            savePlanSettings();
-        });
-    } else {
-        // 減量シミュレーション: 最新体重と直近の記録(筋トレ頻度・有酸素)から
-        // メンテナンスカロリーを推定し、選択中のペースで目標摂取3区分と予測体重を出す
-        const latestWeight = getLatestWeight();
-        const todayStr = getLocalDateString();
-        const profile = computeActivityProfile(latestWeight, state.workouts, state.cardioLogs, todayStr);
-        const pace = getSimulationPace(s);
-        const tdeeChoice = getEffectiveTdee(profile, s);
-        // 通常日の下限にはBMRを渡す(下限に当たると実効アンダーカロリーが目標より小さくなる)
-        const sim = computeIntakeTiersForPace(
-            tdeeChoice.tdee, pace, s.daysNormal, s.daysMilkTea, s.daysEvent,
-            SIM_INTAKE_DELTA_SWEET, SIM_INTAKE_DELTA_EVENT, profile.bmr);
-        const proj1M = projectWeightAfterDays(latestWeight, sim.effectiveDailyDeficit, 30);
-        const proj3M = projectWeightAfterDays(latestWeight, sim.effectiveDailyDeficit, 90);
-        // 通常日が下限(BMR)に張り付くとeffectiveDailyDeficitが0以下になり、予測体重が
-        // 現在体重以上になることがある。"-"を直書きすると "--0.5kg" のような表示になるため、
-        // 増減の符号は差分から求める
-        const formatProjectedDelta = (projected) => {
-            const delta = Math.round((projected - latestWeight) * 10) / 10;
-            return `${delta > 0 ? '+' : ''}${delta.toFixed(1)}kg`;
-        };
-        const paceButtonsHtml = SIM_PACE_OPTIONS.map(p => `
-            <button type="button" class="plan-sim-pace-btn${p === pace ? ' active' : ''}" data-pace="${p}">月${p}kg</button>
-        `).join('');
-
-        container.innerHTML = `
-            <div class="card plan-hero">
-                <div class="card-body plan-hero-body">
-                    <div class="plan-hero-left">
-                        <div class="plan-hero-icon">
-                            <i data-lucide="target"></i>
-                        </div>
-                        <div>
-                            <h2 class="plan-hero-title">最適化ライフスタイル計画</h2>
-                            <p class="plan-hero-subtitle">実績データに基づく減量シミュレーションとロードマップ</p>
-                        </div>
+            <div class="card-body">
+                <div class="plan-sim-facts">
+                    <div class="plan-sim-fact">
+                        <span class="plan-sim-fact-label">現在の体重</span>
+                        <span class="plan-sim-fact-value">${latestWeight.toFixed(1)} kg</span>
                     </div>
-                    <div class="plan-hero-actions">
-                        <button class="btn btn-primary btn-sm" id="btn-trigger-plan-edit" type="button">
-                            <i data-lucide="edit"></i> 計画を編集
-                        </button>
+                    <div class="plan-sim-fact">
+                        <span class="plan-sim-fact-label">TDEE(1日の総消費)</span>
+                        <span class="plan-sim-fact-value">${tdeeChoice.tdee} kcal/日</span>
+                        <div class="chart-period-toggle plan-tdee-toggle">
+                            <button type="button" class="chart-period-btn plan-tdee-btn${tdeeChoice.source === 'estimated' ? ' active' : ''}" data-tdee-source="estimated">推定 ${profile.tdee}</button>
+                            <button type="button" class="chart-period-btn plan-tdee-btn${tdeeChoice.source === 'measured' ? ' active' : ''}" data-tdee-source="measured"${tdeeChoice.measured ? '' : ' disabled'}>実測 ${tdeeChoice.measured ? tdeeChoice.measured.tdee : '—'}</button>
+                        </div>
+                        <span class="plan-sim-fact-sub">${tdeeSubtextHtml(tdeeChoice, profile)}</span>
                     </div>
                 </div>
-            </div>
 
-            <!-- 減量シミュレーション: 実績→メンテナンスカロリー→目標摂取3区分→予測体重 -->
-            <div class="card margin-top-1-5">
-                <div class="card-header">
-                    <div class="header-title">
-                        <i data-lucide="calculator"></i>
-                        <h3>減量シミュレーション（現在の体重と記録から算出）</h3>
-                    </div>
+                <div class="plan-sim-pace-row">
+                    <span class="plan-sim-pace-label">減量ペース</span>
+                    <div class="plan-sim-pace-buttons">${paceButtonsHtml}</div>
+                    <span class="plan-sim-fact-sub">アンダーカロリー 約${sim.effectiveDailyDeficit} kcal/日</span>
                 </div>
-                <div class="card-body">
-                    <div class="plan-sim-facts">
-                        <div class="plan-sim-fact">
-                            <span class="plan-sim-fact-label">現在の体重</span>
-                            <span class="plan-sim-fact-value">${latestWeight.toFixed(1)} kg</span>
-                        </div>
-                        <div class="plan-sim-fact">
-                            <span class="plan-sim-fact-label">TDEE(1日の総消費)</span>
-                            <span class="plan-sim-fact-value">${tdeeChoice.tdee} kcal/日</span>
-                            <div class="chart-period-toggle plan-tdee-toggle">
-                                <button type="button" class="chart-period-btn plan-tdee-btn${tdeeChoice.source === 'estimated' ? ' active' : ''}" data-tdee-source="estimated">推定 ${profile.tdee}</button>
-                                <button type="button" class="chart-period-btn plan-tdee-btn${tdeeChoice.source === 'measured' ? ' active' : ''}" data-tdee-source="measured"${tdeeChoice.measured ? '' : ' disabled'}>実測 ${tdeeChoice.measured ? tdeeChoice.measured.tdee : '—'}</button>
-                            </div>
-                            <span class="plan-sim-fact-sub">${tdeeSubtextHtml(tdeeChoice, profile)}</span>
-                        </div>
-                    </div>
+                ${sim.clamped ? `<p class="plan-sim-clamp-warning">⚠️ このペースでは通常日が基礎代謝(${profile.bmr}kcal)を下回るため、下限で調整しています。実際の減量ペースは選択より緩やかになります。</p>` : ''}
 
-                    <div class="plan-sim-pace-row">
-                        <span class="plan-sim-pace-label">減量ペース</span>
-                        <div class="plan-sim-pace-buttons">${paceButtonsHtml}</div>
-                        <span class="plan-sim-fact-sub">アンダーカロリー 約${sim.effectiveDailyDeficit} kcal/日</span>
-                    </div>
-                    ${sim.clamped ? `<p class="plan-sim-clamp-warning">⚠️ このペースでは通常日が基礎代謝(${profile.bmr}kcal)を下回るため、下限で調整しています。実際の減量ペースは選択より緩やかになります。</p>` : ''}
-
-                    <h4 class="plan-section-heading">目標摂取カロリー（週平均 ${sim.effectiveAvgIntake} kcal/日）</h4>
-                    <div class="plan-sub-items">
-                        <div class="plan-tier-box compact tier-normal">
-                            <div class="plan-tier-header">
-                                <span>🌳 通常日（週${s.daysNormal}回）</span>
-                                <span class="plan-tier-kcal">${sim.intakeNormal} kcal</span>
-                            </div>
-                        </div>
-                        <div class="plan-tier-box compact tier-milktea">
-                            <div class="plan-tier-header">
-                                <span>🍰 少し甘えた日（週${s.daysMilkTea}回）</span>
-                                <span class="plan-tier-kcal">${sim.intakeSweet} kcal</span>
-                            </div>
-                        </div>
-                        <div class="plan-tier-box compact tier-event">
-                            <div class="plan-tier-header">
-                                <span>🍺 イベント日（週${s.daysEvent}回）</span>
-                                <span class="plan-tier-kcal">${sim.intakeEvent} kcal</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="plan-summary-box margin-top-1">
-                        <div class="plan-summary-box-row">
-                            <span>1ヶ月後の予測体重</span>
-                            <span>${proj1M.toFixed(1)} kg（${formatProjectedDelta(proj1M)}）</span>
-                        </div>
-                        <div class="plan-summary-box-row">
-                            <span>3ヶ月後の予測体重</span>
-                            <span>${proj3M.toFixed(1)} kg（${formatProjectedDelta(proj3M)}）</span>
-                        </div>
-                    </div>
-
-                    <button class="btn btn-primary btn-full margin-top-1" id="btn-adopt-simulation" type="button" title="目標摂取カロリー・消費予算・体重ロードマップを、このシミュレーション結果で更新します(計画開始日は固定のまま)">
-                        <i data-lucide="check"></i> この結果を計画に反映する
+                <h4 class="plan-section-heading">
+                    目標摂取カロリー（週平均 ${sim.effectiveAvgIntake} kcal/日）
+                    <button type="button" class="plan-inline-edit-btn" id="btn-edit-day-mix" title="週の日数配分を変更する">
+                        <i data-lucide="pencil"></i> 日数配分
                     </button>
+                </h4>
+                <div class="plan-sub-items">
+                    <div class="plan-tier-box compact tier-normal">
+                        <div class="plan-tier-header">
+                            <span>🌳 通常日（週${s.daysNormal}日）</span>
+                            <span class="plan-tier-kcal">${sim.intakeNormal} kcal</span>
+                        </div>
+                    </div>
+                    <div class="plan-tier-box compact tier-milktea">
+                        <div class="plan-tier-header">
+                            <span>🍰 少し甘えた日（週${s.daysMilkTea}日）</span>
+                            <span class="plan-tier-kcal">${sim.intakeSweet} kcal</span>
+                        </div>
+                    </div>
+                    <div class="plan-tier-box compact tier-event">
+                        <div class="plan-tier-header">
+                            <span>🍺 イベント日（週${s.daysEvent}日）</span>
+                            <span class="plan-tier-kcal">${sim.intakeEvent} kcal</span>
+                        </div>
+                    </div>
+                </div>
+                <div id="plan-day-mix-editor" class="plan-inline-editor is-hidden"></div>
+
+                <button class="btn btn-primary btn-full margin-top-1" id="btn-adopt-simulation" type="button" title="目標摂取カロリー・消費予算・体重ロードマップを、このシミュレーション結果で更新します(計画開始日は固定のまま)">
+                    <i data-lucide="check"></i> この結果を計画に反映する
+                </button>
+            </div>
+        </div>
+
+        <!-- 体重ロードマップ: 選択中のペースで2週間ごと3ヶ月分 -->
+        <div class="card margin-top-1-5">
+            <div class="card-header">
+                <div class="header-title">
+                    <i data-lucide="trending-down"></i>
+                    <h3>体重ロードマップ（2週間ごと・3ヶ月先まで）</h3>
+                </div>
+                <button type="button" class="plan-inline-edit-btn" id="btn-edit-plan-start" title="計画開始日を変更する">
+                    <i data-lucide="pencil"></i> 開始日: ${s.weightPlanStartDate ? formatDateJp(s.weightPlanStartDate) : '未設定'}
+                </button>
+            </div>
+            <div class="card-body">
+                <div id="plan-start-editor" class="plan-inline-editor is-hidden"></div>
+                <div class="roadmap-table">
+                    <div class="roadmap-row head">
+                        <span class="roadmap-row-label">時点</span>
+                        <span class="roadmap-row-weight">予測体重</span>
+                        <span class="roadmap-row-delta">現在比</span>
+                    </div>
+                    ${roadmapHtml}
                 </div>
             </div>
+        </div>
+    `;
 
-            <div class="settings-grid">
-                <!-- Calorie Target Card -->
-                <div class="card">
-                    <div class="card-header">
-                        <div class="header-title">
-                            <i data-lucide="flame"></i>
-                            <h3>摂取・消費カロリー目標</h3>
-                        </div>
-                    </div>
-                    <div class="card-body">
-                        <h4 class="plan-section-heading">摂取カロリー予算（週平均 ${avgIntake} kcal/日）</h4>
-                        <div class="plan-sub-items">
-                            <div class="plan-tier-box compact tier-normal">
-                                <div class="plan-tier-header">
-                                    <span>① 通常日（週${s.daysNormal}回）</span>
-                                    <span class="plan-tier-kcal">${s.intakeNormal} kcal</span>
-                                </div>
-                            </div>
-                            <div class="plan-tier-box compact tier-milktea">
-                                <div class="plan-tier-header">
-                                    <span>② 少し甘えた日（週${s.daysMilkTea}回）</span>
-                                    <span class="plan-tier-kcal">${s.intakeMilkTea} kcal</span>
-                                </div>
-                            </div>
-                            <div class="plan-tier-box compact tier-event">
-                                <div class="plan-tier-header">
-                                    <span>③ イベント日（週${s.daysEvent}回）</span>
-                                    <span class="plan-tier-kcal">${s.intakeEvent} kcal</span>
-                                </div>
-                            </div>
-                        </div>
-
-                        <h4 class="plan-section-heading secondary">消費カロリー予算（週平均 ${avgExpenditure} kcal/日）</h4>
-                        <div class="plan-summary-box">
-                            <div class="plan-summary-box-row">
-                                <span>ベース消費（研究室・バイト含む）</span>
-                                <span>${s.baseBurn} kcal/日</span>
-                            </div>
-                            <div class="plan-summary-box-row">
-                                <span>有酸素ラン（週${s.runCount}回 4km走）</span>
-                                <span>+${s.runBurn} kcal/回 (平均 +${Math.round(s.runBurn * s.runCount / 7)} kcal/日)</span>
-                            </div>
-                            <div class="plan-summary-box-row">
-                                <span>週間ランニング目標</span>
-                                <span>${weekRunDistance.toFixed(1)} / ${s.weeklyRunDistanceTarget} km（今週の実績）</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Roadmap Card -->
-                <div class="card">
-                    <div class="card-header">
-                        <div class="header-title">
-                            <i data-lucide="trending-down"></i>
-                            <h3>体重減少目標ロードマップ</h3>
-                        </div>
-                    </div>
-                    <div class="card-body">
-                        <p class="settings-desc">目標アンダーカロリー（約${deficit} kcal/日）による体重変化シミュレーションです。</p>
-                        <div class="roadmap-timeline">
-                            <div class="roadmap-item">
-                                <div class="roadmap-dot"></div>
-                                <strong class="roadmap-label">開始時</strong>
-                                <div class="roadmap-value">${s.weightStart} kg</div>
-                                <p class="roadmap-note">開始日: ${s.weightPlanStartDate ? formatDateJp(s.weightPlanStartDate) : '未設定（計画を保存すると記録されます）'}</p>
-                            </div>
-                            <div class="roadmap-item primary">
-                                <div class="roadmap-dot"></div>
-                                <strong class="roadmap-label">1ヶ月目目標</strong>
-                                <div class="roadmap-value">${s.weight1Month} kg <span class="roadmap-delta">(-${(s.weightStart - s.weight1Month).toFixed(1)}kg)</span></div>
-                                <p class="roadmap-note">食生活の最適化移行期。水分と糖質が抜ける初期減少フェーズ。</p>
-                            </div>
-                            <div class="roadmap-item primary">
-                                <div class="roadmap-dot"></div>
-                                <strong class="roadmap-label">3ヶ月目目標</strong>
-                                <div class="roadmap-value">${s.weight3Month} kg <span class="roadmap-delta">(-${(s.weightStart - s.weight3Month).toFixed(1)}kg)</span></div>
-                                <p class="roadmap-note">総減量幅 ${(s.weightStart - s.weight3Month).toFixed(1)}kg。膝への衝撃が劇的に減り、体が軽くなることを実感できます。</p>
-                            </div>
-                            <div class="roadmap-item secondary">
-                                <div class="roadmap-dot"></div>
-                                <strong class="roadmap-label">最終均衡点（長期継続時の収束値）</strong>
-                                <div class="roadmap-value">${s.weightEquilibrium} kg <span class="roadmap-delta">(-${(s.weightStart - s.weightEquilibrium).toFixed(1)}kg)</span></div>
-                                <p class="roadmap-note">運動・食事の入力と出力が動的平衡状態に達する標準健康体型。</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-        `;
-
-        // Bind edit button action
-        document.getElementById('btn-trigger-plan-edit').addEventListener('click', () => {
-            renderPlanTab(true);
+    // シミュレーションの操作: ペース切り替えは選択を保存して再描画、
+    // 「計画に反映」は計画設定(摂取3区分・消費予算・ロードマップ)へ書き込む
+    container.querySelectorAll('.plan-sim-pace-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const s2 = state.planSettings || Object.assign({}, DEFAULT_PLAN_SETTINGS);
+            s2.targetPaceKgMonth = parseFloat(btn.getAttribute('data-pace')) || 2;
+            state.planSettings = s2;
+            // saveData()だけだとdirtyが立たず、クラウド同期ユーザーは次回起動時の
+            // 自動プル(planSettings丸ごと置換)で選択が黙って巻き戻る。同期にも乗せる
+            saveDataAndSync();
+            renderPlanTab();
         });
-
-        // シミュレーションの操作: ペース切り替えは選択を保存して再描画、
-        // 「計画に反映」は計画設定(摂取3区分・消費予算・ロードマップ)へ書き込む
-        container.querySelectorAll('.plan-sim-pace-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
-                const s2 = state.planSettings || Object.assign({}, DEFAULT_PLAN_SETTINGS);
-                s2.targetPaceKgMonth = parseFloat(btn.getAttribute('data-pace')) || 2;
-                state.planSettings = s2;
-                // saveData()だけだとdirtyが立たず、クラウド同期ユーザーは次回起動時の
-                // 自動プル(planSettings丸ごと置換)で選択が黙って巻き戻る。同期にも乗せる
-                saveDataAndSync();
-                renderPlanTab(false);
-            });
-        });
-        const adoptBtn = document.getElementById('btn-adopt-simulation');
-        if (adoptBtn) {
-            adoptBtn.addEventListener('click', () => {
-                adoptSimulationPlan();
-            });
-        }
-        // TDEEの推定/実測切り替え(ペース切り替えと同じく、選択を保存して再描画)
-        container.querySelectorAll('.plan-tdee-btn:not([disabled])').forEach(btn => {
-            btn.addEventListener('click', () => {
-                const s2 = state.planSettings || Object.assign({}, DEFAULT_PLAN_SETTINGS);
-                s2.tdeeSource = btn.getAttribute('data-tdee-source') === 'measured' ? 'measured' : 'estimated';
-                state.planSettings = s2;
-                // ペース切替と同じくdirtyを立てて同期に乗せる(起動時プルでの巻き戻り防止)
-                saveDataAndSync();
-                renderPlanTab(false);
-            });
+    });
+    const adoptBtn = document.getElementById('btn-adopt-simulation');
+    if (adoptBtn) {
+        adoptBtn.addEventListener('click', () => {
+            adoptSimulationPlan();
         });
     }
+    // TDEEの推定/実測切り替え(ペース切り替えと同じく、選択を保存して再描画)
+    container.querySelectorAll('.plan-tdee-btn:not([disabled])').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const s2 = state.planSettings || Object.assign({}, DEFAULT_PLAN_SETTINGS);
+            s2.tdeeSource = btn.getAttribute('data-tdee-source') === 'measured' ? 'measured' : 'estimated';
+            state.planSettings = s2;
+            // ペース切替と同じくdirtyを立てて同期に乗せる(起動時プルでの巻き戻り防止)
+            saveDataAndSync();
+            renderPlanTab();
+        });
+    });
+
+    wirePlanInlineEditors(s);
 
     if (window.lucide) {
         lucide.createIcons();
     }
 }
 
-function savePlanSettings() {
-    const s = state.planSettings || {};
+// 個別の編集欄がひとつでも開いているか。開いている間は外側からの再描画を抑止して、
+// 入力中の値が消えないようにする(タブ切り替え時など。navigation.jsから参照)。
+function isPlanInlineEditorOpen() {
+    return Array.from(document.querySelectorAll('.plan-inline-editor'))
+        .some(el => !el.classList.contains('is-hidden'));
+}
 
-    s.intakeNormal = parseInt(document.getElementById('edit-intake-normal').value) || 0;
-    s.daysNormal = parseInt(document.getElementById('edit-days-normal').value) || 0;
-    s.intakeMilkTea = parseInt(document.getElementById('edit-intake-milktea').value) || 0;
-    s.daysMilkTea = parseInt(document.getElementById('edit-days-milktea').value) || 0;
-    s.intakeEvent = parseInt(document.getElementById('edit-intake-event').value) || 0;
-    s.daysEvent = parseInt(document.getElementById('edit-days-event').value) || 0;
+// 個別の編集ボタン。一括編集画面の代わりに、その設定が効いている場所のすぐ隣で
+// 開閉するインラインエディタとして実装する。
+// fields: [{ key, label, type, step, min }]、onSave(values) は検証済みの値を受け取る。
+function openInlineEditor(editorEl, fields, currentSettings, onSave) {
+    if (!editorEl) return;
 
-    s.baseBurn = parseInt(document.getElementById('edit-base-burn').value) || 0;
-    s.runBurn = parseInt(document.getElementById('edit-run-burn').value) || 0;
-    s.runCount = parseInt(document.getElementById('edit-run-count').value) || 0;
-    s.weeklyRunDistanceTarget = parseFloat(document.getElementById('edit-weekly-run-distance-target').value) || 0;
+    editorEl.innerHTML = `
+        <div class="plan-inline-editor-fields">
+            ${fields.map(f => `
+                <div class="form-group">
+                    <label class="text-2xs" for="inline-edit-${f.key}">${f.label}</label>
+                    <input type="${f.type || 'number'}" id="inline-edit-${f.key}"
+                        ${f.step ? `step="${f.step}"` : ''}
+                        value="${f.type === 'date' ? (currentSettings[f.key] || '') : (currentSettings[f.key] ?? '')}"
+                        class="width-full">
+                </div>
+            `).join('')}
+        </div>
+        <div class="plan-inline-editor-actions">
+            <button type="button" class="btn btn-secondary btn-sm" data-role="cancel">キャンセル</button>
+            <button type="button" class="btn btn-primary btn-sm" data-role="save">保存</button>
+        </div>
+    `;
+    editorEl.classList.remove('is-hidden');
 
-    s.weightStart = parseFloat(document.getElementById('edit-weight-start').value) || 0.0;
-    s.weight1Month = parseFloat(document.getElementById('edit-weight-1month').value) || 0.0;
-    s.weight3Month = parseFloat(document.getElementById('edit-weight-3month').value) || 0.0;
-    s.weightEquilibrium = parseFloat(document.getElementById('edit-weight-equilibrium').value) || 0.0;
-    // 計画開始日は編集フォームの値をそのまま使う。空欄なら既存値を維持し、
-    // 一度も設定されていない場合のみ今日を初期値にする(保存のたびに今日へ
-    // リセットすると予測線の起点が実際の計画開始からズレてしまうため固定運用)
-    s.weightPlanStartDate = document.getElementById('edit-weight-plan-start-date').value ||
-        s.weightPlanStartDate || getLocalDateString();
+    const firstInput = editorEl.querySelector('input');
+    if (firstInput) firstInput.focus();
 
+    editorEl.querySelector('[data-role="cancel"]').addEventListener('click', () => {
+        editorEl.classList.add('is-hidden');
+        editorEl.innerHTML = '';
+    });
+
+    editorEl.querySelector('[data-role="save"]').addEventListener('click', () => {
+        const values = {};
+        for (const f of fields) {
+            const input = editorEl.querySelector(`#inline-edit-${f.key}`);
+            if (!input) continue;
+            if (f.type === 'date') {
+                values[f.key] = input.value;
+                continue;
+            }
+            const raw = parseFloat(input.value);
+            // 数値項目は空欄・不正値・下限割れをここで弾く(一括編集の頃は
+            // parseInt(...)||0 で黙って0にしており、日数配分が全部0になると
+            // 週平均の分母が7へフォールバックして意図しない目標値が出ていた)
+            if (isNaN(raw) || (f.min !== undefined && raw < f.min)) {
+                showToast(`「${f.label}」には${f.min !== undefined ? `${f.min}以上の` : ''}数値を入力してください`);
+                return;
+            }
+            values[f.key] = f.step && String(f.step).includes('.') ? raw : Math.round(raw);
+        }
+        onSave(values);
+    });
+
+    if (window.lucide) lucide.createIcons();
+}
+
+// 計画設定へ書き込んで保存・再描画する共通処理
+function savePlanSettingsPatch(patch, toastMessage) {
+    const s = state.planSettings || Object.assign({}, DEFAULT_PLAN_SETTINGS);
+    Object.assign(s, patch);
     state.planSettings = s;
     // クラウド(PlanSettingsシート)にも反映する。ブリーフィング等の外部連携が
     // シートの計画を参照するため、ローカル保存だけで止めない
     saveDataAndSync();
-    showToast('最適化計画の変更を保存しました');
+    showToast(toastMessage);
+    renderPlanTab();
+    updateDashboard();
+}
 
-    renderPlanTab(false);
-    updateDashboard(); // 週間ランニング目標カードの目標値もその場で反映する
+function wirePlanInlineEditors(s) {
+    const dayMixBtn = document.getElementById('btn-edit-day-mix');
+    const dayMixEditor = document.getElementById('plan-day-mix-editor');
+    if (dayMixBtn && dayMixEditor) {
+        dayMixBtn.addEventListener('click', () => {
+            if (!dayMixEditor.classList.contains('is-hidden')) {
+                dayMixEditor.classList.add('is-hidden');
+                dayMixEditor.innerHTML = '';
+                return;
+            }
+            openInlineEditor(dayMixEditor, [
+                { key: 'daysNormal', label: '通常日（週何日）', min: 0 },
+                { key: 'daysMilkTea', label: '少し甘えた日（週何日）', min: 0 },
+                { key: 'daysEvent', label: 'イベント日（週何日）', min: 0 }
+            ], s, (values) => {
+                const total = values.daysNormal + values.daysMilkTea + values.daysEvent;
+                if (total <= 0) {
+                    showToast('週の日数はどれか1つ以上を1日以上にしてください');
+                    return;
+                }
+                if (total > 7) {
+                    showToast(`週の日数の合計が${total}日になっています。7日以内にしてください`);
+                    return;
+                }
+                savePlanSettingsPatch(values, `週の日数配分を保存しました（通常${values.daysNormal} / 甘え${values.daysMilkTea} / イベント${values.daysEvent}日）`);
+            });
+        });
+    }
+
+    const startBtn = document.getElementById('btn-edit-plan-start');
+    const startEditor = document.getElementById('plan-start-editor');
+    if (startBtn && startEditor) {
+        startBtn.addEventListener('click', () => {
+            if (!startEditor.classList.contains('is-hidden')) {
+                startEditor.classList.add('is-hidden');
+                startEditor.innerHTML = '';
+                return;
+            }
+            openInlineEditor(startEditor, [
+                { key: 'weightPlanStartDate', label: '計画開始日（体重グラフの予測線の起点）', type: 'date' }
+            ], s, (values) => {
+                if (!values.weightPlanStartDate) {
+                    showToast('計画開始日を選択してください');
+                    return;
+                }
+                savePlanSettingsPatch(values, `計画開始日を ${formatDateJp(values.weightPlanStartDate)} に変更しました`);
+            });
+        });
+    }
 }
 
 // planSettingsから選択中の減量ペース(kg/月)を取り出す。不正値・未設定はデフォルトの2に丸める
@@ -532,6 +405,6 @@ function adoptSimulationPlan() {
     saveDataAndSync();
 
     showToast(`シミュレーション結果を計画に反映しました（通常${sim.intakeNormal} / 甘え${sim.intakeSweet} / イベント${sim.intakeEvent} kcal、月${pace}kgペース、${tdeeChoice.source === 'measured' ? '実測' : '推定'}TDEE${tdeeChoice.tdee}基準）`);
-    renderPlanTab(false);
+    renderPlanTab();
     updateDashboard();
 }

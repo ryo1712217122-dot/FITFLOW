@@ -36,9 +36,10 @@ function initNavigation() {
                 // 直近の記録から毎回算出しているため、開くたびに再計算する。
                 // これをしないと、体重を記録し直してもリロードするまで古い数字のままになる
                 // (ダッシュボードだけ更新され、計画タブが取り残される不具合があった)。
-                // ただし編集フォームを開いている最中は、入力中の値を捨てないよう再描画しない。
-                if (!document.getElementById('btn-save-plan-edit')) {
-                    renderPlanTab(false);
+                // ただし個別の編集欄(日数配分・計画開始日)を開いている最中は、
+                // 入力中の値を捨てないよう再描画しない。
+                if (!isPlanInlineEditorOpen()) {
+                    renderPlanTab();
                 }
             }
 

@@ -231,8 +231,11 @@ function renderCalendar() {
 
         const titleParts = [];
 
-        // 記録内容に応じた3段階の濃淡で塗り分ける(絵文字インジケーターは廃止して色で判別):
-        //   トレーニングした日(走った日を含む) = 濃 / 走っただけの日 = 中 / 体重を測っただけの日 = 薄
+        // このカレンダーは「運動した日が一目で分かること」が目的なので、塗り分けるのは
+        //   トレーニングした日(走った日を含む) = 濃 / 走っただけの日 = 中
+        // の2段階だけにする。体重を測っただけの日は運動していないため塗らない
+        // (ほぼ毎日測るので薄い色が全面に広がり、運動した日とのコントラストが落ちていた)。
+        // 体重の記録有無はツールチップ(title)には残す。
         const dayWorkouts = workoutsByDate[dateStr];
         const hasWorkout = dayWorkouts && dayWorkouts.length > 0;
         const hasCardio = !!cardioByDate[dateStr];
@@ -243,8 +246,6 @@ function renderCalendar() {
             titleParts.push(`トレーニング記録 ${dayWorkouts.length}件`);
         } else if (hasCardio) {
             dayCell.classList.add('cal-intensity-medium');
-        } else if (hasWeight) {
-            dayCell.classList.add('cal-intensity-light');
         }
         if (hasCardio) titleParts.push('有酸素の記録あり');
         if (hasWeight) titleParts.push('体重の記録あり');
@@ -293,6 +294,35 @@ function initDashboardControls() {
     if (autoCalcMaintBtn) {
         autoCalcMaintBtn.addEventListener('click', () => {
             calculateFluidMaintenance();
+        });
+    }
+
+    // 週間ランニング目標距離の編集。計画タブの一括編集画面を廃止したため、
+    // この値が表示されているこのカードで直接編集できるようにしている
+    // (エディタの実装はjs/plan.jsのopenInlineEditorを共用)。
+    const runTargetBtn = document.getElementById('btn-edit-run-target');
+    const runTargetEditor = document.getElementById('run-target-editor');
+    if (runTargetBtn && runTargetEditor) {
+        runTargetBtn.addEventListener('click', () => {
+            if (!runTargetEditor.classList.contains('is-hidden')) {
+                runTargetEditor.classList.add('is-hidden');
+                runTargetEditor.innerHTML = '';
+                return;
+            }
+            const s = state.planSettings || DEFAULT_PLAN_SETTINGS;
+            openInlineEditor(runTargetEditor, [
+                { key: 'weeklyRunDistanceTarget', label: '週間ランニング目標距離 (km)', step: '0.1', min: 0.1 }
+            ], s, (values) => {
+                const settings = state.planSettings || Object.assign({}, DEFAULT_PLAN_SETTINGS);
+                settings.weeklyRunDistanceTarget = values.weeklyRunDistanceTarget;
+                state.planSettings = settings;
+                saveDataAndSync();
+                runTargetEditor.classList.add('is-hidden');
+                runTargetEditor.innerHTML = '';
+                showToast(`週間ランニング目標を ${values.weeklyRunDistanceTarget} km に変更しました`);
+                updateDashboard();
+                renderPlanTab();
+            });
         });
     }
 }

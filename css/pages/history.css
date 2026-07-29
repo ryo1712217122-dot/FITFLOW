@@ -55,6 +55,36 @@
     white-space: nowrap;
 }
 
+/* 月ごとの見出し(有酸素履歴)。その月の回数・合計距離・合計消費をまとめて出す。 */
+.history-month-header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    padding: 0.5rem 0.25rem;
+    border-bottom: 2px solid var(--color-primary);
+    margin-top: 0.5rem;
+}
+
+/* 先頭の見出しだけは、一覧ヘッダーとの間隔が空きすぎないようにする */
+.history-cards-container > .history-month-header:first-child {
+    margin-top: 0;
+}
+
+.history-month-label {
+    font-family: var(--font-display);
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.history-month-summary {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--color-primary);
+}
+
 /* 履歴カードの数値表示(有酸素・体重・食事・カロリー収支で共通)。
    以前は各カードのテンプレートにインラインstyleで直書きされており、
    同じ見た目の指定が12箇所に散っていた上、色が #86ac41 固定でテーマパレットに

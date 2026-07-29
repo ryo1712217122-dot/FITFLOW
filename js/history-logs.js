@@ -8,6 +8,9 @@ function updateCardioHistoryList() {
     // 表示用の並び替えは state.cardioLogs 自体を書き換えず、コピー配列に対して行う
     // (直接ソートすると getLatestWeight() のような「末尾 = 最新」前提のロジックが壊れるため)
     const sortedLogs = sortedByDateDesc(state.cardioLogs);
+    // 月ごとの見出し(件数・合計距離)で区切って表示する。1件ずつの羅列だと
+    // 「今月どれだけ走ったか」が分からないため
+    const monthGroups = groupCardioLogsByMonth(state.cardioLogs);
 
     countSpan.textContent = sortedLogs.length;
     container.innerHTML = '';
@@ -23,62 +26,76 @@ function updateCardioHistoryList() {
         return;
     }
 
-    sortedLogs.forEach((c) => {
-        const card = document.createElement('div');
-        card.classList.add('card');
-        card.classList.add('history-card');
-        card.classList.add('cardio');
-
-        const formattedDate = formatDateJp(c.date);
-
-        card.innerHTML = `
-            <div class="history-card-header">
-                <div class="history-title-area">
-                    <div class="history-title-row">
-                        <span class="history-mood-badge">🏃</span>
-                        <h4>ランニング記録</h4>
-                        <span class="category-tag category-tag-cardio">有酸素</span>
-                    </div>
-                    <div class="history-date-row">
-                        <i data-lucide="calendar"></i>
-                        <span>${formattedDate}</span>
-                    </div>
-                </div>
-                <div class="history-actions">
-                    <button class="btn-icon text-danger btn-delete-cardio" title="削除する">
-                        <i data-lucide="trash-2"></i>
-                    </button>
-                </div>
-            </div>
-
-            <div class="cardio-history-value-row">
-                <div>
-                    <span class="history-metric-label">走行距離</span>
-                    <span class="history-metric-value-lg">${c.distance.toFixed(2)} <span class="history-metric-unit">km</span></span>
-                </div>
-                <div>
-                    <span class="history-metric-label">消費エネルギー</span>
-                    <span class="history-metric-value-lg">${Math.round(c.calories)} <span class="history-metric-unit">kcal</span></span>
-                </div>
-            </div>
+    monthGroups.forEach(group => {
+        const header = document.createElement('div');
+        header.classList.add('history-month-header');
+        header.innerHTML = `
+            <span class="history-month-label">${escapeHtml(group.label)}</span>
+            <span class="history-month-summary">${group.count}回 ・ ${group.totalDistance.toFixed(2)} km ・ ${group.totalCalories} kcal</span>
         `;
+        container.appendChild(header);
 
-        card.querySelector('.btn-delete-cardio').addEventListener('click', () => {
-            showConfirmModal(
-                '記録の削除',
-                `このランニング記録（${formattedDate} - ${c.distance}km）を削除しますか？`,
-                () => {
-                    deleteCardioLog(c);
-                }
-            );
+        group.logs.forEach((c) => {
+            container.appendChild(createCardioHistoryCard(c));
         });
-
-        container.appendChild(card);
     });
 
     if (window.lucide) {
         lucide.createIcons();
     }
+}
+
+function createCardioHistoryCard(c) {
+    const card = document.createElement('div');
+    card.classList.add('card');
+    card.classList.add('history-card');
+    card.classList.add('cardio');
+
+    const formattedDate = formatDateJp(c.date);
+
+    card.innerHTML = `
+        <div class="history-card-header">
+            <div class="history-title-area">
+                <div class="history-title-row">
+                    <span class="history-mood-badge">🏃</span>
+                    <h4>ランニング記録</h4>
+                    <span class="category-tag category-tag-cardio">有酸素</span>
+                </div>
+                <div class="history-date-row">
+                    <i data-lucide="calendar"></i>
+                    <span>${formattedDate}</span>
+                </div>
+            </div>
+            <div class="history-actions">
+                <button class="btn-icon text-danger btn-delete-cardio" title="削除する">
+                    <i data-lucide="trash-2"></i>
+                </button>
+            </div>
+        </div>
+
+        <div class="cardio-history-value-row">
+            <div>
+                <span class="history-metric-label">走行距離</span>
+                <span class="history-metric-value-lg">${c.distance.toFixed(2)} <span class="history-metric-unit">km</span></span>
+            </div>
+            <div>
+                <span class="history-metric-label">消費エネルギー</span>
+                <span class="history-metric-value-lg">${Math.round(c.calories)} <span class="history-metric-unit">kcal</span></span>
+            </div>
+        </div>
+    `;
+
+    card.querySelector('.btn-delete-cardio').addEventListener('click', () => {
+        showConfirmModal(
+            '記録の削除',
+            `このランニング記録（${formattedDate} - ${c.distance}km）を削除しますか？`,
+            () => {
+                deleteCardioLog(c);
+            }
+        );
+    });
+
+    return card;
 }
 
 function deleteCardioLog(entry) {
