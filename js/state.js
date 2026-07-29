@@ -207,6 +207,23 @@ function runOneTimeMigrations() {
             localStorage.setItem(planStartFlag, 'true');
         }
     }
+
+    // 2026-07: 上の開始日修正はweightPlanStartDateだけを直し、開始時体重(weightStart)は
+    // 手つかずだったため、既定値(81.0kg)のまま残っている環境がある。開始日はロードマップと
+    // 体重グラフの予測線の起点になるので、開始時体重も実際の記録に合わせ直す。
+    // 判定はlib/data-utils.jsのdecidePlanStartWeightMigrationに委譲(テスト対象)。
+    const planStartWeightFlag = MIGRATION_FLAG_PREFIX + '2026_07_fix_plan_start_weight';
+    if (!localStorage.getItem(planStartWeightFlag)) {
+        const decision = decidePlanStartWeightMigration(state.weightLogs, state.planSettings);
+        if (decision.apply) {
+            state.planSettings.weightStart = decision.weightStart;
+            saveDataAndSync();
+            console.log(`🛠️ 最適化計画の開始時体重を実際の記録(${decision.weightStart}kg)に修正しました`);
+        }
+        if (decision.markDone) {
+            localStorage.setItem(planStartWeightFlag, 'true');
+        }
+    }
 }
 
 // GAS ウェブアプリURLの保存は、ユーザーが「接続情報を保存」ボタンを押した時だけ行う

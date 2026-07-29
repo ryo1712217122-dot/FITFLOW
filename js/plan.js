@@ -35,16 +35,29 @@ function renderPlanTab() {
         <button type="button" class="plan-sim-pace-btn${p === pace ? ' active' : ''}" data-pace="${p}">月${p}kg</button>
     `).join('');
 
-    // ロードマップは保存済みのマイルストーンではなく、選択中のペースからその場で計算する
-    // (ペースを変えた瞬間に全段が追従し、画面の数字と予測が食い違わない)
-    const roadmap = computeWeightRoadmap(latestWeight, sim.effectiveDailyDeficit);
-    const roadmapHtml = roadmap.map(r => `
-        <div class="roadmap-row${r.isMajor ? ' major' : ''}">
+    // ロードマップは「計画開始日」を起点にする。今日を起点に前へ伸ばすだけだと
+    // 計画全体の中で今どこにいるのかが分からないため。
+    // 開始時体重は保存値(s.weightStart)ではなく開始日近くの実際の体重記録から取る
+    // (保存値は開始日マイグレーションの際に更新されておらず、古い既定値が残りうる)。
+    const startLog = s.weightPlanStartDate ? findWeightNearDate(state.weightLogs, s.weightPlanStartDate) : null;
+    const roadmapStartWeight = startLog ? startLog.weight : s.weightStart;
+    const roadmap = s.weightPlanStartDate
+        ? computePlanRoadmap(s.weightPlanStartDate, roadmapStartWeight, sim.effectiveDailyDeficit,
+            state.weightLogs, todayStr)
+        : [];
+    const elapsedDaysForHeader = s.weightPlanStartDate ? computeDaysSince(s.weightPlanStartDate, todayStr) : 0;
+
+    const roadmapHtml = roadmap.map(r => {
+        const diffClass = r.diff === null ? '' : (r.diff > 0 ? ' behind' : (r.diff < 0 ? ' ahead' : ''));
+        return `
+        <div class="roadmap-row${r.isMajor ? ' major' : ''}${r.isNow ? ' now' : ''}">
             <span class="roadmap-row-label">${r.label}</span>
-            <span class="roadmap-row-weight">${r.weight.toFixed(1)} kg</span>
-            <span class="roadmap-row-delta">${r.days === 0 ? '—' : `${r.delta > 0 ? '+' : ''}${r.delta.toFixed(1)} kg`}</span>
-        </div>
-    `).join('');
+            <span class="roadmap-row-date">${formatRoadmapDate(r.date)}</span>
+            <span class="roadmap-row-weight">${r.planned.toFixed(1)}</span>
+            <span class="roadmap-row-actual">${r.actual === null ? '—' : r.actual.toFixed(1)}</span>
+            <span class="roadmap-row-delta${diffClass}">${r.diff === null ? '—' : `${r.diff > 0 ? '+' : ''}${r.diff.toFixed(1)}`}</span>
+        </div>`;
+    }).join('');
 
     container.innerHTML = `
         <div class="card plan-hero compact">
@@ -122,12 +135,12 @@ function renderPlanTab() {
             </div>
         </div>
 
-        <!-- 体重ロードマップ: 選択中のペースで2週間ごと3ヶ月分 -->
+        <!-- 体重ロードマップ: 計画開始日を起点に2週間ごと。現在位置と実績との差を示す -->
         <div class="card margin-top-1-5">
             <div class="card-header">
                 <div class="header-title">
                     <i data-lucide="trending-down"></i>
-                    <h3>体重ロードマップ（2週間ごと・3ヶ月先まで）</h3>
+                    <h3>体重ロードマップ</h3>
                 </div>
                 <button type="button" class="plan-inline-edit-btn" id="btn-edit-plan-start" title="計画開始日を変更する">
                     <i data-lucide="pencil"></i> 開始日: ${s.weightPlanStartDate ? formatDateJp(s.weightPlanStartDate) : '未設定'}
@@ -135,14 +148,22 @@ function renderPlanTab() {
             </div>
             <div class="card-body">
                 <div id="plan-start-editor" class="plan-inline-editor is-hidden"></div>
-                <div class="roadmap-table">
-                    <div class="roadmap-row head">
-                        <span class="roadmap-row-label">時点</span>
-                        <span class="roadmap-row-weight">予測体重</span>
-                        <span class="roadmap-row-delta">現在比</span>
+                ${roadmap.length === 0 ? `
+                    <p class="no-data-msg">計画開始日が未設定のためロードマップを表示できません。上の「開始日」から設定してください。</p>
+                ` : `
+                    <p class="roadmap-summary">開始 ${roadmapStartWeight.toFixed(1)}kg から <strong>${elapsedDaysForHeader}日経過</strong>${startLog ? '' : '（開始日近くの体重記録が無いため、保存値を開始時体重として使用）'}</p>
+                    <div class="roadmap-table">
+                        <div class="roadmap-row head">
+                            <span class="roadmap-row-label">時点</span>
+                            <span class="roadmap-row-date">日付</span>
+                            <span class="roadmap-row-weight">計画</span>
+                            <span class="roadmap-row-actual">実績</span>
+                            <span class="roadmap-row-delta">差</span>
+                        </div>
+                        ${roadmapHtml}
                     </div>
-                    ${roadmapHtml}
-                </div>
+                    <p class="roadmap-legend-note">差は「実績 − 計画」。マイナスは計画より先行、プラスは遅れ。</p>
+                `}
             </div>
         </div>
     `;
@@ -183,6 +204,12 @@ function renderPlanTab() {
     if (window.lucide) {
         lucide.createIcons();
     }
+}
+
+// ロードマップの日付表示。年は繰り返しになるので省き "7/15" 形式にする。
+function formatRoadmapDate(dateStr) {
+    const parts = String(dateStr || '').split('-');
+    return parts.length === 3 ? `${Number(parts[1])}/${Number(parts[2])}` : dateStr;
 }
 
 // 個別の編集欄がひとつでも開いているか。開いている間は外側からの再描画を抑止して、

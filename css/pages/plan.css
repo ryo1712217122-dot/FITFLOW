@@ -132,10 +132,22 @@
     margin-top: 0.5rem;
 }
 
+.roadmap-summary {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    margin: 0 0 0.5rem;
+}
+
+.roadmap-legend-note {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    margin: 0.6rem 0 0;
+}
+
 .roadmap-row {
     display: grid;
-    grid-template-columns: 1fr auto auto;
-    gap: 1rem;
+    grid-template-columns: 4.5rem 3.5rem 1fr 1fr 3.5rem;
+    gap: 0.75rem;
     align-items: baseline;
     padding: 0.55rem 0.5rem;
     border-bottom: 1px solid var(--border-color);
@@ -169,26 +181,74 @@
     font-weight: 600;
 }
 
-.roadmap-row-weight {
+.roadmap-row-date {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+}
+
+.roadmap-row-weight,
+.roadmap-row-actual {
     font-family: var(--font-display);
     font-size: 1.05rem;
     font-weight: 700;
-    color: var(--text-primary);
     text-align: right;
-    min-width: 5.5rem;
 }
 
-.roadmap-row.major .roadmap-row-weight {
-    color: var(--color-primary);
+/* 計画値は控えめ、実績値はパレット色で主役にする(見たいのは「実際どうだったか」) */
+.roadmap-row-weight {
+    color: var(--text-secondary);
+}
+
+.roadmap-row-actual {
+    color: var(--text-primary);
+}
+
+.roadmap-row.major .roadmap-row-weight,
+.roadmap-row.major .roadmap-row-actual {
     font-size: 1.15rem;
     font-weight: 800;
 }
 
 .roadmap-row-delta {
     font-size: 0.85rem;
+    font-weight: 600;
     color: var(--text-secondary);
     text-align: right;
-    min-width: 4.5rem;
+}
+
+/* 計画より軽い=先行、重い=遅れ */
+.roadmap-row-delta.ahead {
+    color: var(--color-primary);
+}
+
+.roadmap-row-delta.behind {
+    color: var(--color-warning, #d9a05b);
+}
+
+/* 現在位置の行。計画全体のどこにいるかが一目で分かるよう強く示す */
+.roadmap-row.now {
+    background: color-mix(in srgb, var(--color-primary) 18%, transparent);
+    border-radius: var(--radius-sm);
+    box-shadow: inset 3px 0 0 var(--color-primary);
+}
+
+.roadmap-row.now .roadmap-row-label {
+    color: var(--color-primary);
+    font-weight: 800;
+}
+
+.roadmap-row.now .roadmap-row-actual {
+    color: var(--color-primary);
+}
+
+/* ヘッダー行は数値列も右揃えに揃える */
+.roadmap-row.head .roadmap-row-weight,
+.roadmap-row.head .roadmap-row-actual,
+.roadmap-row.head .roadmap-row-delta {
+    font-family: inherit;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--text-muted);
 }
 
 /* 個別の編集ボタン（計画タブの一括編集画面を廃止した代替）。
