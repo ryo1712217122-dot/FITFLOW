@@ -78,6 +78,12 @@ const DOM = {
     drinkingExistingHint: document.getElementById('drinking-existing-hint'),
     drinkingExistingHintText: document.getElementById('drinking-existing-hint-text'),
     drinkingImpactSummary: document.getElementById('drinking-impact-summary'),
+    // 飲み会の推定摂取カロリー(保存先はその日のmealLogsの夕食)
+    drinkingCalorieGroup: document.getElementById('drinking-calorie-group'),
+    drinkingCalories: document.getElementById('drinking-calories'),
+    drinkingCaloriesEstimate: document.getElementById('drinking-calories-estimate'),
+    drinkingMealHint: document.getElementById('drinking-meal-hint'),
+    drinkingMealHintText: document.getElementById('drinking-meal-hint-text'),
 
     // History
     searchInput: document.getElementById('search-input'),

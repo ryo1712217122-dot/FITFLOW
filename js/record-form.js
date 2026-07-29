@@ -95,9 +95,19 @@ function initFormControls() {
         if (DOM.drinkingDate) {
             DOM.drinkingDate.value = getFitnessDateString();
             syncDrinkingFormWithExistingDataForDate(DOM.drinkingDate.value);
-            // 入力は日付だけで「未保存の入力が失われる」ことがないため、確認なしで同期のみ
+            // 日付を変えると推定カロリーの入力もクリアされるが、飲み会フォームは
+            // 目安を選び直すだけで復元できる軽い入力なので、確認なしで同期する
             DOM.drinkingDate.addEventListener('change', () => {
                 syncDrinkingFormWithExistingDataForDate(DOM.drinkingDate.value);
+            });
+        }
+        // 目安セレクトは数値欄へ値を書き込むだけの入力補助(食事フォームの目安selectと同じ考え方)。
+        // 選んだあと数値欄で微調整できるよう、食事フォームのように入力欄を隠す切り替えはしない。
+        if (DOM.drinkingCaloriesEstimate && DOM.drinkingCalories) {
+            DOM.drinkingCaloriesEstimate.addEventListener('change', () => {
+                if (DOM.drinkingCaloriesEstimate.value) {
+                    DOM.drinkingCalories.value = DOM.drinkingCaloriesEstimate.value;
+                }
             });
         }
         DOM.drinkingForm.addEventListener('submit', (e) => {
@@ -625,9 +635,26 @@ function refreshRecordFormsAfterExternalDataChange() {
 // DRINKING (飲み会: 日付のみの記録)
 // ==========================================
 
+// 飲み会フォームの推定摂取カロリー欄を読み取る。
+// 「空欄(=食事記録を作らない)」と「不正な入力」を呼び出し側が区別できるよう、
+// { ok, value } で返す。不正値を黙ってnull扱いにすると、ユーザーは入力したつもりなのに
+// 食事記録が作られず、原因も分からないままになるため。
+function readDrinkingCalories() {
+    if (!DOM.drinkingCalories) return { ok: true, value: null };
+    const text = DOM.drinkingCalories.value.trim();
+    if (text === '') return { ok: true, value: null };
+    const v = parseFloat(text);
+    if (isNaN(v) || v < 0) return { ok: false, value: null };
+    return { ok: true, value: Math.round(v) };
+}
+
 // 選択中の日付がすでに飲み会として記録済みかに応じて、ヒントと送信ボタンの文言を切り替える。
 // 送信は「未記録なら記録、記録済みなら取り消し」のトグル動作(入力欄が日付しかないため、
 // 体重フォームのような上書き保存の概念がなく、削除だけ別UIにするより一箇所で完結させる)。
+//
+// 推定カロリー欄は「記録する時にだけ使う」ため、記録済みの日では隠す
+// (ボタンが「取り消す」になっている状態で入力欄が残っていると、その値がどう扱われるのか
+//  分からなくなるため)。記録後にカロリーだけ直したい場合は食事フォーム・食事履歴で編集する。
 function syncDrinkingFormWithExistingDataForDate(date) {
     const exists = !!date && state.drinkingLogs.some(d => d.date === date);
 
@@ -637,6 +664,23 @@ function syncDrinkingFormWithExistingDataForDate(date) {
             DOM.drinkingExistingHint.classList.remove('is-hidden');
         } else {
             DOM.drinkingExistingHint.classList.add('is-hidden');
+        }
+    }
+
+    // 日付を変えたら前の日付向けの入力を持ち越さない
+    if (DOM.drinkingCalories) DOM.drinkingCalories.value = '';
+    if (DOM.drinkingCaloriesEstimate) DOM.drinkingCaloriesEstimate.value = '';
+    if (DOM.drinkingCalorieGroup) DOM.drinkingCalorieGroup.classList.toggle('is-hidden', exists);
+
+    // その日にすでに食事記録があるなら、上書き対象がある旨を明示する
+    if (DOM.drinkingMealHint && DOM.drinkingMealHintText) {
+        const existingMeal = date ? state.mealLogs.find(m => m.date === date) : null;
+        if (existingMeal && !exists) {
+            DOM.drinkingMealHintText.textContent =
+                `この日はすでに食事の記録（合計 ${sumMealCalories(existingMeal)} kcal、うち夕食 ${Number(existingMeal.dinner) || 0} kcal）があります。入力すると夕食が上書きされます（朝食・昼食・間食はそのまま）。`;
+            DOM.drinkingMealHint.classList.remove('is-hidden');
+        } else {
+            DOM.drinkingMealHint.classList.add('is-hidden');
         }
     }
 
@@ -657,19 +701,62 @@ function saveDrinkingLog() {
     }
 
     const existingIndex = state.drinkingLogs.findIndex(d => d.date === date);
+    let mealChanged = false;
+
+    // 記録する時だけカロリーを検証する(取り消し時は入力欄自体を隠しているため対象外)。
+    // 何も書き換える前に弾くことで、失敗時に中途半端な状態が残らないようにする。
+    const calories = existingIndex === -1 ? readDrinkingCalories() : { ok: true, value: null };
+    if (!calories.ok) {
+        showToast('推定摂取カロリーは0以上の数値で入力してください（空欄なら食事記録は作りません）');
+        return;
+    }
+
     if (existingIndex !== -1) {
+        // 取り消し時は食事記録に手を付けない。ここで消すと、あとから食事フォームや
+        // 食事履歴で調整した値まで巻き添えで失われるため(このアプリはデータ消失に
+        // 繰り返し悩まされてきたので、迷ったら残す側に倒す)。
         state.drinkingLogs.splice(existingIndex, 1);
-        showToast('飲み会の記録を取り消しました');
+        const stillHasMeal = state.mealLogs.some(m => m.date === date);
+        showToast(stillHasMeal
+            ? '飲み会の記録を取り消しました（その日の食事記録は残しています）'
+            : '飲み会の記録を取り消しました');
     } else {
         state.drinkingLogs.push({ date });
         state.drinkingLogs.sort((a, b) => new Date(a.date) - new Date(b.date));
-        showToast('🍻 飲み会を記録しました！翌日の体重変化に注目です');
+
+        // 推定カロリーが入っていれば、その日の食事記録の「夕食」として保存する。
+        // 実測TDEE(computeMeasuredTdee)はmealLogsしか見ないため、ここに入れて初めて
+        // 「飲み会の日だけ摂取が抜ける」偏りが解消される。
+        const kcal = calories.value;
+        if (kcal !== null) {
+            const idx = state.mealLogs.findIndex(m => m.date === date);
+            const record = buildMealLogWithField(idx !== -1 ? state.mealLogs[idx] : null, date, 'dinner', kcal);
+            if (idx !== -1) {
+                state.mealLogs[idx] = record;
+            } else {
+                state.mealLogs.push(record);
+                state.mealLogs.sort((a, b) => new Date(a.date) - new Date(b.date));
+            }
+            mealChanged = true;
+            showToast(`🍻 飲み会を記録しました！摂取 ${kcal} kcal を夕食として保存しました`);
+        } else {
+            showToast('🍻 飲み会を記録しました！翌日の体重変化に注目です');
+        }
     }
 
     saveDataAndSync();
     syncDrinkingFormWithExistingDataForDate(date);
     updateDashboard();
     updateWeightHistoryList();
+    if (mealChanged) {
+        // 食事フォームが同じ日付を開いていれば、今書き込んだ値に合わせ直す
+        // (古い表示のまま送信すると、いま保存した夕食を上書きしてしまうため)
+        if (DOM.mealDate && DOM.mealDate.value === date) {
+            syncMealFormWithExistingDataForDate(date);
+        }
+        updateMealHistoryList();
+        updateCalorieBalanceHistoryList();
+    }
 }
 
 // ==========================================
