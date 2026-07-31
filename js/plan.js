@@ -431,7 +431,7 @@ function tdeeSubtextHtml(tdeeChoice, profile) {
         const m = tdeeChoice.measured;
         const weeklyKg = Math.round(m.slopeKgPerDay * 7 * 100) / 100;
         const sign = weeklyKg > 0 ? '+' : '';
-        return `直近${m.windowDays}日の実測: 平均摂取${m.avgIntake}kcal(${m.mealDays}日分)、体重${sign}${weeklyKg}kg/週(${m.weightPoints}点)から逆算`
+        return `直近${m.windowDays}日の実測: 平均摂取${m.avgIntake}kcal(昨日までの${m.mealDays}日分)、体重${sign}${weeklyKg}kg/週(${m.weightPoints}点)から逆算`
             + `<br>95%の確からしさで ${m.tdeeLow}〜${m.tdeeHigh} kcal/日（体重を毎日測るほど狭まります）`;
     }
     // 推定式の内訳。運動分はPALに埋め込まず、実績からの1日平均として明示的に足している
