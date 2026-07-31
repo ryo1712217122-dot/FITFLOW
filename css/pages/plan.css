@@ -321,9 +321,14 @@
     min-width: 180px;
 }
 
+/* 生活活動レベルの編集ボタンがラベル行に同居するので、行内で両端に振り分ける */
 .plan-sim-fact-label {
     font-size: 0.75rem;
     color: var(--text-secondary);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
 }
 
 .plan-sim-fact-value {
@@ -347,6 +352,43 @@
 .plan-tdee-btn[disabled] {
     opacity: 0.45;
     cursor: not-allowed;
+}
+
+/* 実測TDEEの誤差幅。値そのものより控えめに見せる */
+.plan-tdee-range {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    letter-spacing: 0;
+}
+
+/* 平衡体重。「3ヶ月後に何kg」より行動に効く指標なのでペースの直下に置く */
+.plan-equilibrium {
+    background: color-mix(in srgb, var(--color-secondary) 10%, transparent);
+    border-left: 4px solid var(--color-secondary);
+    border-radius: 8px;
+    padding: 0.7rem 0.9rem;
+    margin: -0.5rem 0 1.25rem;
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+}
+
+.plan-equilibrium strong {
+    color: var(--color-secondary);
+    font-family: var(--font-display);
+    font-size: 1.1rem;
+}
+
+.plan-inline-editor-fields select {
+    padding: 0.5rem;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border-color);
+    background: var(--bg-surface);
+    color: var(--text-primary);
+    font-size: 0.85rem;
 }
 
 .plan-sim-pace-row {

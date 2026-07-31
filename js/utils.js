@@ -8,6 +8,29 @@ function getLocalDateString(date = new Date()) {
     return `${y}-${m}-${d}`;
 }
 
+// 「フィットネス上の今日」を返す(AM3時までは前日扱い)。アプリ内で今日を指す箇所は
+// 記録フォームのデフォルト日付も表示・集計もすべてこれに揃える。
+// 以前はフォームだけがgetFitnessDateStringで、ダッシュボードや計画タブはgetLocalDateStringを
+// 使っていたため、深夜1時に開くとフォームは前日・ダッシュボードは当日を指してズレていた。
+function getTodayStr() {
+    return getFitnessDateString();
+}
+
+// 実績から活動プロフィール(BMR・PAL・ベース消費・運動消費・TDEE)を求める共通入口。
+// 生活活動レベルと1セットあたりkcalという設定値の受け渡しを1か所にまとめ、
+// ダッシュボードと計画タブが必ず同じ前提で計算するようにする。
+function getActivityProfile(latestWeight, todayStr) {
+    const s = state.planSettings || DEFAULT_PLAN_SETTINGS;
+    return computeActivityProfile(
+        latestWeight, state.workouts, state.cardioLogs, todayStr || getTodayStr(),
+        {
+            lifestylePal: s.lifestyleActivityLevel || DEFAULT_PLAN_SETTINGS.lifestyleActivityLevel,
+            caloriesPerSet: WORKOUT_CALORIES_PER_SET,
+            bmrPerKg: BMR_KCAL_PER_KG
+        }
+    );
+}
+
 // Escape free-text user input before inserting it via innerHTML
 function escapeHtml(str) {
     if (str === null || str === undefined) return '';

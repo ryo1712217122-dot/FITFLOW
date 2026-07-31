@@ -15,6 +15,34 @@ const DEFAULT_WORKOUT_CATEGORY = 'その他 (Other)';
 // 有酸素の「距離×体重」と同様、種目や重量の違いを厳密には反映しない単純化モデル。
 const WORKOUT_CALORIES_PER_SET = 15;
 
+// 基礎代謝の推定に使う「体重1kgあたりの基礎代謝(kcal/kg/日)」。
+// 日本人の基礎代謝基準値(男性18-29歳=23.7、30-49歳=22.5)の中央付近を取った簡易値。
+const BMR_KCAL_PER_KG = 23;
+
+// 生活活動レベル(PAL)。**運動(筋トレ・有酸素)を含まない**日常生活の活動量で、
+// 運動分はcardioLogs/workoutsの実績から別途加算する(lib/data-utils.jsのcomputeActivityProfile)。
+// v1.21.0以前はこれを筋トレ頻度から自動決定しており、運動消費の二重計上になっていた。
+//
+// 歩数の目安は「歩行の正味コスト ≒ 0.5 kcal/kg/km・歩幅70cm」から換算している。
+// 体重80kgなら1日1万歩(約7km)は約280kcal/日で、ほとんど歩かない生活との差は約180kcal、
+// PAL換算でおよそ +0.10〜0.15 に相当する。
+const LIFESTYLE_ACTIVITY_LEVELS = [
+    { value: 1.35, label: 'ほとんど外出しない', hint: '〜3,000歩' },
+    { value: 1.45, label: '座位中心・移動少なめ', hint: '3,000〜7,000歩' },
+    { value: 1.55, label: '通学・通勤でよく歩く', hint: '7,000〜12,000歩' },
+    { value: 1.70, label: '立ち仕事・非常によく歩く', hint: '12,000歩〜' }
+];
+
+// 選択中の生活活動レベルの表示名を返す。一致する選択肢が無ければ最も近いものの名前を使う。
+function getLifestyleLevelLabel(pal) {
+    const v = Number(pal);
+    const exact = LIFESTYLE_ACTIVITY_LEVELS.find(l => l.value === v);
+    if (exact) return exact.label;
+    return LIFESTYLE_ACTIVITY_LEVELS.reduce((best, l) =>
+        Math.abs(l.value - v) < Math.abs(best.value - v) ? l : best,
+        LIFESTYLE_ACTIVITY_LEVELS[0]).label;
+}
+
 // 一回限りのデータ移行(migrations)の実行済みフラグに使うlocalStorageキーの接頭辞。
 // 各移行は「接頭辞 + 移行名」のキーが立っていればスキップされる(冪等性の担保)。
 const MIGRATION_FLAG_PREFIX = 'fitflow_migration_';
@@ -42,6 +70,9 @@ const DEFAULT_PLAN_SETTINGS = {
     weight1Month: 79.0,
     weight3Month: 75.5,
     weightEquilibrium: 67.0,
+    // 運動を除いた生活活動レベル(LIFESTYLE_ACTIVITY_LEVELSのvalue)。
+    // 既存ユーザーもloadData()のマージでこの既定値が入る。
+    lifestyleActivityLevel: 1.55,
     // ロードマップ(weightStart等)がどの日付を起点とした予測なのか。
     // nullの場合は体重グラフの予測線を描画しない(いつからの計画か分からないため)。
     // 未設定の場合のみ初回保存時の日付が入り、以降は編集フォームの「計画開始日」で

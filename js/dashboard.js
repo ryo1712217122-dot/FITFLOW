@@ -31,7 +31,7 @@ function updateDashboard() {
     }
 
     // 3. Stats: Today's running
-    const todayStr = getLocalDateString();
+    const todayStr = getTodayStr();
     let todayCalories = 0;
     let todayDistance = 0;
 
@@ -94,10 +94,9 @@ function calculateStreak(workouts) {
     const dates = workouts.map(w => w.date);
     const uniqueDates = [...new Set(dates)].sort((a, b) => new Date(b) - new Date(a));
 
-    const todayStr = getLocalDateString();
-    const yesterday = new Date();
-    yesterday.setDate(yesterday.getDate() - 1);
-    const yesterdayStr = getLocalDateString(yesterday);
+    const todayStr = getTodayStr();
+    // 「昨日」もフィットネス上の今日を基準に取る(実時刻の昨日ではない)
+    const yesterdayStr = addDaysToDateString(todayStr, -1);
 
     // Check if user has logged a workout today or yesterday
     if (uniqueDates[0] !== todayStr && uniqueDates[0] !== yesterdayStr) {
@@ -191,7 +190,7 @@ function renderCalendar() {
         DOM.calendarDays.appendChild(emptyCell);
     }
 
-    const todayStr = getLocalDateString();
+    const todayStr = getTodayStr();
 
     // O(W) Group workouts by date beforehand for fast O(1) lookup in render loop
     const workoutsByDate = {};
@@ -335,11 +334,12 @@ function initDashboardControls() {
 // 採用するのはprofile.tdeeではなくprofile.baseBurn。
 // state.maintenanceCaloriesは「運動分を含まない基準線」であり、
 // ダッシュボードでは maintenance + 有酸素 + 筋トレ で総消費を組み立てるため、
-// ここに有酸素分を含むtdeeを入れると運動消費を二重計上してしまう
-// (computeActivityProfileも tdee = baseBurn + runBurn×runCount/7 として分解している)。
+// ここに運動分を含むtdeeを入れると二重計上になる。
+// v1.21.0でPALが筋トレ頻度に連動しなくなったので、baseBurnは本当に運動を含まない
+// 値になった(それ以前はPAL経由で筋トレ分が暗黙に入っており、なお二重計上だった)。
 function calculateFluidMaintenance() {
     const latestWeight = getLatestWeight();
-    const profile = computeActivityProfile(latestWeight, state.workouts, state.cardioLogs, getLocalDateString());
+    const profile = getActivityProfile(latestWeight);
     const calculatedCalories = profile.baseBurn;
 
     // Apply to input and state
@@ -349,7 +349,7 @@ function calculateFluidMaintenance() {
     state.maintenanceCalories = calculatedCalories;
     saveDataAndSync();
 
-    showToast(`メンテナンスカロリーを再計算しました：${calculatedCalories} kcal (${profile.palDesc}・直近30日${profile.workoutsLast30Days}回, 最新体重: ${latestWeight.toFixed(1)}kg)`);
+    showToast(`メンテナンスカロリーを再計算しました：${calculatedCalories} kcal (基礎${profile.bmr}×活動${profile.pal}「${getLifestyleLevelLabel(profile.pal)}」, 最新体重: ${latestWeight.toFixed(1)}kg)`);
     updateDashboard();
 }
 
@@ -365,7 +365,7 @@ function renderWeightChart() {
 
     // 表示期間: 今日からweightChartPeriodDays日分の日付ウィンドウで絞り込む
     // (「最近N件」ではなく日数で切ることで、記録の抜けがあっても期間の意味が変わらない)
-    const windowStart = new Date(getLocalDateString() + 'T00:00:00');
+    const windowStart = new Date(getTodayStr() + 'T00:00:00');
     windowStart.setDate(windowStart.getDate() - (weightChartPeriodDays - 1));
     const startIndex = state.weightLogs.findIndex(l => {
         const d = new Date(l.date + 'T00:00:00');
@@ -401,14 +401,15 @@ function renderWeightChart() {
 
     // 日々の変動ノイズに埋もれがちな傾向を、要約テキストとしても添える
     if (DOM.weightChangeSummary) {
-        const change = computeWeightChangeOverDays(state.weightLogs, WEIGHT_TREND_WINDOW_DAYS);
+        // 2点の生の差ではなく移動平均どうしの差を取る(測定ノイズを約1/√7に落とす)
+        const change = computeWeightTrendChange(state.weightLogs, WEIGHT_TREND_WINDOW_DAYS, WEIGHT_TREND_WINDOW_DAYS);
         if (change === null) {
             DOM.weightChangeSummary.textContent = '';
         } else {
             const sign = change > 0 ? '+' : '';
             const trendClass = change < 0 ? 'weight-change-down' : (change > 0 ? 'weight-change-up' : '');
             DOM.weightChangeSummary.className = `weight-change-summary ${trendClass}`;
-            DOM.weightChangeSummary.textContent = `直近${WEIGHT_TREND_WINDOW_DAYS}日間で ${sign}${change}kg`;
+            DOM.weightChangeSummary.textContent = `直近${WEIGHT_TREND_WINDOW_DAYS}日間の傾向 ${sign}${change}kg`;
         }
     }
 
@@ -462,16 +463,19 @@ function renderWeightChart() {
         }
     ];
 
-    // 最適化計画のロードマップ(開始時・1ヶ月目・3ヶ月目)が設定されていれば、
-    // 予測体重を実測と同じ日付軸に重ねて表示し、計画が当たっているか一目で確認できるようにする
+    // 計画上の予測体重を実測と同じ日付軸に重ねて表示し、計画が当たっているか一目で分かるようにする。
+    // v1.21.0から、計画タブのロードマップ表とまったく同じ関数・同じ前提(選択中のペースと
+    // 開始日近くの実測体重)で引く。以前はここだけが保存済みマイルストーンの折れ線を使っており、
+    // ペースを変えてもグラフの予測線は「計画に反映」を押すまで動かず、表と食い違っていた。
     const plan = state.planSettings;
     if (plan && plan.weightPlanStartDate) {
+        const planBasis = getPlanProjectionBasis();
         const plannedSeries = computePlannedWeightSeries(
             recentLogs.map(l => l.date),
             plan.weightPlanStartDate,
-            plan.weightStart,
-            plan.weight1Month,
-            plan.weight3Month
+            planBasis.startWeight,
+            planBasis.dailyDeficit,
+            planBasis.kcalPerKgPerDay
         );
         if (plannedSeries.some(v => v !== null)) {
             datasets.push({
@@ -543,13 +547,11 @@ function renderCalorieChart() {
 
     const labels = [];
     const datesYmd = [];
-    const today = new Date();
+    const todayStr = getTodayStr();
 
-    // Generate dates window
+    // Generate dates window（フィットネス上の今日を終端にする）
     for (let i = CARDIO_DAYS_WINDOW - 1; i >= 0; i--) {
-        const d = new Date();
-        d.setDate(today.getDate() - i);
-        const ymd = getLocalDateString(d);
+        const ymd = addDaysToDateString(todayStr, -i);
         datesYmd.push(ymd);
 
         const parts = ymd.split('-');

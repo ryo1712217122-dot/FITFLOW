@@ -224,6 +224,26 @@ function runOneTimeMigrations() {
             localStorage.setItem(planStartWeightFlag, 'true');
         }
     }
+
+    // 2026-07: メンテナンスカロリー(ダッシュボードの消費の基準線)の定義が変わったため、
+    // 保存済みの値を新しい定義で計算し直す。
+    // 旧: BMR × PAL、ただしPALは筋トレ頻度で決まっていた → 基準線に筋トレ分が暗黙に入り、
+    //     そこへさらに筋トレ推定消費を足していたので総消費が過大だった(体重80kgで数百kcal)。
+    // 新: BMR × 生活活動レベル(運動を含まない)。運動は有酸素・筋トレとも明示的に加算する。
+    // 体重ログが無い環境ではmarkDoneせず、次回起動で再判定する。
+    const maintenanceFlag = MIGRATION_FLAG_PREFIX + '2026_07_maintenance_excludes_exercise';
+    if (!localStorage.getItem(maintenanceFlag)) {
+        if (state.weightLogs.length > 0) {
+            const latestWeight = getLatestWeightFromLogs(state.weightLogs, DEFAULT_WEIGHT_KG);
+            const recalculated = getActivityProfile(latestWeight).baseBurn;
+            if (recalculated > 0 && recalculated !== state.maintenanceCalories) {
+                console.log(`🛠️ メンテナンスカロリーを新しい定義(運動を含まない基準線)で再計算しました: ${state.maintenanceCalories} → ${recalculated} kcal`);
+                state.maintenanceCalories = recalculated;
+                saveDataAndSync();
+            }
+            localStorage.setItem(maintenanceFlag, 'true');
+        }
+    }
 }
 
 // GAS ウェブアプリURLの保存は、ユーザーが「接続情報を保存」ボタンを押した時だけ行う

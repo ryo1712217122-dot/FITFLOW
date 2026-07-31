@@ -19,17 +19,11 @@ function renderPlanTab() {
 
     const s = state.planSettings || DEFAULT_PLAN_SETTINGS;
 
-    // 減量シミュレーション: 最新体重と直近の記録(筋トレ頻度・有酸素)から
-    // メンテナンスカロリーを推定し、選択中のペースで目標摂取3区分と予測体重を出す
-    const latestWeight = getLatestWeight();
-    const todayStr = getLocalDateString();
-    const profile = computeActivityProfile(latestWeight, state.workouts, state.cardioLogs, todayStr);
+    // 減量シミュレーションと予測の前提は getPlanProjectionBasis に集約している
+    // (ダッシュボードの体重グラフの予測線も同じ関数を通る)
+    const basis = getPlanProjectionBasis();
+    const { profile, tdeeChoice, sim, latestWeight, todayStr, startLog } = basis;
     const pace = getSimulationPace(s);
-    const tdeeChoice = getEffectiveTdee(profile, s);
-    // 通常日の下限にはBMRを渡す(下限に当たると実効アンダーカロリーが目標より小さくなる)
-    const sim = computeIntakeTiersForPace(
-        tdeeChoice.tdee, pace, s.daysNormal, s.daysMilkTea, s.daysEvent,
-        SIM_INTAKE_DELTA_SWEET, SIM_INTAKE_DELTA_EVENT, profile.bmr);
 
     const paceButtonsHtml = SIM_PACE_OPTIONS.map(p => `
         <button type="button" class="plan-sim-pace-btn${p === pace ? ' active' : ''}" data-pace="${p}">月${p}kg</button>
@@ -37,15 +31,17 @@ function renderPlanTab() {
 
     // ロードマップは「計画開始日」を起点にする。今日を起点に前へ伸ばすだけだと
     // 計画全体の中で今どこにいるのかが分からないため。
-    // 開始時体重は保存値(s.weightStart)ではなく開始日近くの実際の体重記録から取る
-    // (保存値は開始日マイグレーションの際に更新されておらず、古い既定値が残りうる)。
-    const startLog = s.weightPlanStartDate ? findWeightNearDate(state.weightLogs, s.weightPlanStartDate) : null;
-    const roadmapStartWeight = startLog ? startLog.weight : s.weightStart;
+    const roadmapStartWeight = basis.startWeight;
     const roadmap = s.weightPlanStartDate
-        ? computePlanRoadmap(s.weightPlanStartDate, roadmapStartWeight, sim.effectiveDailyDeficit,
-            state.weightLogs, todayStr)
+        ? computePlanRoadmap(s.weightPlanStartDate, roadmapStartWeight, basis.dailyDeficit,
+            state.weightLogs, todayStr, { kcalPerKgPerDay: basis.kcalPerKgPerDay })
         : [];
     const elapsedDaysForHeader = s.weightPlanStartDate ? computeDaysSince(s.weightPlanStartDate, todayStr) : 0;
+
+    // 平衡体重: いまの摂取を続けた場合に最終的に落ち着く体重。
+    // 「3ヶ月後に何kg」より行動と結びつく指標なので、ペースの隣に添える。
+    const equilibrium = computeEquilibriumWeight(latestWeight, basis.dailyDeficit, basis.kcalPerKgPerDay);
+    const halfLifeDays = computeHalfLifeDays(basis.kcalPerKgPerDay);
 
     const roadmapHtml = roadmap.map(r => {
         const diffClass = r.diff === null ? '' : (r.diff > 0 ? ' behind' : (r.diff < 0 ? ' ahead' : ''));
@@ -84,8 +80,13 @@ function renderPlanTab() {
                         <span class="plan-sim-fact-value">${latestWeight.toFixed(1)} kg</span>
                     </div>
                     <div class="plan-sim-fact">
-                        <span class="plan-sim-fact-label">TDEE(1日の総消費)</span>
-                        <span class="plan-sim-fact-value">${tdeeChoice.tdee} kcal/日</span>
+                        <span class="plan-sim-fact-label">
+                            TDEE(1日の総消費)
+                            <button type="button" class="plan-inline-edit-btn" id="btn-edit-lifestyle" title="運動を除いた日常の活動量を変更する">
+                                <i data-lucide="pencil"></i> 生活活動
+                            </button>
+                        </span>
+                        <span class="plan-sim-fact-value">${tdeeChoice.tdee}${tdeeChoice.source === 'measured' ? ` <span class="plan-tdee-range">± ${Math.round(1.96 * tdeeChoice.measured.tdeeStdError)}</span>` : ''} kcal/日</span>
                         <div class="chart-period-toggle plan-tdee-toggle">
                             <button type="button" class="chart-period-btn plan-tdee-btn${tdeeChoice.source === 'estimated' ? ' active' : ''}" data-tdee-source="estimated">推定 ${profile.tdee}</button>
                             <button type="button" class="chart-period-btn plan-tdee-btn${tdeeChoice.source === 'measured' ? ' active' : ''}" data-tdee-source="measured"${tdeeChoice.measured ? '' : ' disabled'}>実測 ${tdeeChoice.measured ? tdeeChoice.measured.tdee : '—'}</button>
@@ -93,12 +94,18 @@ function renderPlanTab() {
                         <span class="plan-sim-fact-sub">${tdeeSubtextHtml(tdeeChoice, profile)}</span>
                     </div>
                 </div>
+                <div id="plan-lifestyle-editor" class="plan-inline-editor is-hidden"></div>
 
                 <div class="plan-sim-pace-row">
                     <span class="plan-sim-pace-label">減量ペース</span>
                     <div class="plan-sim-pace-buttons">${paceButtonsHtml}</div>
                     <span class="plan-sim-fact-sub">アンダーカロリー 約${sim.effectiveDailyDeficit} kcal/日</span>
                 </div>
+                ${equilibrium !== null ? `
+                <p class="plan-equilibrium">
+                    この食事を続けた場合に落ち着く体重（平衡体重）は <strong>${equilibrium.toFixed(1)} kg</strong>
+                    <span class="plan-sim-fact-sub">現在との差が半分まで縮むのに約${halfLifeDays}日。体重が減るとTDEEも下がるため、減量は一定ペースではなくここへ向かって減速していきます。</span>
+                </p>` : ''}
                 ${sim.clamped ? `<p class="plan-sim-clamp-warning">⚠️ このペースでは通常日が基礎代謝(${profile.bmr}kcal)を下回るため、下限で調整しています。実際の減量ペースは選択より緩やかになります。</p>` : ''}
 
                 <h4 class="plan-section-heading">
@@ -221,19 +228,30 @@ function isPlanInlineEditorOpen() {
 
 // 個別の編集ボタン。一括編集画面の代わりに、その設定が効いている場所のすぐ隣で
 // 開閉するインラインエディタとして実装する。
-// fields: [{ key, label, type, step, min }]、onSave(values) は検証済みの値を受け取る。
+// fields: [{ key, label, type, step, min, options }]、onSave(values) は検証済みの値を受け取る。
+// type='select' の場合は options: [{ value, label }] から選択肢を組み立て、数値として返す。
 function openInlineEditor(editorEl, fields, currentSettings, onSave) {
     if (!editorEl) return;
+
+    const fieldHtml = (f) => {
+        if (f.type === 'select') {
+            const current = String(currentSettings[f.key] ?? '');
+            return `<select id="inline-edit-${f.key}" class="width-full">
+                ${f.options.map(o => `<option value="${o.value}"${String(o.value) === current ? ' selected' : ''}>${escapeHtml(o.label)}</option>`).join('')}
+            </select>`;
+        }
+        return `<input type="${f.type || 'number'}" id="inline-edit-${f.key}"
+            ${f.step ? `step="${f.step}"` : ''}
+            value="${f.type === 'date' ? (currentSettings[f.key] || '') : (currentSettings[f.key] ?? '')}"
+            class="width-full">`;
+    };
 
     editorEl.innerHTML = `
         <div class="plan-inline-editor-fields">
             ${fields.map(f => `
                 <div class="form-group">
                     <label class="text-2xs" for="inline-edit-${f.key}">${f.label}</label>
-                    <input type="${f.type || 'number'}" id="inline-edit-${f.key}"
-                        ${f.step ? `step="${f.step}"` : ''}
-                        value="${f.type === 'date' ? (currentSettings[f.key] || '') : (currentSettings[f.key] ?? '')}"
-                        class="width-full">
+                    ${fieldHtml(f)}
                 </div>
             `).join('')}
         </div>
@@ -244,7 +262,7 @@ function openInlineEditor(editorEl, fields, currentSettings, onSave) {
     `;
     editorEl.classList.remove('is-hidden');
 
-    const firstInput = editorEl.querySelector('input');
+    const firstInput = editorEl.querySelector('input, select');
     if (firstInput) firstInput.focus();
 
     editorEl.querySelector('[data-role="cancel"]').addEventListener('click', () => {
@@ -257,6 +275,10 @@ function openInlineEditor(editorEl, fields, currentSettings, onSave) {
         for (const f of fields) {
             const input = editorEl.querySelector(`#inline-edit-${f.key}`);
             if (!input) continue;
+            if (f.type === 'select') {
+                values[f.key] = parseFloat(input.value);
+                continue;
+            }
             if (f.type === 'date') {
                 values[f.key] = input.value;
                 continue;
@@ -319,6 +341,48 @@ function wirePlanInlineEditors(s) {
         });
     }
 
+    // 生活活動レベル(運動を除いた日常の活動量)。TDEEのベース消費に直接効く唯一の手入力値で、
+    // 歩数の目安を添えて選ばせる(1日1万歩なら「通学・通勤でよく歩く」)。
+    const lifestyleBtn = document.getElementById('btn-edit-lifestyle');
+    const lifestyleEditor = document.getElementById('plan-lifestyle-editor');
+    if (lifestyleBtn && lifestyleEditor) {
+        lifestyleBtn.addEventListener('click', () => {
+            if (!lifestyleEditor.classList.contains('is-hidden')) {
+                lifestyleEditor.classList.add('is-hidden');
+                lifestyleEditor.innerHTML = '';
+                return;
+            }
+            openInlineEditor(lifestyleEditor, [{
+                key: 'lifestyleActivityLevel',
+                label: '日常の活動量（運動は別で加算されるので含めないでください）',
+                type: 'select',
+                options: LIFESTYLE_ACTIVITY_LEVELS.map(l => ({
+                    value: l.value,
+                    label: `${l.label}（${l.hint}）`
+                }))
+            }], s, (values) => {
+                const level = values.lifestyleActivityLevel;
+                if (!isFinite(level) || level <= 0) {
+                    showToast('活動量を選択してください');
+                    return;
+                }
+                lifestyleEditor.classList.add('is-hidden');
+                lifestyleEditor.innerHTML = '';
+                // メンテナンスカロリー(ダッシュボードの基準線)もこの設定から計算されるので、
+                // 選び直したら即座に追従させる(押し忘れて古い基準線が残るのを防ぐ)
+                const settings = state.planSettings || Object.assign({}, DEFAULT_PLAN_SETTINGS);
+                settings.lifestyleActivityLevel = level;
+                state.planSettings = settings;
+                state.maintenanceCalories = getActivityProfile(getLatestWeight()).baseBurn;
+                if (DOM.maintenanceInput) DOM.maintenanceInput.value = state.maintenanceCalories;
+                saveDataAndSync();
+                showToast(`日常の活動量を「${getLifestyleLevelLabel(level)}」に変更しました（メンテナンス ${state.maintenanceCalories} kcal）`);
+                renderPlanTab();
+                updateDashboard();
+            });
+        });
+    }
+
     const startBtn = document.getElementById('btn-edit-plan-start');
     const startEditor = document.getElementById('plan-start-editor');
     if (startBtn && startEditor) {
@@ -353,7 +417,7 @@ function getSimulationPace(planSettings) {
 // renderPlanTab(表示)とadoptSimulationPlan(計画反映)の両方がこれを通ることで、
 // 画面に見えている数字と計画に書き込まれる数字が必ず一致する。
 function getEffectiveTdee(profile, planSettings) {
-    const measured = computeMeasuredTdee(state.weightLogs, state.mealLogs, getLocalDateString());
+    const measured = computeMeasuredTdee(state.weightLogs, state.mealLogs, getTodayStr());
     const wantMeasured = !!(planSettings && planSettings.tdeeSource === 'measured');
     if (wantMeasured && measured) {
         return { tdee: measured.tdee, source: 'measured', measured, fellBack: false };
@@ -361,22 +425,53 @@ function getEffectiveTdee(profile, planSettings) {
     return { tdee: profile.tdee, source: 'estimated', measured, fellBack: wantMeasured && !measured };
 }
 
-// TDEE表示の補足文。推定は内訳、実測は算出根拠(期間・記録数・平均摂取・体重ペース)を示す
+// TDEE表示の補足文。推定は内訳、実測は算出根拠(期間・記録数・平均摂取・体重ペース)と誤差幅を示す
 function tdeeSubtextHtml(tdeeChoice, profile) {
     if (tdeeChoice.source === 'measured') {
         const m = tdeeChoice.measured;
         const weeklyKg = Math.round(m.slopeKgPerDay * 7 * 100) / 100;
         const sign = weeklyKg > 0 ? '+' : '';
-        return `直近${m.windowDays}日の実測: 平均摂取${m.avgIntake}kcal(${m.mealDays}日分)、体重${sign}${weeklyKg}kg/週(${m.weightPoints}点)から逆算`;
+        return `直近${m.windowDays}日の実測: 平均摂取${m.avgIntake}kcal(${m.mealDays}日分)、体重${sign}${weeklyKg}kg/週(${m.weightPoints}点)から逆算`
+            + `<br>95%の確からしさで ${m.tdeeLow}〜${m.tdeeHigh} kcal/日（体重を毎日測るほど狭まります）`;
     }
-    const base = `基礎${profile.bmr}×活動${profile.pal}（${profile.palDesc}・直近30日${profile.workoutsLast30Days}回）${profile.runCount > 0 ? ` + ラン週${profile.runCount}回` : ''}`;
+    // 推定式の内訳。運動分はPALに埋め込まず、実績からの1日平均として明示的に足している
+    const parts = [`基礎${profile.bmr}×生活活動${profile.pal}（${getLifestyleLevelLabel(profile.pal)}）`];
+    if (profile.cardioDailyAvg > 0) parts.push(`有酸素+${profile.cardioDailyAvg}`);
+    if (profile.workoutDailyAvg > 0) parts.push(`筋トレ+${profile.workoutDailyAvg}（直近30日${profile.workoutsLast30Days}回）`);
+    const base = parts.join(' ');
     if (tdeeChoice.fellBack) {
-        return `${base}<br>⚠️ 実測TDEEはデータ不足のため使えません（直近28日に食事記録10日分・体重8点/14日以上が必要）。推定値で計算中`;
+        return `${base}<br>⚠️ 実測TDEEはまだ精度が足りません（体重の記録が増えるほど誤差が縮み、±150kcal/日以内になると使えます）。推定値で計算中`;
     }
     if (!tdeeChoice.measured) {
         return `${base}<br>※食事と体重の記録が貯まると、実測TDEE(あなた個人の実測値)に切り替えられます`;
     }
     return base;
+}
+
+// 計画の予測に必要な前提を1か所で組み立てる。
+// ロードマップ表(計画タブ)と体重グラフの予測線(ダッシュボード)はどちらもここを通るので、
+// 両者が食い違うことがない。ペースやTDEEの選択を変えれば両方が同時に動く。
+function getPlanProjectionBasis() {
+    const s = state.planSettings || DEFAULT_PLAN_SETTINGS;
+    const latestWeight = getLatestWeight();
+    const todayStr = getTodayStr();
+    const profile = getActivityProfile(latestWeight, todayStr);
+    const tdeeChoice = getEffectiveTdee(profile, s);
+    // 通常日の下限にはBMRを渡す(下限に当たると実効アンダーカロリーが目標より小さくなる)
+    const sim = computeIntakeTiersForPace(
+        tdeeChoice.tdee, getSimulationPace(s), s.daysNormal, s.daysMilkTea, s.daysEvent,
+        SIM_INTAKE_DELTA_SWEET, SIM_INTAKE_DELTA_EVENT, profile.bmr);
+
+    // 開始時体重は保存値(s.weightStart)ではなく開始日近くの実際の体重記録から取る
+    // (保存値は開始日マイグレーションの際に更新されておらず、古い既定値が残りうる)
+    const startLog = s.weightPlanStartDate ? findWeightNearDate(state.weightLogs, s.weightPlanStartDate) : null;
+
+    return {
+        profile, tdeeChoice, sim, latestWeight, todayStr, startLog,
+        startWeight: startLog ? startLog.weight : s.weightStart,
+        dailyDeficit: sim.effectiveDailyDeficit,
+        kcalPerKgPerDay: profile.kcalPerKgPerDay
+    };
 }
 
 // シミュレーション結果を計画へ反映する。旧「実績から再計算」2ボタン(消費予算・ロードマップ)を
@@ -391,16 +486,10 @@ function adoptSimulationPlan() {
     }
 
     const s = state.planSettings || Object.assign({}, DEFAULT_PLAN_SETTINGS);
-    const latestWeight = getLatestWeight();
-    const todayStr = getLocalDateString();
-
-    const profile = computeActivityProfile(latestWeight, state.workouts, state.cardioLogs, todayStr);
+    // 表示側(renderPlanTab)とまったく同じ前提で計算する
+    const basis = getPlanProjectionBasis();
+    const { profile, tdeeChoice, sim, latestWeight, todayStr } = basis;
     const pace = getSimulationPace(s);
-    // 表示側(renderPlanTab)と同じ条件で計算する(TDEEの推定/実測選択・通常日の下限=BMR)
-    const tdeeChoice = getEffectiveTdee(profile, s);
-    const sim = computeIntakeTiersForPace(
-        tdeeChoice.tdee, pace, s.daysNormal, s.daysMilkTea, s.daysEvent,
-        SIM_INTAKE_DELTA_SWEET, SIM_INTAKE_DELTA_EVENT, profile.bmr);
 
     s.intakeNormal = sim.intakeNormal;
     s.intakeMilkTea = sim.intakeSweet;
@@ -422,11 +511,17 @@ function adoptSimulationPlan() {
         s.weightPlanStartDate = todayStr;
         s.weightStart = latestWeight;
     }
+    // 保存するマイルストーンも減速を織り込んだ予測にする。表示はもうこの値を使わないが、
+    // クラウド(PlanSettingsシート)経由で外部のブリーフィングが参照するため書き込みは残す。
     const { weight1Month, weight3Month } =
-        computeRoadmapMilestones(latestWeight, sim.effectiveDailyDeficit, elapsedDays, s.weight1Month, s.weight3Month);
+        computeRoadmapMilestones(latestWeight, sim.effectiveDailyDeficit, elapsedDays,
+            s.weight1Month, s.weight3Month, basis.kcalPerKgPerDay);
     s.weight1Month = weight1Month;
     s.weight3Month = weight3Month;
     s.targetPaceKgMonth = pace;
+    // 平衡体重も実績から出し直す(固定値のまま放置されていた項目)
+    const equilibrium = computeEquilibriumWeight(latestWeight, sim.effectiveDailyDeficit, basis.kcalPerKgPerDay);
+    if (equilibrium !== null) s.weightEquilibrium = equilibrium;
 
     state.planSettings = s;
     saveDataAndSync();

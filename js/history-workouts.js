@@ -412,7 +412,7 @@ function renderVolumeTrendChart() {
     const canvas = document.getElementById('volumeTrendChart');
     if (!canvas || !DOM.noVolumeTrendData) return;
 
-    const todayStr = getLocalDateString();
+    const todayStr = getTodayStr();
     const weeklyVolumes = computeWeeklyTrainingVolume(state.workouts, VOLUME_TREND_WEEKS, todayStr);
 
     const hasAnyData = weeklyVolumes.some(w => w.volume > 0);
