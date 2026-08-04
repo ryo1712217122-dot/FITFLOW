@@ -1,9 +1,10 @@
-// FITFLOW - 「記録する」タブ: トレーニング・有酸素・体重・食事・飲み会の5つの独立したフォーム。
+// FITFLOW - 「記録する」タブ: トレーニング・有酸素・体重・食事・飲み会・睡眠の6つの独立したフォーム。
 //   パート1(#workout-form)     : トレーニング(筋トレ)
 //   パート2(#cardio-form)      : 有酸素(走行距離)
 //   パート3(#weight-quick-form): 体重
 //   パート4(#meal-form)        : 食事(朝食/昼食/夕食/間食の摂取kcal目安)
 //   パート5(#drinking-form)    : 飲み会(日付のみ。体重変化の文脈として体重グラフに重ねる)
+//   パート6(#sleep-form)       : 睡眠(就寝・起床の時刻。日付は「起床日」)
 // それぞれ一つずつ入力・保存できる(以前の「有酸素を保存して完了」のような合体送信は廃止)。
 //
 // 筋トレの種目は「まとめて最後に一括保存」ではなく、1種目入力し終えるごとに
@@ -113,6 +114,27 @@ function initFormControls() {
         DOM.drinkingForm.addEventListener('submit', (e) => {
             e.preventDefault();
             saveDrinkingLog();
+        });
+    }
+
+    // パート6: 睡眠
+    if (DOM.sleepForm) {
+        if (DOM.sleepDate) {
+            // 睡眠は「起床日」に紐づけるので、27時ルールで求めた日付をそのまま使える
+            // (深夜2時に記録しても、その時点で寝ているはずはなく、直したいのは前日の記録)
+            DOM.sleepDate.value = getFitnessDateString();
+            syncSleepFormWithExistingDataForDate(DOM.sleepDate.value);
+            DOM.sleepDate.addEventListener('change', () => {
+                syncSleepFormWithExistingDataForDate(DOM.sleepDate.value);
+            });
+        }
+        // 時刻を触るたびに睡眠時間を出しておく(保存前に入力ミスへ気づけるように)
+        [DOM.sleepBedTime, DOM.sleepWakeTime].forEach(el => {
+            if (el) el.addEventListener('input', updateSleepDurationPreview);
+        });
+        DOM.sleepForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            saveSleepLog();
         });
     }
 }
@@ -1095,4 +1117,107 @@ function saveDailyLog() {
     updateCardioHint(); // 体重が変わると有酸素の消費目安も変わるため
     updateDashboard();
     updateWeightHistoryList();
+}
+
+// ==========================================
+// 睡眠の記録
+// ==========================================
+
+// 入力中の就寝・起床から睡眠時間をその場に表示する。
+// 保存してから「6時間のつもりが18時間になっていた」と気づくのを防ぐための即時フィードバック。
+function updateSleepDurationPreview() {
+    if (!DOM.sleepDurationPreview) return;
+    const hours = computeSleepDuration(
+        DOM.sleepBedTime ? DOM.sleepBedTime.value : '',
+        DOM.sleepWakeTime ? DOM.sleepWakeTime.value : ''
+    );
+    if (hours === null) {
+        DOM.sleepDurationPreview.textContent = '';
+        DOM.sleepDurationPreview.classList.remove('is-short');
+        return;
+    }
+    const target = getSleepTargetHours();
+    DOM.sleepDurationPreview.textContent = `→ ${formatSleepHours(hours)}${hours < target ? `（目標${target}時間に${formatSleepHours(target - hours)}届きません）` : ''}`;
+    DOM.sleepDurationPreview.classList.toggle('is-short', hours < target);
+}
+
+// 睡眠時間(小数)を「6時間45分」の形にする。6.75という小数表記より寝起きに読みやすい。
+function formatSleepHours(hours) {
+    const totalMinutes = Math.round(hours * 60);
+    const h = Math.floor(totalMinutes / 60);
+    const m = totalMinutes % 60;
+    if (h === 0) return `${m}分`;
+    return m === 0 ? `${h}時間` : `${h}時間${m}分`;
+}
+
+// 目標睡眠時間。planSettings.sleepTarget は防衛ラインUIの廃止後もキーだけ残っていた項目で、
+// 睡眠の記録を入れたことで再び意味を持つようになった。
+function getSleepTargetHours() {
+    const s = state.planSettings || DEFAULT_PLAN_SETTINGS;
+    const v = parseFloat(s.sleepTarget);
+    return v > 0 ? v : DEFAULT_PLAN_SETTINGS.sleepTarget;
+}
+
+// 指定日にすでに睡眠の記録があれば、その値をフォームへ復元して注意書きを出す。
+// 他のフォームと同じく、既存日付への上書きを事故ではなく意図的な操作にするため。
+function syncSleepFormWithExistingDataForDate(date) {
+    const existing = state.sleepLogs.find(s => s.date === date);
+    if (DOM.sleepExistingHint && DOM.sleepExistingHintText) {
+        if (existing) {
+            const hours = computeSleepDuration(existing.bedTime, existing.wakeTime);
+            DOM.sleepExistingHintText.textContent =
+                `この日はすでに記録があります（${existing.bedTime}〜${existing.wakeTime}／${formatSleepHours(hours)}）。保存すると上書きされます。`;
+            DOM.sleepExistingHint.classList.remove('is-hidden');
+        } else {
+            DOM.sleepExistingHint.classList.add('is-hidden');
+        }
+    }
+    if (DOM.sleepBedTime) DOM.sleepBedTime.value = existing ? existing.bedTime : '';
+    if (DOM.sleepWakeTime) DOM.sleepWakeTime.value = existing ? existing.wakeTime : '';
+    updateSleepDurationPreview();
+}
+
+function saveSleepLog() {
+    if (!DOM.sleepDate) return;
+    const date = DOM.sleepDate.value;
+    if (!date) {
+        showToast('日付を入力してください');
+        return;
+    }
+
+    const bedTime = DOM.sleepBedTime ? DOM.sleepBedTime.value : '';
+    const wakeTime = DOM.sleepWakeTime ? DOM.sleepWakeTime.value : '';
+    const hours = computeSleepDuration(bedTime, wakeTime);
+    // 何も書き換える前に検証する(失敗時に中途半端な状態を残さない)
+    if (hours === null) {
+        showToast(bedTime && wakeTime && bedTime === wakeTime
+            ? '就寝と起床が同じ時刻になっています'
+            : '就寝時刻と起床時刻を入力してください');
+        return;
+    }
+    // 就寝から起床までが極端に長い場合は、時刻の取り違え(AM/PM)を疑う。
+    // 弾かずに警告だけにすると気づかず保存されるので、ここでは保存を止める
+    if (hours > 16) {
+        showToast(`睡眠時間が${formatSleepHours(hours)}になっています。就寝と起床が逆になっていませんか？`);
+        return;
+    }
+
+    const existingIndex = state.sleepLogs.findIndex(s => s.date === date);
+    const updated = existingIndex !== -1;
+    const record = { date, bedTime, wakeTime };
+    if (updated) {
+        state.sleepLogs[existingIndex] = record;
+    } else {
+        state.sleepLogs.push(record);
+        state.sleepLogs.sort((a, b) => new Date(a.date) - new Date(b.date));
+    }
+
+    saveDataAndSync();
+    syncSleepFormWithExistingDataForDate(date);
+    updateDashboard();
+    updateSleepHistoryList();
+
+    const target = getSleepTargetHours();
+    showToast(`😴 ${updated ? '睡眠を更新しました' : '睡眠を記録しました'}：${formatSleepHours(hours)}`
+        + (hours < target ? `（目標${target}時間に届いていません）` : ''));
 }

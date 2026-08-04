@@ -1,4 +1,4 @@
-// FITFLOW - 履歴リストタブ: 検索/フィルタ入力 + サブタブ(筋トレ/有酸素/体重)切り替え
+// FITFLOW - 履歴リストタブ: 検索/フィルタ入力 + サブタブ(筋トレ/有酸素/体重/食事/睡眠/カロリー収支)切り替え
 
 function initHistoryControls() {
     if (DOM.searchInput) DOM.searchInput.addEventListener('input', () => updateHistoryList());
@@ -15,17 +15,19 @@ function initHistoryControls() {
     const tabCardio = document.getElementById('history-tab-cardio');
     const tabWeight = document.getElementById('history-tab-weight');
     const tabMeals = document.getElementById('history-tab-meals');
+    const tabSleep = document.getElementById('history-tab-sleep');
     const tabCalorieBalance = document.getElementById('history-tab-calorie-balance');
     const panelWorkouts = document.getElementById('history-workouts-panel');
     const panelCardio = document.getElementById('history-cardio-panel');
     const panelWeight = document.getElementById('history-weight-panel');
     const panelMeals = document.getElementById('history-meals-panel');
+    const panelSleep = document.getElementById('history-sleep-panel');
     const panelCalorieBalance = document.getElementById('history-calorie-balance-panel');
 
-    if (tabWorkouts && tabCardio && tabWeight && tabMeals && tabCalorieBalance &&
-        panelWorkouts && panelCardio && panelWeight && panelMeals && panelCalorieBalance) {
-        const allTabs = [tabWorkouts, tabCardio, tabWeight, tabMeals, tabCalorieBalance];
-        const allPanels = [panelWorkouts, panelCardio, panelWeight, panelMeals, panelCalorieBalance];
+    if (tabWorkouts && tabCardio && tabWeight && tabMeals && tabSleep && tabCalorieBalance &&
+        panelWorkouts && panelCardio && panelWeight && panelMeals && panelSleep && panelCalorieBalance) {
+        const allTabs = [tabWorkouts, tabCardio, tabWeight, tabMeals, tabSleep, tabCalorieBalance];
+        const allPanels = [panelWorkouts, panelCardio, panelWeight, panelMeals, panelSleep, panelCalorieBalance];
         const switchSubTab = (activeTab, activePanel) => {
             allTabs.forEach(t => {
                 t.classList.remove('active');
@@ -58,6 +60,11 @@ function initHistoryControls() {
         tabMeals.addEventListener('click', () => {
             switchSubTab(tabMeals, panelMeals);
             updateMealHistoryList();
+        });
+
+        tabSleep.addEventListener('click', () => {
+            switchSubTab(tabSleep, panelSleep);
+            updateSleepHistoryList();
         });
 
         tabCalorieBalance.addEventListener('click', () => {

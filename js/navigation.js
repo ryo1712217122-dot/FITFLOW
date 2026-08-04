@@ -26,6 +26,7 @@ function initNavigation() {
                 updateCardioHistoryList();
                 updateWeightHistoryList();
                 updateMealHistoryList();
+                updateSleepHistoryList();
                 updateCalorieBalanceHistoryList();
             } else if (tabId === 'quick-log') {
                 if (!state.editingWorkoutId) {

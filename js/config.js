@@ -8,6 +8,8 @@ const CARDIO_DAYS_WINDOW = 7;
 const WEIGHT_TREND_WINDOW_DAYS = 7;
 // 総トレーニングボリューム週次推移グラフで表示する週数
 const VOLUME_TREND_WEEKS = 8;
+// 睡眠のサマリー(平均睡眠時間・就寝時刻のばらつき)を出す期間
+const SLEEP_TREND_WINDOW_DAYS = 7;
 // タイトル・部位カテゴリーの入力欄はフォームから撤去したため、新規記録には固定のデフォルト値を使う
 const DEFAULT_WORKOUT_CATEGORY = 'その他 (Other)';
 // 筋トレの消費カロリー概算に使う「1セットあたりの目安kcal」。

@@ -16,17 +16,17 @@
     <script src="vendor/lucide-0.469.0.min.js"></script>
     <!-- CSSはカスケードレイヤーで管理。layers.cssの宣言順が優先度を決めるため、
          必ずこれを他のどのスタイルシートよりも先に読み込むこと（<link>の物理的な順番には依存しない）。 -->
-    <link rel="stylesheet" href="css/layers.css?v=1.21.1">
-    <link rel="stylesheet" href="css/tokens.css?v=1.21.1">
-    <link rel="stylesheet" href="css/base.css?v=1.21.1">
-    <link rel="stylesheet" href="css/layout.css?v=1.21.1">
-    <link rel="stylesheet" href="css/components.css?v=1.21.1">
-    <link rel="stylesheet" href="css/pages/record.css?v=1.21.1">
-    <link rel="stylesheet" href="css/pages/dashboard.css?v=1.21.1">
-    <link rel="stylesheet" href="css/pages/plan.css?v=1.21.1">
-    <link rel="stylesheet" href="css/pages/history.css?v=1.21.1">
-    <link rel="stylesheet" href="css/pages/settings.css?v=1.21.1">
-    <link rel="stylesheet" href="css/responsive.css?v=1.21.1">
+    <link rel="stylesheet" href="css/layers.css?v=1.22.0">
+    <link rel="stylesheet" href="css/tokens.css?v=1.22.0">
+    <link rel="stylesheet" href="css/base.css?v=1.22.0">
+    <link rel="stylesheet" href="css/layout.css?v=1.22.0">
+    <link rel="stylesheet" href="css/components.css?v=1.22.0">
+    <link rel="stylesheet" href="css/pages/record.css?v=1.22.0">
+    <link rel="stylesheet" href="css/pages/dashboard.css?v=1.22.0">
+    <link rel="stylesheet" href="css/pages/plan.css?v=1.22.0">
+    <link rel="stylesheet" href="css/pages/history.css?v=1.22.0">
+    <link rel="stylesheet" href="css/pages/settings.css?v=1.22.0">
+    <link rel="stylesheet" href="css/responsive.css?v=1.22.0">
 </head>
 <body>
     <div class="app-container">
@@ -38,7 +38,7 @@
                 </div>
                 <div class="brand-text">
                     <h1>FITFLOW</h1>
-                    <span class="app-version">v1.21.1</span>
+                    <span class="app-version">v1.22.0</span>
                 </div>
             </div>
 
@@ -79,7 +79,7 @@
             <!-- Top bar -->
             <header class="top-bar">
                 <div class="welcome">
-                    <h2 id="greeting-text">こんにちは！<span class="app-version-badge">v1.21.1</span></h2>
+                    <h2 id="greeting-text">こんにちは！<span class="app-version-badge">v1.22.0</span></h2>
                     <p id="date-text">2026年7月3日 金曜日</p>
                 </div>
                 <div class="header-right-controls">
@@ -407,6 +407,55 @@
                                 </button>
                             </div>
                         </form>
+
+                        <!-- 睡眠は「起床日」に紐づける(前夜23:30に寝て今朝6:15に起きた睡眠は今日の記録)。
+                             就寝・起床の時刻を入れると睡眠時間は自動計算され、就寝時刻のばらつき
+                             (生活リズムの安定度)も算出できる。 -->
+                        <form id="sleep-form" class="card log-card">
+                            <div class="card-header">
+                                <div class="header-title">
+                                    <i data-lucide="moon"></i>
+                                    <h3>😴 睡眠の記録</h3>
+                                </div>
+                            </div>
+                            <p class="form-hint form-section-intro">前の晩の睡眠を記録します。日付は<strong>起きた日</strong>です（昨夜23:30に寝て今朝起きたなら今日）。睡眠時間は自動で計算され、午後のブリーフィングのコメントにも使われます。</p>
+                            <div class="card-body">
+                                <div class="form-group">
+                                    <label for="sleep-date">日付（起床日） <span class="required">*</span></label>
+                                    <div class="input-icon-wrapper">
+                                        <i data-lucide="calendar" class="input-icon"></i>
+                                        <input type="date" id="sleep-date" required>
+                                    </div>
+                                    <div class="existing-data-hint is-hidden" id="sleep-existing-hint">
+                                        <i data-lucide="info"></i>
+                                        <span id="sleep-existing-hint-text"></span>
+                                    </div>
+                                </div>
+
+                                <div class="sleep-time-row">
+                                    <div class="form-group">
+                                        <label for="sleep-bed-time">就寝 <span class="required">*</span></label>
+                                        <div class="input-icon-wrapper">
+                                            <i data-lucide="bed" class="input-icon"></i>
+                                            <input type="time" id="sleep-bed-time" required>
+                                        </div>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="sleep-wake-time">起床 <span class="required">*</span></label>
+                                        <div class="input-icon-wrapper">
+                                            <i data-lucide="sunrise" class="input-icon"></i>
+                                            <input type="time" id="sleep-wake-time" required>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <p class="sleep-duration-preview" id="sleep-duration-preview"></p>
+
+                                <button type="submit" class="btn btn-primary btn-full margin-top-1" id="sleep-submit-btn">
+                                    <i data-lucide="check"></i> 睡眠を記録
+                                </button>
+                            </div>
+                        </form>
                     </div>
                     <!-- Global datalist for popular exercises list suggestions -->
                     <datalist id="popular-exercises">
@@ -455,6 +504,16 @@
                             <h3>本日のラン消費</h3>
                             <p class="big-number"><span id="today-calorie-num">0</span> <span class="unit">kcal</span></p>
                             <span class="stat-desc" id="today-cardio-dist">0.00 km 走行</span>
+                        </div>
+                    </div>
+
+                    <!-- 睡眠。前夜の睡眠時間と直近7日の平均・就寝時刻のばらつきを一目で見せる -->
+                    <div class="card stat-card sleep-stat-card">
+                        <div class="card-icon"><i data-lucide="moon"></i></div>
+                        <div class="card-info">
+                            <h3>前夜の睡眠</h3>
+                            <p class="big-number"><span id="latest-sleep-num">—</span> <span class="unit">時間</span></p>
+                            <span class="stat-desc" id="sleep-summary-desc">未登録</span>
                         </div>
                     </div>
 
@@ -613,6 +672,7 @@
                     <button class="btn btn-sm history-sub-tab-btn" id="history-tab-cardio" type="button" role="tab" aria-selected="false">有酸素（ラン）履歴</button>
                     <button class="btn btn-sm history-sub-tab-btn" id="history-tab-weight" type="button" role="tab" aria-selected="false">体重履歴</button>
                     <button class="btn btn-sm history-sub-tab-btn" id="history-tab-meals" type="button" role="tab" aria-selected="false">食事履歴</button>
+                    <button class="btn btn-sm history-sub-tab-btn" id="history-tab-sleep" type="button" role="tab" aria-selected="false">睡眠履歴</button>
                     <button class="btn btn-sm history-sub-tab-btn" id="history-tab-calorie-balance" type="button" role="tab" aria-selected="false">カロリー収支</button>
                 </div>
 
@@ -731,6 +791,17 @@
 
                     <div id="meal-history-container" class="history-cards-container">
                         <!-- Meal history cards generated by JS -->
+                    </div>
+                </div>
+
+                <!-- 睡眠履歴コンテンツ (Sleep History Panel) -->
+                <div id="history-sleep-panel" role="tabpanel" class="is-hidden">
+                    <div class="history-list-header">
+                        <h3>睡眠履歴一覧 (<span id="sleep-history-count">0</span>件)</h3>
+                    </div>
+
+                    <div id="sleep-history-container" class="history-cards-container">
+                        <!-- Sleep history cards generated by JS -->
                     </div>
                 </div>
 
@@ -917,26 +988,26 @@
     </div>
 
     <!-- lib/data-utils.js: DOM非依存の純粋関数（node --testでもテストされる）。他のどのjs/*.jsよりも先に読み込む -->
-    <script src="lib/data-utils.js?v=1.21.1"></script>
+    <script src="lib/data-utils.js?v=1.22.0"></script>
     <!-- js/*.js: すべてグローバルスコープに関数を定義するクラシックscript。
          ESモジュールにはしていない（index.htmlをダブルクリックしてfile://で開いても動作させるため）。
          依存関係は読み込み順で解決するので、この順番を変えないこと。 -->
-    <script src="js/config.js?v=1.21.1"></script>
-    <script src="js/state.js?v=1.21.1"></script>
-    <script src="js/utils.js?v=1.21.1"></script>
-    <script src="js/dom.js?v=1.21.1"></script>
-    <script src="js/notifications.js?v=1.21.1"></script>
-    <script src="js/theme.js?v=1.21.1"></script>
-    <script src="js/navigation.js?v=1.21.1"></script>
-    <script src="js/dashboard.js?v=1.21.1"></script>
-    <script src="js/record-form.js?v=1.21.1"></script>
-    <script src="js/history-workouts.js?v=1.21.1"></script>
-    <script src="js/history-logs.js?v=1.21.1"></script>
-    <script src="js/history-nav.js?v=1.21.1"></script>
-    <script src="js/day-summary.js?v=1.21.1"></script>
-    <script src="js/plan.js?v=1.21.1"></script>
-    <script src="js/sync.js?v=1.21.1"></script>
-    <script src="js/backup.js?v=1.21.1"></script>
-    <script src="js/main.js?v=1.21.1"></script>
+    <script src="js/config.js?v=1.22.0"></script>
+    <script src="js/state.js?v=1.22.0"></script>
+    <script src="js/utils.js?v=1.22.0"></script>
+    <script src="js/dom.js?v=1.22.0"></script>
+    <script src="js/notifications.js?v=1.22.0"></script>
+    <script src="js/theme.js?v=1.22.0"></script>
+    <script src="js/navigation.js?v=1.22.0"></script>
+    <script src="js/dashboard.js?v=1.22.0"></script>
+    <script src="js/record-form.js?v=1.22.0"></script>
+    <script src="js/history-workouts.js?v=1.22.0"></script>
+    <script src="js/history-logs.js?v=1.22.0"></script>
+    <script src="js/history-nav.js?v=1.22.0"></script>
+    <script src="js/day-summary.js?v=1.22.0"></script>
+    <script src="js/plan.js?v=1.22.0"></script>
+    <script src="js/sync.js?v=1.22.0"></script>
+    <script src="js/backup.js?v=1.22.0"></script>
+    <script src="js/main.js?v=1.22.0"></script>
 </body>
 </html>

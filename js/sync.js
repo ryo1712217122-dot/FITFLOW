@@ -64,7 +64,10 @@ function triggerSync(isSilent = false) {
         mealLogs: state.mealLogs,
         // drinkingLogs(飲み会記録)も同様にGAS側が未対応の間は無視されるだけなので先行して送る
         // (対応パッチ: GAS_DRINKINGLOGS_PATCH.md)。取り込み側の注意点はmealLogsと同じ。
-        drinkingLogs: state.drinkingLogs
+        drinkingLogs: state.drinkingLogs,
+        // sleepLogs(睡眠記録: {date, bedTime, wakeTime}。dateは起床日)。
+        // 対応パッチ: GAS_SLEEPLOGS_PATCH.md。取り込み側の注意点はmealLogsと同じ。
+        sleepLogs: state.sleepLogs
     };
 
     fetchSheetsWithRetry(state.sheetsUrl, {
@@ -138,6 +141,8 @@ function autoSyncFromCloud() {
             const importedMeals = Array.isArray(data.mealLogs) ? filterValidMealLogs(data.mealLogs) : null;
             // drinkingLogsもmealLogsと同じ理由で「配列として実際に返ってきた時だけ」取り込む
             const importedDrinking = Array.isArray(data.drinkingLogs) ? filterValidDrinkingLogs(data.drinkingLogs) : null;
+            // sleepLogsも同様(GAS未対応の間にキー欠落=空配列と解釈すると睡眠記録が消える)
+            const importedSleep = Array.isArray(data.sleepLogs) ? filterValidSleepLogs(data.sleepLogs) : null;
 
             if (!validateWorkoutsSchema(importedWorkouts)) {
                 console.warn("☁️ Cloud workouts failed schema validation.");
@@ -162,12 +167,14 @@ function autoSyncFromCloud() {
             if (importedPlan) state.planSettings = importedPlan;
             if (importedMeals !== null) state.mealLogs = importedMeals;
             if (importedDrinking !== null) state.drinkingLogs = importedDrinking;
+            if (importedSleep !== null) state.sleepLogs = importedSleep;
 
             // Sort
             state.weightLogs.sort((a, b) => new Date(a.date) - new Date(b.date));
             state.cardioLogs.sort((a, b) => new Date(a.date) - new Date(b.date));
             state.mealLogs.sort((a, b) => new Date(a.date) - new Date(b.date));
             state.drinkingLogs.sort((a, b) => new Date(a.date) - new Date(b.date));
+            state.sleepLogs.sort((a, b) => new Date(a.date) - new Date(b.date));
 
             // Save locally but keep clean state
             saveData();
@@ -223,6 +230,7 @@ function restoreFromSheets() {
             // 起きにくいが、autoSyncFromCloudと挙動を揃え、欠落時は空配列でマージしない
             const importedMeals = Array.isArray(data.mealLogs) ? filterValidMealLogs(data.mealLogs) : [];
             const importedDrinking = Array.isArray(data.drinkingLogs) ? filterValidDrinkingLogs(data.drinkingLogs) : [];
+            const importedSleep = Array.isArray(data.sleepLogs) ? filterValidSleepLogs(data.sleepLogs) : [];
 
             if (!validateWorkoutsSchema(importedWorkouts)) {
                 showToast('受信したデータ形式が不正です');
@@ -233,7 +241,7 @@ function restoreFromSheets() {
                 'クラウドからの復元',
                 `スプレッドシートからデータを取得しました（ワークアウト: ${importedWorkouts.length}件, 体重ログ: ${importedWeights.length}件）。既存データにマージしますか？`,
                 () => {
-                    mergeImportedData(importedWorkouts, importedWeights, importedCardio, importedMaint, importedPlan, importedMeals, importedDrinking);
+                    mergeImportedData(importedWorkouts, importedWeights, importedCardio, importedMaint, importedPlan, importedMeals, importedDrinking, importedSleep);
                     localStorage.setItem(DIRTY_KEY, 'false'); // Mark clean on manual merge override
                 }
             );
@@ -269,6 +277,21 @@ function normalizeImportedData(data) {
                 }
             }
             return w;
+        });
+    }
+
+    // Normalize sleep logs
+    // スプレッドシートの時刻セルはGAS側でDateとして読まれ、JSON化の過程で
+    // "1899-12-30T14:30:00.000Z" のようなISO文字列になる。normalizeTimeが
+    // ワークアウトのTimeと同じ要領で "HH:MM" に戻す(平文の"23:30"はそのまま通る)。
+    if (Array.isArray(data.sleepLogs)) {
+        data.sleepLogs = data.sleepLogs.map(sl => {
+            if (sl) {
+                sl.date = normalizeDate(sl.date);
+                sl.bedTime = normalizeTime(sl.bedTime);
+                sl.wakeTime = normalizeTime(sl.wakeTime);
+            }
+            return sl;
         });
     }
 

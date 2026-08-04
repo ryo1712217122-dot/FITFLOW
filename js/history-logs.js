@@ -452,3 +452,158 @@ function updateCalorieBalanceHistoryList() {
         lucide.createIcons();
     }
 }
+
+// ==========================================
+// 睡眠履歴
+// ==========================================
+
+// 睡眠の記録一覧。体重・食事の履歴と同じく、カード内でのインライン編集にする。
+function updateSleepHistoryList() {
+    const container = DOM.sleepHistoryContainer;
+    const countSpan = DOM.sleepHistoryCount;
+    if (!container || !countSpan) return;
+
+    const sortedLogs = sortedByDateDesc(state.sleepLogs);
+    countSpan.textContent = sortedLogs.length;
+    container.innerHTML = '';
+
+    if (sortedLogs.length === 0) {
+        container.innerHTML = `
+            <div class="card empty-state">
+                <i data-lucide="moon"></i>
+                <p>睡眠の記録はありません。</p>
+            </div>
+        `;
+        if (window.lucide) lucide.createIcons();
+        return;
+    }
+
+    const target = getSleepTargetHours();
+    // 飲み会の翌朝は睡眠が乱れやすいので、体重履歴と同じく🍻を添えて文脈が分かるようにする
+    const drinkingSet = new Set(state.drinkingLogs.map(d => d.date));
+
+    sortedLogs.forEach(s => {
+        const hours = computeSleepDuration(s.bedTime, s.wakeTime);
+        if (hours === null) return;
+        const formattedDate = formatDateJp(s.date);
+        // 「起床日」基準なので、飲み会当日の夜の睡眠は翌日の記録に現れる
+        const afterDrinking = drinkingSet.has(addDaysToDateString(s.date, -1));
+
+        const card = document.createElement('div');
+        card.classList.add('card', 'history-card', 'sleep-history-card');
+        card.innerHTML = `
+            <div class="history-card-header">
+                <div class="history-title-area">
+                    <div class="history-title-row">
+                        <span class="history-mood-badge">😴</span>
+                        <h4>睡眠記録</h4>
+                        ${afterDrinking ? '<span class="history-mood-badge" title="前夜は飲み会でした">🍻</span>' : ''}
+                    </div>
+                    <div class="history-date-row">
+                        <i data-lucide="calendar"></i>
+                        <span>${formattedDate}に起床</span>
+                    </div>
+                </div>
+                <div class="history-actions">
+                    <button class="btn-icon btn-edit-sleep" title="修正する">
+                        <i data-lucide="pencil"></i>
+                    </button>
+                    <button class="btn-icon text-danger btn-delete-sleep" title="削除する">
+                        <i data-lucide="trash-2"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div class="sleep-history-value-row">
+                <span class="history-metric-label">睡眠時間</span>
+                <span class="history-metric-value-lg${hours < target ? ' sleep-short' : ''}">${formatSleepHours(hours)}</span>
+            </div>
+            <div class="sleep-history-times">
+                <span><i data-lucide="bed"></i> 就寝 ${escapeHtml(s.bedTime)}</span>
+                <span><i data-lucide="sunrise"></i> 起床 ${escapeHtml(s.wakeTime)}</span>
+            </div>
+        `;
+
+        card.querySelector('.btn-edit-sleep').addEventListener('click', () => {
+            const valueRow = card.querySelector('.sleep-history-value-row');
+            valueRow.innerHTML = `
+                <div class="sleep-history-edit-grid">
+                    <div class="form-group">
+                        <label>就寝</label>
+                        <input type="time" class="sleep-edit-bed" value="${escapeHtml(s.bedTime)}">
+                    </div>
+                    <div class="form-group">
+                        <label>起床</label>
+                        <input type="time" class="sleep-edit-wake" value="${escapeHtml(s.wakeTime)}">
+                    </div>
+                </div>
+                <button type="button" class="btn btn-primary btn-sm btn-save-sleep-edit margin-top-0-5">保存</button>
+            `;
+            const bedInput = valueRow.querySelector('.sleep-edit-bed');
+            bedInput.focus();
+            valueRow.querySelector('.btn-save-sleep-edit').addEventListener('click', () => {
+                const newBed = bedInput.value;
+                const newWake = valueRow.querySelector('.sleep-edit-wake').value;
+                const newHours = computeSleepDuration(newBed, newWake);
+                if (newHours === null) {
+                    showToast(newBed && newWake && newBed === newWake
+                        ? '就寝と起床が同じ時刻になっています'
+                        : '就寝時刻と起床時刻を入力してください');
+                    return;
+                }
+                if (newHours > 16) {
+                    showToast(`睡眠時間が${formatSleepHours(newHours)}になっています。就寝と起床が逆になっていませんか？`);
+                    return;
+                }
+                editSleepLog(s, newBed, newWake);
+            });
+        });
+
+        card.querySelector('.btn-delete-sleep').addEventListener('click', () => {
+            showConfirmModal(
+                '記録の削除',
+                `この睡眠記録（${formattedDate} - ${formatSleepHours(hours)}）を削除しますか？`,
+                () => {
+                    deleteSleepLog(s);
+                }
+            );
+        });
+
+        container.appendChild(card);
+    });
+
+    if (window.lucide) {
+        lucide.createIcons();
+    }
+}
+
+function editSleepLog(entry, bedTime, wakeTime) {
+    const index = state.sleepLogs.indexOf(entry);
+    if (index >= 0) {
+        state.sleepLogs[index] = { date: entry.date, bedTime, wakeTime };
+        saveDataAndSync();
+        updateSleepHistoryList();
+        updateDashboard();
+        // 同じ日付を記録フォームが開いていれば表示を合わせる
+        // (古い値のまま送信すると、いま直した内容を上書きしてしまうため)
+        if (DOM.sleepDate && DOM.sleepDate.value === entry.date) {
+            syncSleepFormWithExistingDataForDate(entry.date);
+        }
+        showToast('睡眠記録を更新しました');
+    }
+}
+
+function deleteSleepLog(entry) {
+    const index = state.sleepLogs.indexOf(entry);
+    if (index >= 0) {
+        state.sleepLogs.splice(index, 1);
+        saveDataAndSync();
+        updateSleepHistoryList();
+        updateDashboard();
+        // 削除した日をフォームが開いていれば、入力欄も空に戻す
+        if (DOM.sleepDate && DOM.sleepDate.value === entry.date) {
+            syncSleepFormWithExistingDataForDate(entry.date);
+        }
+        showToast('睡眠記録を削除しました');
+    }
+}

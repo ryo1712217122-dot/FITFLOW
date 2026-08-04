@@ -251,4 +251,30 @@
     width: 14px;
     height: 14px;
 }
+
+/* 睡眠フォーム: 就寝と起床を横並びにして、1画面で完結させる */
+.sleep-time-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+}
+
+.sleep-time-row .form-group {
+    margin-bottom: 0;
+}
+
+/* 入力中に出る睡眠時間のプレビュー。保存前に取り違えへ気づけるようにする */
+.sleep-duration-preview {
+    margin: 0.75rem 0 0;
+    font-family: var(--font-display);
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--color-primary);
+    min-height: 1.4em;
+}
+
+.sleep-duration-preview.is-short {
+    color: var(--color-warning, #d9a05b);
+}
+
 } /* end @layer pages (record) */

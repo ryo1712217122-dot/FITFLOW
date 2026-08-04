@@ -10,6 +10,7 @@ let state = {
     cardioLogs: [],
     mealLogs: [],
     drinkingLogs: [],
+    sleepLogs: [],
     maintenanceCalories: DEFAULT_MAINTENANCE_CALORIES,
     sheetsUrl: '',
     planSettings: null,
@@ -108,6 +109,20 @@ function loadData() {
     }
     state.drinkingLogs.sort((a, b) => new Date(a.date) - new Date(b.date));
 
+    // 3.7 Sleep Logs (睡眠の記録: 1日1件、{date, bedTime, wakeTime}。dateは「起床日」)
+    const sleepData = localStorage.getItem('fitflow_sleep_logs');
+    if (sleepData) {
+        try {
+            state.sleepLogs = filterValidSleepLogs(JSON.parse(sleepData));
+        } catch (e) {
+            console.error('Error parsing sleep logs', e);
+            state.sleepLogs = [];
+        }
+    } else {
+        state.sleepLogs = [];
+    }
+    state.sleepLogs.sort((a, b) => new Date(a.date) - new Date(b.date));
+
     // 4. Maintenance Calories
     const maintData = localStorage.getItem('fitflow_maintenance');
     if (maintData) {
@@ -152,6 +167,7 @@ function saveData() {
     localStorage.setItem('fitflow_cardio_logs', JSON.stringify(state.cardioLogs));
     localStorage.setItem('fitflow_meal_logs', JSON.stringify(state.mealLogs));
     localStorage.setItem('fitflow_drinking_logs', JSON.stringify(state.drinkingLogs));
+    localStorage.setItem('fitflow_sleep_logs', JSON.stringify(state.sleepLogs));
     localStorage.setItem('fitflow_maintenance', state.maintenanceCalories.toString());
     // 注意: fitflow_sheets_url はここでは書き込まない(saveSheetsUrl()に分離している)。
     // saveData()はワークアウト記録などほぼ全ての保存操作のたびに呼ばれるため、

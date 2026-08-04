@@ -393,4 +393,48 @@
     box-shadow: 0 4px 15px color-mix(in srgb, var(--color-primary) 30%, transparent);
     border-color: transparent;
 }
+
+/* 睡眠履歴 */
+.sleep-history-value-row {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.sleep-history-value-row .history-metric-value-lg.sleep-short {
+    color: var(--color-warning, #d9a05b);
+}
+
+.sleep-history-times {
+    display: flex;
+    gap: 1.25rem;
+    margin-top: 0.5rem;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+}
+
+.sleep-history-times span {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+}
+
+.sleep-history-times i {
+    width: 14px;
+    height: 14px;
+}
+
+.sleep-history-edit-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem;
+    width: 100%;
+}
+
+.sleep-history-edit-grid .form-group {
+    margin-bottom: 0;
+}
+
 } /* end @layer pages (history) */

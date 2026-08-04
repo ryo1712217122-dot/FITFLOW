@@ -81,6 +81,9 @@ function updateDashboard() {
     // 4.5 週間ランニング目標の達成度
     updateWeeklyRunGoal(todayStr);
 
+    // 4.6 睡眠
+    updateSleepTile(todayStr);
+
     // 5. Training Calendar & Charts
     renderCalendar();
     renderWeightChart();
@@ -139,6 +142,36 @@ function updateWeeklyRunGoal(todayStr) {
         const pct = target > 0 ? Math.min(100, Math.round((weekDistance / target) * 100)) : 0;
         DOM.weeklyRunProgressFill.style.width = `${pct}%`;
         DOM.weeklyRunProgressFill.classList.toggle('progress-bar-fill-complete', pct >= 100);
+    }
+}
+
+// 睡眠タイル。前夜の睡眠時間を主役に、直近7日の平均・不足日数・就寝時刻のばらつきを添える。
+// 就寝時刻のばらつきは生活リズムの安定度で、睡眠時間そのものと同じくらい体調に効く指標。
+function updateSleepTile(todayStr) {
+    if (!DOM.latestSleepNum && !DOM.sleepSummaryDesc) return;
+
+    const target = getSleepTargetHours();
+    const stats = computeSleepStats(state.sleepLogs, todayStr, {
+        days: SLEEP_TREND_WINDOW_DAYS, targetHours: target
+    });
+
+    if (!stats) {
+        if (DOM.latestSleepNum) DOM.latestSleepNum.textContent = '—';
+        if (DOM.sleepSummaryDesc) DOM.sleepSummaryDesc.textContent = '未登録';
+        return;
+    }
+
+    if (DOM.latestSleepNum) {
+        DOM.latestSleepNum.textContent = stats.latest.hours.toFixed(1);
+        DOM.latestSleepNum.classList.toggle('tile-value-danger', stats.latest.hours < target);
+    }
+    if (DOM.sleepSummaryDesc) {
+        const parts = [`${SLEEP_TREND_WINDOW_DAYS}日平均 ${stats.avgHours.toFixed(1)}h（${stats.nights}日分）`];
+        if (stats.shortNights > 0) parts.push(`目標${target}h未満 ${stats.shortNights}日`);
+        if (stats.bedTimeSpreadMin !== null && stats.nights >= 3) {
+            parts.push(`就寝 ${stats.avgBedTime}±${stats.bedTimeSpreadMin}分`);
+        }
+        DOM.sleepSummaryDesc.textContent = parts.join(' / ');
     }
 }
 

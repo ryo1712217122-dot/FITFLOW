@@ -349,4 +349,10 @@
 .calorie-summary-tile .tile-value-danger {
     color: var(--color-danger);
 }
+
+/* 睡眠タイル。他のstat-cardと同じ骨格で、アイコンだけセカンダリ色にして区別する */
+.sleep-stat-card .card-icon {
+    background: var(--secondary-gradient);
+}
+
 } /* end @layer pages (dashboard) */

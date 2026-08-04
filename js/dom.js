@@ -85,6 +85,18 @@ const DOM = {
     drinkingMealHint: document.getElementById('drinking-meal-hint'),
     drinkingMealHintText: document.getElementById('drinking-meal-hint-text'),
 
+    sleepForm: document.getElementById('sleep-form'),
+    sleepDate: document.getElementById('sleep-date'),
+    sleepBedTime: document.getElementById('sleep-bed-time'),
+    sleepWakeTime: document.getElementById('sleep-wake-time'),
+    sleepDurationPreview: document.getElementById('sleep-duration-preview'),
+    sleepExistingHint: document.getElementById('sleep-existing-hint'),
+    sleepExistingHintText: document.getElementById('sleep-existing-hint-text'),
+    latestSleepNum: document.getElementById('latest-sleep-num'),
+    sleepSummaryDesc: document.getElementById('sleep-summary-desc'),
+    sleepHistoryCount: document.getElementById('sleep-history-count'),
+    sleepHistoryContainer: document.getElementById('sleep-history-container'),
+
     // History
     searchInput: document.getElementById('search-input'),
     filterMood: document.getElementById('filter-mood'),
