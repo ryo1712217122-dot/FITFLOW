@@ -1,9 +1,12 @@
 # GASバックエンド SleepLogs 永続化パッチ
 
-> **⚠️ 未適用**: バックエンドコードの正本（gas-scripts リポジトリの
-> `projects/fitflow-api/FITFLOW.js`）には反映済みだが、**`clasp push` と本番Webアプリの
-> 再デプロイはまだ行っていない**。適用するまで SleepLogs シートは作られず、
-> 睡眠の記録はローカル（LocalStorage）とJSONバックアップにのみ保存される。
+> **✅ 適用済み (2026-08-04)**: `clasp push` 後、本番Webアプリを**同一デプロイIDのまま @6 に更新**
+> （デプロイID `AKfycbzvGub8...`、説明「SleepLogs(睡眠記録)の永続化パッチを追加」）。
+> 適用直後に本番 `doGet` へ実リクエストし、レスポンスに `"sleepLogs":[]`（まだ SleepLogs シート
+> 未作成のため空配列）が含まれること、既存の workouts(19件) / weightLogs(24件) /
+> cardioLogs(17件) / mealLogs(15件) / drinkingLogs(2件) / planSettings(21キー) /
+> maintenanceCalories が従来どおり返ることを確認済み。
+> 以下は適用内容の記録。
 
 ## 目的
 
@@ -30,7 +33,7 @@ v1.22.0で追加した「睡眠の記録」フォーム（就寝時刻・起床�
 ## 適用内容
 
 `gas-scripts` リポジトリの `projects/fitflow-api/FITFLOW.js` に対して、以下3か所。
-**コードは反映済み**なので、残っているのは push と再デプロイのみ。
+以下は適用した内容の記録。
 
 ### 1. `doPost` の backup 処理に書き込みを追加
 
@@ -93,23 +96,24 @@ function readSleepLogs_(ss) {
 ただし**スプレッドシートのタイムゾーンとブラウザのタイムゾーンが一致している前提**
 （どちらもJST）である点は注意。ズレると時刻が数時間ずれて復元される。
 
-## 適用手順
+## 適用手順（実施済み）
 
 ```bash
 cd workspace/gas-scripts/projects/fitflow-api
 clasp push
+clasp deploy -i AKfycbzvGub8qkPOxTPDcoDbGfiT-U3tdky93ZRMr1SriYq8L4mfPENtZr5iAYyPSJ-xxaZ8 \
+  -d "SleepLogs(睡眠記録)の永続化パッチを追加"
 ```
 
-その後、**本番Webアプリを同一デプロイIDのまま新しいバージョンへ更新**する
-（デプロイIDが変わるとアプリ側の同期URLが無効になる）。DrinkingLogsパッチ適用時（@5）と同じ手順。
+`-i` でデプロイIDを指定して既存デプロイのバージョンだけを上げる。
+**新規デプロイを作るとURLが変わり、アプリ側の同期URLが無効になる**ので必ず `-i` を付ける。
 
 ## 適用後の確認
 
-1. 本番 `doGet` に実リクエストし、レスポンスに `"sleepLogs":[]`（まだシート未作成なので空配列）が
-   含まれること、既存の workouts / weightLogs / cardioLogs / mealLogs / drinkingLogs /
-   planSettings / maintenanceCalories が従来どおり返ることを確認する
-2. アプリで睡眠を1件記録して同期し、スプレッドシートに `SleepLogs` シートが作られ、
-   Date / BedTime / WakeTime の3列が入ることを確認する
-3. アプリ側で「クラウドから復元」を実行し、**就寝・起床の時刻が入力どおりに戻ること**を確認する
+1. ✅ 本番 `doGet` に実リクエストし、レスポンスに `"sleepLogs":[]` が含まれること、
+   既存の全キーが従来どおり返ることを確認済み（2026-08-04）
+2. ⬜ アプリで睡眠を1件記録して同期し、スプレッドシートに `SleepLogs` シートが作られ、
+   Date / BedTime / WakeTime の3列が入ること（**次に睡眠を記録した時に自動で作られる**）
+3. ⬜ アプリ側で「クラウドから復元」を実行し、**就寝・起床の時刻が入力どおりに戻ること**
    （上記「時刻の往復について」の懸念が実環境で問題ないことの確認。ここがズレると
-   `filterValidSleepLogs` が弾いて睡眠記録が消えるため、必ず見ること）
+   `filterValidSleepLogs` が弾いて睡眠記録が消えるため、実データができたら必ず見ること）
