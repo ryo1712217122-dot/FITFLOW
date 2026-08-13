@@ -45,6 +45,13 @@ function getLifestyleLevelLabel(pal) {
         LIFESTYLE_ACTIVITY_LEVELS[0]).label;
 }
 
+// 「記録する」タブで進行中の筋トレセッションのID。
+// トレーニングは1種目ずつ保存していくため、途中でアプリを閉じることが普通にある。
+// メモリ上のstate.editingWorkoutIdだけだとリロードで開いているセッションを見失い、
+// 続きを記録するには履歴から編集し直す必要があった(そうしないと同じ日のセッションが
+// 2件に割れる)。ここに保存して、開き直しても同じセッションへ追記できるようにする。
+const OPEN_WORKOUT_KEY = 'fitflow_open_workout_id';
+
 // 一回限りのデータ移行(migrations)の実行済みフラグに使うlocalStorageキーの接頭辞。
 // 各移行は「接頭辞 + 移行名」のキーが立っていればスキップされる(冪等性の担保)。
 const MIGRATION_FLAG_PREFIX = 'fitflow_migration_';

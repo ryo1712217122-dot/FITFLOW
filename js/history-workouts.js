@@ -185,44 +185,16 @@ function editWorkout(id) {
     if (!workout) return;
 
     // 以後、種目ブロックの個別保存はこのワークアウトに対して行われる
-    // (record-form.jsのgetOrCreateOpenWorkout/saveExerciseBlockが参照する)
-    state.editingWorkoutId = id;
+    // (record-form.jsのgetOrCreateOpenWorkout/saveExerciseBlockが参照する)。
+    // setOpenWorkoutId経由なので、編集の途中でアプリを閉じても開き直せば続きから編集できる
+    // (ただし「フィットネス上の今日」以外の記録は復元対象外。state.jsのloadData参照)
+    setOpenWorkoutId(id);
 
     const formNavItem = document.querySelector('[data-tab="quick-log"]');
     if (formNavItem) formNavItem.click();
 
-    const titleHeader = document.getElementById('logger-form-title');
-    if (titleHeader) titleHeader.textContent = '🏋️ トレーニング記録の編集';
-
-    if (DOM.saveWorkoutBtn) {
-        DOM.saveWorkoutBtn.innerHTML = '<i data-lucide="save"></i> 編集を完了する';
-    }
-
-    if (DOM.workoutDate) DOM.workoutDate.value = workout.date;
-    if (DOM.workoutTime) DOM.workoutTime.value = workout.time || '12:00';
-
-    if (DOM.workoutImpression) DOM.workoutImpression.value = workout.impression || '';
-
-    const moodRadio = DOM.workoutForm ? DOM.workoutForm.querySelector(`input[name="workout-mood"][value="${workout.mood}"]`) : null;
-    if (moodRadio) moodRadio.checked = true;
-
-    if (DOM.exerciseList) {
-        DOM.exerciseList.innerHTML = '';
-
-        if (workout.exercises) {
-            workout.exercises.forEach((ex, idx) => {
-                addExerciseBlock(ex, idx);
-            });
-        }
-        // 既存種目に加えて、その場で新しい種目もすぐ追加できるよう空ブロックを1つ用意する
-        addExerciseBlock();
-    }
-
-    updateWorkoutCalorieHint();
-
-    if (window.lucide) {
-        lucide.createIcons();
-    }
+    // フォームの組み立ては記録フォーム側と共用する(見出し・ボタン・案内文だけが違う)
+    populateWorkoutForm(workout, 'edit');
 }
 
 function deleteWorkout(id) {
@@ -232,7 +204,7 @@ function deleteWorkout(id) {
         // 削除したワークアウトが記録フォームで開いたままだった場合、
         // 古いidを参照し続けないようにする(次の種目保存は自動的に新規作成にフォールバックする)
         if (state.editingWorkoutId === id) {
-            state.editingWorkoutId = null;
+            setOpenWorkoutId(null);
         }
         saveDataAndSync();
         showToast('ワークアウト記録を削除しました');

@@ -277,4 +277,19 @@
     color: var(--color-warning, #d9a05b);
 }
 
+
+/* 記録中のトレーニングを開き直した時の案内。
+   前回の種目が並んでいる理由が分からないと「二重に記録された」と誤解されるため、
+   通常のform-hintより目立たせる */
+.workout-resume-hint {
+    margin: 0 1.5rem 0.5rem;
+    padding: 0.6rem 0.85rem;
+    border-radius: 8px;
+    border-left: 4px solid var(--color-primary);
+    background: color-mix(in srgb, var(--color-primary) 10%, transparent);
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+    line-height: 1.5;
+}
+
 } /* end @layer pages (record) */

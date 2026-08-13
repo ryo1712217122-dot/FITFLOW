@@ -123,6 +123,20 @@ function loadData() {
     }
     state.sleepLogs.sort((a, b) => new Date(a.date) - new Date(b.date));
 
+    // 3.8 進行中の筋トレセッション。参照先が実在し、かつ「フィットネス上の今日」の
+    // 記録である場合だけ引き継ぐ。日付をまたいだセッションまで復元すると、今日の種目が
+    // 昨日のセッションに足されてしまう(記録済みの種目は履歴にそのまま残る)。
+    const openWorkoutId = localStorage.getItem(OPEN_WORKOUT_KEY);
+    if (openWorkoutId) {
+        const open = state.workouts.find(w => w && w.id === openWorkoutId);
+        if (open && open.date === getFitnessDateString()) {
+            state.editingWorkoutId = openWorkoutId;
+        } else {
+            localStorage.removeItem(OPEN_WORKOUT_KEY);
+            state.editingWorkoutId = null;
+        }
+    }
+
     // 4. Maintenance Calories
     const maintData = localStorage.getItem('fitflow_maintenance');
     if (maintData) {
@@ -259,6 +273,18 @@ function runOneTimeMigrations() {
             }
             localStorage.setItem(maintenanceFlag, 'true');
         }
+    }
+}
+
+// 進行中の筋トレセッションを設定/解除する。state と localStorage を必ず一緒に動かすため、
+// state.editingWorkoutId への直接代入ではなくこの関数を通すこと
+// (片方だけ更新すると、リロード時に存在しないセッションを開こうとする)。
+function setOpenWorkoutId(id) {
+    state.editingWorkoutId = id || null;
+    if (id) {
+        localStorage.setItem(OPEN_WORKOUT_KEY, id);
+    } else {
+        localStorage.removeItem(OPEN_WORKOUT_KEY);
     }
 }
 

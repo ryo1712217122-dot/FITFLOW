@@ -29,9 +29,8 @@ function initNavigation() {
                 updateSleepHistoryList();
                 updateCalorieBalanceHistoryList();
             } else if (tabId === 'quick-log') {
-                if (!state.editingWorkoutId) {
-                    resetWorkoutForm();
-                }
+                // 進行中のセッションがあればフォームへ復元し、無ければ新規フォームにする
+                syncWorkoutFormWithOpenSession();
             } else if (tabId === 'plan') {
                 // 減量シミュレーション(TDEE・目標摂取カロリー・予測体重)は最新体重と
                 // 直近の記録から毎回算出しているため、開くたびに再計算する。

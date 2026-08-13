@@ -15,6 +15,10 @@ document.addEventListener('DOMContentLoaded', () => {
     initSettingsControls();
     initDaySummaryModal();
 
+    // 「記録する」は初期表示タブなのでナビのクリックが発火しない。
+    // 進行中の筋トレセッションがあれば、起動直後にフォームへ復元しておく
+    syncWorkoutFormWithOpenSession();
+
     // Load initial views
     updateDashboard();
     updateHistoryList();

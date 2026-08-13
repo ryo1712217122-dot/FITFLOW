@@ -13,6 +13,98 @@
 //
 // 日付のデフォルトはgetFitnessDateString(27時ルール: AM3時までは前日扱い)を使う。
 // 深夜のトレーニング後に記録しても「今日」に化けないようにするため。
+//
+// 進行中のセッションはlocalStorage(OPEN_WORKOUT_KEY)にも残るので、途中でアプリを
+// 閉じても開き直せば同じセッションに追記できる。セッションが終わるのは
+// 「トレーニングを記録完了」を押した時だけ。
+
+// フォームが今どのワークアウトを組み立てているか。state.editingWorkoutIdと食い違う場合
+// (リロード直後はフォームが空)だけ組み立て直す。一致している間は触らないことで、
+// タブを行き来しても入力途中の種目が消えないようにする。
+let formBoundWorkoutId = null;
+
+// フォームの用途。'new'=新規、'resume'=進行中セッションの続き、'edit'=履歴からの過去記録の編集。
+// 「記録中です」の案内は 'edit' では出さない(過去の記録を直しているだけなので誤解を招く)。
+let workoutFormMode = 'new';
+
+// 「記録する」タブを開いた時と起動時に呼ぶ。進行中のセッションがあればそれをフォームへ
+// 復元し、無ければ通常どおり新規フォームにする。
+// force=true なら、既に同じセッションを開いていてもフォームを組み立て直す
+// (クラウド同期やインポートで裏のデータが入れ替わった直後に使う)。
+function syncWorkoutFormWithOpenSession({ force = false } = {}) {
+    if (state.editingWorkoutId) {
+        if (!force && formBoundWorkoutId === state.editingWorkoutId) return; // 既に開いている。入力中の値を保つ
+        const workout = state.workouts.find(w => w.id === state.editingWorkoutId);
+        if (workout) {
+            populateWorkoutForm(workout, 'resume');
+            return;
+        }
+        // 参照先が消えている(履歴で削除された等)。開いたままにせず新規に戻す
+        setOpenWorkoutId(null);
+    }
+    resetWorkoutForm();
+}
+
+// ワークアウトの内容をフォームへ流し込む。履歴からの編集(mode='edit')と、
+// 進行中セッションの再開(mode='resume')で共用する。違いは見出し・ボタン・案内文だけ。
+function populateWorkoutForm(workout, mode) {
+    const isResume = mode === 'resume';
+
+    const titleHeader = document.getElementById('logger-form-title');
+    if (titleHeader) {
+        titleHeader.textContent = isResume ? '🏋️ トレーニングの記録（記録中）' : '🏋️ トレーニング記録の編集';
+    }
+    if (DOM.saveWorkoutBtn) {
+        DOM.saveWorkoutBtn.innerHTML = isResume
+            ? '<i data-lucide="check"></i> トレーニングを記録完了'
+            : '<i data-lucide="save"></i> 編集を完了する';
+    }
+
+    if (DOM.workoutDate) DOM.workoutDate.value = workout.date;
+    if (DOM.workoutTime) DOM.workoutTime.value = workout.time || '12:00';
+    if (DOM.workoutImpression) DOM.workoutImpression.value = workout.impression || '';
+
+    const moodRadio = DOM.workoutForm
+        ? DOM.workoutForm.querySelector(`input[name="workout-mood"][value="${workout.mood}"]`)
+        : null;
+    if (moodRadio) moodRadio.checked = true;
+
+    if (DOM.exerciseList) {
+        DOM.exerciseList.innerHTML = '';
+        (workout.exercises || []).forEach((ex, idx) => addExerciseBlock(ex, idx));
+        // 既存種目に加えて、その場で次の種目もすぐ追加できるよう空ブロックを1つ用意する
+        addExerciseBlock();
+    }
+
+    formBoundWorkoutId = workout.id;
+    workoutFormMode = isResume ? 'resume' : 'edit';
+    if (isResume) {
+        showWorkoutResumeHint(workout);
+    } else {
+        hideWorkoutResumeHint();
+    }
+
+    updateWorkoutCalorieHint();
+    if (window.lucide) lucide.createIcons();
+}
+
+// 「このセッションは保存済みで、まだ続けられる」ことを画面に出す。
+// これが無いと、開き直した時に前回の種目が並んでいる理由が分からない。
+function showWorkoutResumeHint(workout) {
+    const hint = document.getElementById('workout-resume-hint');
+    if (!hint || workoutFormMode === 'edit') return;
+    const count = (workout.exercises || []).length;
+    hint.textContent = `記録中のトレーニングです（${count}種目 保存済み）。種目を追加していけます。終わったら「トレーニングを記録完了」を押してください。`;
+    hint.classList.remove('is-hidden');
+}
+
+function hideWorkoutResumeHint() {
+    const hint = document.getElementById('workout-resume-hint');
+    if (hint) {
+        hint.classList.add('is-hidden');
+        hint.textContent = '';
+    }
+}
 
 function initFormControls() {
     if (DOM.addExerciseBtn) {
@@ -140,8 +232,11 @@ function initFormControls() {
 }
 
 function resetWorkoutForm() {
-    state.editingWorkoutId = null;
+    setOpenWorkoutId(null);
+    formBoundWorkoutId = null;
+    workoutFormMode = 'new';
     if (DOM.workoutForm) DOM.workoutForm.reset();
+    hideWorkoutResumeHint();
 
     const now = new Date();
     // 27時ルール: AM3時までは前日の日付をデフォルトにする(深夜トレ後の記録を想定)
@@ -387,7 +482,13 @@ function getOrCreateOpenWorkout() {
             estimatedCalories: 0
         };
         state.workouts.unshift(workout);
-        state.editingWorkoutId = workout.id;
+        // 種目を1つでも保存した時点で「進行中のセッション」になる。以後アプリを閉じても
+        // 開き直せば同じセッションへ追記される(履歴から編集し直す必要がない)。
+        // 案内文は種目を追加し終えたあと(saveExerciseBlockの末尾)で出す。
+        // ここで出すと、まだexercisesが空なので「0種目 保存済み」になってしまう。
+        setOpenWorkoutId(workout.id);
+        formBoundWorkoutId = workout.id;
+        workoutFormMode = 'resume';
     }
 
     return workout;
@@ -460,6 +561,8 @@ function saveExerciseBlock(exerciseBlockEl) {
     }
 
     updateWorkoutCalorieHint();
+    // 保存後の実際の種目数で案内を出し直す(初回保存時はここで初めて表示される)
+    showWorkoutResumeHint(workout);
     updateDashboard();
     updateHistoryList();
 }
@@ -618,7 +721,6 @@ function finishTrainingSession() {
     saveDataAndSync();
     showToast('トレーニングを記録しました！');
 
-    state.editingWorkoutId = null;
     resetWorkoutForm();
 
     updateDashboard();
@@ -637,7 +739,12 @@ function finishTrainingSession() {
 // (実際に発生した不具合)。フォームAは進行中のセッションが裏で入れ替わっている可能性が
 // あるため安全にリセットし、他のフォームは選択中の日付で最新のstateに合わせ直す。
 function refreshRecordFormsAfterExternalDataChange() {
-    resetWorkoutForm();
+    // 進行中のセッションは、取り込み後のデータにも同じidが残っていれば引き継ぐ。
+    // ただしフォームは必ず新しいstateから組み立て直す(force)。表示が古いまま残ると、
+    // 次の送信で取り込んだばかりのデータを古い値で上書きしてしまうため。
+    // 起動時の自動同期もここを通るので、単純にresetすると開いているセッションが
+    // 毎回失われてしまう(セッションの永続化が意味を成さなくなる)。
+    syncWorkoutFormWithOpenSession({ force: true });
 
     if (DOM.cardioDate && DOM.cardioDate.value) {
         syncCardioFormWithExistingDataForDate(DOM.cardioDate.value);
@@ -650,6 +757,9 @@ function refreshRecordFormsAfterExternalDataChange() {
     }
     if (DOM.drinkingDate && DOM.drinkingDate.value) {
         syncDrinkingFormWithExistingDataForDate(DOM.drinkingDate.value);
+    }
+    if (DOM.sleepDate && DOM.sleepDate.value) {
+        syncSleepFormWithExistingDataForDate(DOM.sleepDate.value);
     }
 }
 
