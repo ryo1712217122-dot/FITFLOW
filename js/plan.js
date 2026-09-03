@@ -106,7 +106,11 @@ function renderPlanTab() {
                     この食事を続けた場合に落ち着く体重（平衡体重）は <strong>${equilibrium.toFixed(1)} kg</strong>
                     <span class="plan-sim-fact-sub">現在との差が半分まで縮むのに約${halfLifeDays}日。体重が減るとTDEEも下がるため、減量は一定ペースではなくここへ向かって減速していきます。</span>
                 </p>` : ''}
-                ${sim.clamped ? `<p class="plan-sim-clamp-warning">⚠️ このペースでは通常日が基礎代謝(${profile.bmr}kcal)を下回るため、下限で調整しています。実際の減量ペースは選択より緩やかになります。</p>` : ''}
+                ${sim.paceLimited
+                    ? `<p class="plan-sim-clamp-warning">⚠️ このペースは毎日を基礎代謝(${profile.bmr}kcal)未満にしないと届かないため、達成できません。全日を基礎代謝に揃えても実際は約${sim.achievablePaceKgMonth}kg/月です。ペースを落とすか、運動でTDEEを上げてください。</p>`
+                    : (sim.clamped
+                        ? `<p class="plan-sim-clamp-warning">⚠️ 通常日が基礎代謝(${profile.bmr}kcal)を下回るため、通常日を下限で止め、甘えた日・イベント日の上乗せを圧縮して週平均${sim.effectiveAvgIntake}kcalに合わせています。日ごとの振れ幅は小さくなりますが、減量ペースは選択どおり月${getSimulationPace(s)}kgです。</p>`
+                        : '')}
 
                 <h4 class="plan-section-heading">
                     目標摂取カロリー（週平均 ${sim.effectiveAvgIntake} kcal/日）

@@ -3,8 +3,6 @@
 
 let state = {
     workouts: [],
-    currentYear: new Date().getFullYear(),
-    currentMonth: new Date().getMonth(), // 0-indexed
     editingWorkoutId: null,
     weightLogs: [],
     cardioLogs: [],

@@ -6,10 +6,11 @@ const DEFAULT_WEIGHT_KG = 70.0;
 const CARDIO_DAYS_WINDOW = 7;
 // 体重推移グラフの移動平均・週間変化量サマリーで使う日数
 const WEIGHT_TREND_WINDOW_DAYS = 7;
+// トレーニングカレンダー(連続ヒートマップ)で表示する週数。右端が今週。
+// 26週=約半年。月ごとのページ送りを廃止した代わりに、ここで見える範囲を決める
+const CALENDAR_HEATMAP_WEEKS = 26;
 // 総トレーニングボリューム週次推移グラフで表示する週数
 const VOLUME_TREND_WEEKS = 8;
-// 睡眠のサマリー(平均睡眠時間・就寝時刻のばらつき)を出す期間
-const SLEEP_TREND_WINDOW_DAYS = 7;
 // タイトル・部位カテゴリーの入力欄はフォームから撤去したため、新規記録には固定のデフォルト値を使う
 const DEFAULT_WORKOUT_CATEGORY = 'その他 (Other)';
 // 筋トレの消費カロリー概算に使う「1セットあたりの目安kcal」。
@@ -43,6 +44,33 @@ function getLifestyleLevelLabel(pal) {
     return LIFESTYLE_ACTIVITY_LEVELS.reduce((best, l) =>
         Math.abs(l.value - v) < Math.abs(best.value - v) ? l : best,
         LIFESTYLE_ACTIVITY_LEVELS[0]).label;
+}
+
+// 自重種目(重量の概念が無い種目)の判定。腹筋ローラーやプランクで毎回0kgを入力するのは
+// 手間なだけでなく、空欄のままだと保存時のバリデーションに引っかかっていた。
+// 種目名にこのキーワードを含む場合、重量欄を隠して重量0として保存する。
+//
+// ただし加重ディップスのように同じ名前でも重りを足す場合があるので、
+// 「マシン/ケーブル/ダンベル/加重」等の語が入っていれば自重扱いにしない。
+// それでも外したい場合は種目ブロックの「重量を入力する」から手動で戻せる。
+const BODYWEIGHT_EXERCISE_KEYWORDS = [
+    '腹筋ローラー', 'アブローラー', 'アブローラ', 'ローラー',
+    'プランク', 'クランチ', 'シットアップ', '腕立て', 'プッシュアップ',
+    'ディップス', 'レッグレイズ', 'ヒップリフト', 'バックエクステンション',
+    'バーピー', 'マウンテンクライマー', '空気椅子', 'ウォールシット', '自重'
+];
+
+// 上のキーワードを含んでいても自重扱いにしない語(重りを足す器具・バリエーション)
+const WEIGHTED_EXERCISE_MARKERS = [
+    'マシン', 'ケーブル', 'ダンベル', 'バーベル', 'スミス',
+    '加重', 'ウェイト', 'ウエイト', 'プレート'
+];
+
+function isBodyweightExercise(name) {
+    const n = String(name || '').trim();
+    if (!n) return false;
+    if (WEIGHTED_EXERCISE_MARKERS.some(k => n.includes(k))) return false;
+    return BODYWEIGHT_EXERCISE_KEYWORDS.some(k => n.includes(k));
 }
 
 // 「記録する」タブで進行中の筋トレセッションのID。

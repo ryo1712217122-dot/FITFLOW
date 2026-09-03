@@ -26,7 +26,6 @@ function initNavigation() {
                 updateCardioHistoryList();
                 updateWeightHistoryList();
                 updateMealHistoryList();
-                updateSleepHistoryList();
                 updateCalorieBalanceHistoryList();
             } else if (tabId === 'quick-log') {
                 // 進行中のセッションがあればフォームへ復元し、無ければ新規フォームにする

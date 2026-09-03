@@ -158,21 +158,16 @@
     gap: 0.25rem;
 }
 
-.exercise-sets-counter label {
+/* 行数を直接指定する入力はやめ、各行の「×セット数」の合計を表示する。
+   同じ内容のセットは1行にまとめて掛け算で入れる方式にしたため、
+   「行数」と「セット数」が一致しなくなった */
+.exercise-sets-total {
     font-size: 0.8rem;
     color: var(--text-secondary);
-    margin: 0;
     white-space: nowrap;
 }
 
-.exercise-sets-input {
-    width: 50px;
-    padding: 0.35rem 0.25rem;
-    font-size: 0.85rem;
-    border-radius: 6px;
-    border: 1px solid var(--border-color);
-    background: var(--bg-surface-hover);
-    text-align: center;
+.exercise-sets-total strong {
     color: var(--text-primary);
 }
 
@@ -190,20 +185,54 @@
     font-size: 0.75rem;
     font-weight: 600;
     color: var(--text-muted);
-    padding-bottom: 0.5rem;
+    padding: 0 0.5rem 0.5rem 0;
     text-transform: uppercase;
+    white-space: nowrap;
 }
 
 .sets-table td {
-    padding: 0.35rem 0;
+    padding: 0.35rem 0.35rem 0.35rem 0;
     vertical-align: middle;
 }
 
 .sets-table input {
-    width: 75px;
-    padding: 0.4rem 0.6rem;
+    width: 68px;
+    padding: 0.4rem 0.5rem;
     font-size: 0.85rem;
     text-align: center;
+}
+
+.sets-table .set-count {
+    width: 52px;
+}
+
+/* 自重種目(腹筋ローラー・プランク等)では重量の列ごと隠す。
+   毎回0kgを入れる手間をなくすため。保存時は重量0として扱う */
+.exercise-item.is-bodyweight .col-weight {
+    display: none;
+}
+
+.sets-table-actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+}
+
+.toggle-weight-btn {
+    margin-top: 0.75rem;
+    background: none;
+    border: none;
+    padding: 0;
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    text-decoration: underline;
+    cursor: pointer;
+}
+
+.toggle-weight-btn:hover {
+    color: var(--text-primary);
 }
 
 .set-row {
@@ -214,19 +243,23 @@
     font-weight: 600;
     font-size: 0.85rem;
     color: var(--text-secondary);
-    width: 40px;
+    width: 48px;
+    white-space: nowrap;
 }
 
 .set-multiply {
     color: var(--text-muted);
     text-align: center;
-    width: 30px;
+    width: 22px;
     font-size: 0.85rem;
 }
 
+/* 余った横幅はこの列に吸わせる。そうしないと重量・レップ・セットの各列が
+   間延びして、掛け算の「×」が数字から離れて読みにくくなる */
 .set-action {
-    text-align: right;
-    width: 40px;
+    text-align: left;
+    width: 100%;
+    padding-left: 0.5rem;
 }
 
 .add-set-row-btn {
@@ -251,32 +284,6 @@
     width: 14px;
     height: 14px;
 }
-
-/* 睡眠フォーム: 就寝と起床を横並びにして、1画面で完結させる */
-.sleep-time-row {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 1rem;
-}
-
-.sleep-time-row .form-group {
-    margin-bottom: 0;
-}
-
-/* 入力中に出る睡眠時間のプレビュー。保存前に取り違えへ気づけるようにする */
-.sleep-duration-preview {
-    margin: 0.75rem 0 0;
-    font-family: var(--font-display);
-    font-size: 1.05rem;
-    font-weight: 700;
-    color: var(--color-primary);
-    min-height: 1.4em;
-}
-
-.sleep-duration-preview.is-short {
-    color: var(--color-warning, #d9a05b);
-}
-
 
 /* 記録中のトレーニングを開き直した時の案内。
    前回の種目が並んでいる理由が分からないと「二重に記録された」と誤解されるため、

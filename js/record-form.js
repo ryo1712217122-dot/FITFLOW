@@ -1,10 +1,9 @@
-// FITFLOW - 「記録する」タブ: トレーニング・有酸素・体重・食事・飲み会・睡眠の6つの独立したフォーム。
+// FITFLOW - 「記録する」タブ: トレーニング・有酸素・体重・食事・飲み会の5つの独立したフォーム。
 //   パート1(#workout-form)     : トレーニング(筋トレ)
 //   パート2(#cardio-form)      : 有酸素(走行距離)
 //   パート3(#weight-quick-form): 体重
 //   パート4(#meal-form)        : 食事(朝食/昼食/夕食/間食の摂取kcal目安)
 //   パート5(#drinking-form)    : 飲み会(日付のみ。体重変化の文脈として体重グラフに重ねる)
-//   パート6(#sleep-form)       : 睡眠(就寝・起床の時刻。日付は「起床日」)
 // それぞれ一つずつ入力・保存できる(以前の「有酸素を保存して完了」のような合体送信は廃止)。
 //
 // 筋トレの種目は「まとめて最後に一括保存」ではなく、1種目入力し終えるごとに
@@ -209,26 +208,6 @@ function initFormControls() {
         });
     }
 
-    // パート6: 睡眠
-    if (DOM.sleepForm) {
-        if (DOM.sleepDate) {
-            // 睡眠は「起床日」に紐づけるので、27時ルールで求めた日付をそのまま使える
-            // (深夜2時に記録しても、その時点で寝ているはずはなく、直したいのは前日の記録)
-            DOM.sleepDate.value = getFitnessDateString();
-            syncSleepFormWithExistingDataForDate(DOM.sleepDate.value);
-            DOM.sleepDate.addEventListener('change', () => {
-                syncSleepFormWithExistingDataForDate(DOM.sleepDate.value);
-            });
-        }
-        // 時刻を触るたびに睡眠時間を出しておく(保存前に入力ミスへ気づけるように)
-        [DOM.sleepBedTime, DOM.sleepWakeTime].forEach(el => {
-            if (el) el.addEventListener('input', updateSleepDurationPreview);
-        });
-        DOM.sleepForm.addEventListener('submit', (e) => {
-            e.preventDefault();
-            saveSleepLog();
-        });
-    }
 }
 
 function resetWorkoutForm() {
@@ -275,6 +254,10 @@ function addExerciseBlock(data = null, existingIndex = null) {
         .map(name => `<option value="${escapeHtml(name)}">${escapeHtml(name)}</option>`)
         .join('');
 
+    // 同じ重量・レップの繰り返しは1行にまとめて復元する(30kg×10を3セットなら1行×3)。
+    // 保存形式は従来どおりフラットなセット配列なので、ここで畳むだけ。
+    const formRows = data && data.sets ? collapseSetsForForm(data.sets) : [];
+
     // 種目名・重量・レップ数の入力にはrequired属性を付けない。
     // 種目保存後には空の入力ブロックが自動で追加されるため、requiredにすると
     // その空ブロックがフォーム全体の送信(有酸素を保存して完了)をHTMLバリデーションで
@@ -290,8 +273,7 @@ function addExerciseBlock(data = null, existingIndex = null) {
                 <input type="text" class="exercise-name" placeholder="種目名（一覧にない場合は自由入力）" list="popular-exercises" value="${data ? escapeHtml(data.name) : ''}">
             </div>
             <div class="exercise-sets-counter">
-                <label>セット数:</label>
-                <input type="number" class="exercise-sets-input" min="1" max="20" value="${data && data.sets ? data.sets.length : 1}">
+                <span class="exercise-sets-total">合計 <strong class="exercise-sets-total-num">0</strong> セット</span>
             </div>
             <button type="button" class="btn-icon btn-remove-exercise text-danger" title="種目を削除">
                 <i data-lucide="trash-2"></i>
@@ -302,17 +284,22 @@ function addExerciseBlock(data = null, existingIndex = null) {
                 <thead>
                     <tr>
                         <th class="set-num">SET</th>
-                        <th>重量 (kg)</th>
-                        <th></th>
+                        <th class="col-weight">重量 (kg)</th>
+                        <th class="col-weight"></th>
                         <th>レップ数</th>
+                        <th></th>
+                        <th>セット</th>
                         <th class="set-action"></th>
                     </tr>
                 </thead>
                 <tbody class="sets-tbody"></tbody>
             </table>
-            <button type="button" class="add-set-row-btn">
-                <i data-lucide="plus"></i> セットを追加
-            </button>
+            <div class="sets-table-actions">
+                <button type="button" class="add-set-row-btn">
+                    <i data-lucide="plus"></i> 内容の違うセットを追加
+                </button>
+                <button type="button" class="toggle-weight-btn is-hidden">重量を入力する</button>
+            </div>
         </div>
         <button type="button" class="btn btn-primary btn-full margin-top-1 btn-save-exercise">
             <i data-lucide="check"></i> この種目を保存
@@ -323,9 +310,15 @@ function addExerciseBlock(data = null, existingIndex = null) {
     const addSetBtn = exerciseBlock.querySelector('.add-set-row-btn');
     const removeExBtn = exerciseBlock.querySelector('.btn-remove-exercise');
     const saveExBtn = exerciseBlock.querySelector('.btn-save-exercise');
-    const setsInput = exerciseBlock.querySelector('.exercise-sets-input');
     const namePicker = exerciseBlock.querySelector('.exercise-name-picker');
     const nameInput = exerciseBlock.querySelector('.exercise-name');
+    const toggleWeightBtn = exerciseBlock.querySelector('.toggle-weight-btn');
+
+    // 既存データに0以外の重量が入っているなら、種目名が自重判定でも重量欄を出す
+    // (加重ディップス等を後から編集した時に、入っている重量が見えなくなるのを防ぐ)
+    if (formRows.some(r => Number(r.weight) > 0)) {
+        exerciseBlock.setAttribute('data-weight-mode', 'forced');
+    }
 
     if (namePicker && nameInput) {
         namePicker.addEventListener('change', () => {
@@ -333,39 +326,23 @@ function addExerciseBlock(data = null, existingIndex = null) {
                 nameInput.value = namePicker.value;
             }
             namePicker.value = '';
+            applyExerciseWeightMode(exerciseBlock);
+        });
+    }
+    if (nameInput) {
+        nameInput.addEventListener('input', () => applyExerciseWeightMode(exerciseBlock));
+    }
+    if (toggleWeightBtn) {
+        toggleWeightBtn.addEventListener('click', () => {
+            const forced = exerciseBlock.getAttribute('data-weight-mode') === 'forced';
+            exerciseBlock.setAttribute('data-weight-mode', forced ? 'auto' : 'forced');
+            applyExerciseWeightMode(exerciseBlock);
         });
     }
 
     addSetBtn.addEventListener('click', () => {
         addSetRow(tbody);
-        if (setsInput) setsInput.value = tbody.children.length;
     });
-
-    if (setsInput) {
-        setsInput.addEventListener('input', () => {
-            let val = parseInt(setsInput.value);
-            if (isNaN(val) || val < 1) return; // Wait for complete input
-            const currentSetsCount = tbody.children.length;
-            if (val > currentSetsCount) {
-                for (let i = 0; i < val - currentSetsCount; i++) {
-                    addSetRow(tbody);
-                }
-            } else if (val < currentSetsCount) {
-                for (let i = 0; i < currentSetsCount - val; i++) {
-                    if (tbody.lastElementChild) {
-                        tbody.lastElementChild.remove();
-                    }
-                }
-            }
-        });
-
-        setsInput.addEventListener('blur', () => {
-            let val = parseInt(setsInput.value);
-            if (isNaN(val) || val < 1) {
-                setsInput.value = tbody.children.length;
-            }
-        });
-    }
 
     saveExBtn.addEventListener('click', () => {
         saveExerciseBlock(exerciseBlock);
@@ -377,58 +354,106 @@ function addExerciseBlock(data = null, existingIndex = null) {
 
     DOM.exerciseList.appendChild(exerciseBlock);
 
-    if (data && data.sets && data.sets.length > 0) {
-        data.sets.forEach(s => addSetRow(tbody, s.weight, s.reps));
+    if (formRows.length > 0) {
+        formRows.forEach(r => addSetRow(tbody, r.weight, r.reps, r.count));
     } else {
         addSetRow(tbody);
     }
+
+    applyExerciseWeightMode(exerciseBlock);
 
     if (window.lucide) {
         lucide.createIcons();
     }
 }
 
-function addSetRow(tbody, weight = '', reps = '') {
-    const setIndex = tbody.children.length + 1;
+// 自重種目なら重量の列を隠す。手動で「重量を入力する」を押した種目(data-weight-mode="forced")は
+// 種目名に関わらず常に表示する。
+function applyExerciseWeightMode(exerciseBlockEl) {
+    if (!exerciseBlockEl) return;
+    const nameInput = exerciseBlockEl.querySelector('.exercise-name');
+    const forced = exerciseBlockEl.getAttribute('data-weight-mode') === 'forced';
+    const auto = isBodyweightExercise(nameInput ? nameInput.value : '');
+    const hideWeight = auto && !forced;
+
+    exerciseBlockEl.classList.toggle('is-bodyweight', hideWeight);
+
+    const toggleBtn = exerciseBlockEl.querySelector('.toggle-weight-btn');
+    if (toggleBtn) {
+        // 自重と判定された種目でだけ、手動で重量欄を出し入れできるようにする
+        toggleBtn.classList.toggle('is-hidden', !auto);
+        toggleBtn.textContent = hideWeight ? '重量を入力する' : '重量なし（自重）に戻す';
+    }
+}
+
+// 1行 = 「重量 × レップ数 × セット数」。同じ内容を3セットやった場合に3行入力するのは
+// 手間なので、セット数の掛け算欄で1行にまとめられるようにしている。
+// 保存時(readExerciseBlockData)にセット数ぶんへ展開するため、保存形式は従来と同じ。
+function addSetRow(tbody, weight = '', reps = '', count = 1) {
     const row = document.createElement('tr');
     row.classList.add('set-row');
     row.innerHTML = `
-        <td class="set-num">${setIndex}</td>
-        <td>
+        <td class="set-num"></td>
+        <td class="col-weight">
             <input type="number" step="any" class="set-weight" placeholder="0" min="0" value="${weight}">
         </td>
-        <td class="set-multiply">×</td>
+        <td class="set-multiply col-weight">×</td>
         <td>
             <input type="number" class="set-reps" placeholder="0" min="0" value="${reps}">
         </td>
+        <td class="set-multiply">×</td>
+        <td>
+            <input type="number" class="set-count" min="1" max="20" value="${count}" title="同じ内容を何セット行ったか">
+        </td>
         <td class="set-action">
-            <button type="button" class="btn-icon btn-remove-set text-danger" title="セットを削除">
+            <button type="button" class="btn-icon btn-remove-set text-danger" title="この行を削除">
                 <i data-lucide="x"></i>
             </button>
         </td>
     `;
 
+    const countInput = row.querySelector('.set-count');
+    countInput.addEventListener('input', () => renumberSetRows(tbody));
+    countInput.addEventListener('blur', () => {
+        const v = parseInt(countInput.value);
+        if (isNaN(v) || v < 1) countInput.value = 1;
+        renumberSetRows(tbody);
+    });
+
     row.querySelector('.btn-remove-set').addEventListener('click', () => {
         if (tbody.children.length > 1) {
             row.remove();
-            Array.from(tbody.children).forEach((r, idx) => {
-                r.querySelector('.set-num').textContent = idx + 1;
-            });
-            // Update sets count input in the parent exercise block
-            const exBlock = tbody.closest('.exercise-item');
-            if (exBlock) {
-                const sInput = exBlock.querySelector('.exercise-sets-input');
-                if (sInput) sInput.value = tbody.children.length;
-            }
+            renumberSetRows(tbody);
         } else {
-            showToast('最低1セットは必要です');
+            showToast('最低1行は必要です');
         }
     });
 
     tbody.appendChild(row);
+    renumberSetRows(tbody);
     if (window.lucide) {
         lucide.createIcons();
     }
+}
+
+// SET列の番号を振り直す。セット数の掛け算があるので、1行が複数セットに対応する場合は
+// "3-5" のような範囲表示にして、通しのセット番号が分かるようにする。
+function renumberSetRows(tbody) {
+    if (!tbody) return;
+    let n = 1;
+    Array.from(tbody.children).forEach(row => {
+        const countInput = row.querySelector('.set-count');
+        const raw = countInput ? parseInt(countInput.value) : 1;
+        const count = isNaN(raw) || raw < 1 ? 1 : raw;
+        const numCell = row.querySelector('.set-num');
+        if (numCell) {
+            numCell.textContent = count > 1 ? `${n}-${n + count - 1}` : String(n);
+        }
+        n += count;
+    });
+    const exBlock = tbody.closest('.exercise-item');
+    const totalEl = exBlock ? exBlock.querySelector('.exercise-sets-total-num') : null;
+    if (totalEl) totalEl.textContent = String(n - 1);
 }
 
 // 種目ブロック(DOM)から入力値を読み取る。不正な入力があればnullを返す。
@@ -439,22 +464,32 @@ function readExerciseBlockData(exerciseBlockEl) {
         return null;
     }
 
+    // 自重種目は重量欄を隠しているので、入力値に関わらず0kgとして保存する
+    const isBodyweight = exerciseBlockEl.classList.contains('is-bodyweight');
+
     const setRows = exerciseBlockEl.querySelectorAll('.set-row');
     const sets = [];
     let hasValidationError = false;
 
     setRows.forEach(row => {
-        const weight = parseFloat(row.querySelector('.set-weight').value);
+        const weight = isBodyweight ? 0 : parseFloat(row.querySelector('.set-weight').value);
         const reps = parseInt(row.querySelector('.set-reps').value);
+        const rawCount = parseInt(row.querySelector('.set-count').value);
+        const count = isNaN(rawCount) || rawCount < 1 ? 1 : rawCount;
         if (isNaN(weight) || isNaN(reps) || weight < 0 || reps < 0) {
             hasValidationError = true;
             return;
         }
-        sets.push({ weight, reps });
+        // 「重量×レップ×セット数」の1行を、保存形式(セット1件ずつの配列)へ展開する
+        for (let i = 0; i < count; i++) {
+            sets.push({ weight, reps });
+        }
     });
 
     if (hasValidationError || sets.length === 0) {
-        showToast('セットの入力内容を確認してください（重量・レップ数を正しく入力）');
+        showToast(isBodyweight
+            ? 'セットの入力内容を確認してください（レップ数を正しく入力）'
+            : 'セットの入力内容を確認してください（重量・レップ数を正しく入力）');
         return null;
     }
 
@@ -757,9 +792,6 @@ function refreshRecordFormsAfterExternalDataChange() {
     }
     if (DOM.drinkingDate && DOM.drinkingDate.value) {
         syncDrinkingFormWithExistingDataForDate(DOM.drinkingDate.value);
-    }
-    if (DOM.sleepDate && DOM.sleepDate.value) {
-        syncSleepFormWithExistingDataForDate(DOM.sleepDate.value);
     }
 }
 
@@ -1227,107 +1259,4 @@ function saveDailyLog() {
     updateCardioHint(); // 体重が変わると有酸素の消費目安も変わるため
     updateDashboard();
     updateWeightHistoryList();
-}
-
-// ==========================================
-// 睡眠の記録
-// ==========================================
-
-// 入力中の就寝・起床から睡眠時間をその場に表示する。
-// 保存してから「6時間のつもりが18時間になっていた」と気づくのを防ぐための即時フィードバック。
-function updateSleepDurationPreview() {
-    if (!DOM.sleepDurationPreview) return;
-    const hours = computeSleepDuration(
-        DOM.sleepBedTime ? DOM.sleepBedTime.value : '',
-        DOM.sleepWakeTime ? DOM.sleepWakeTime.value : ''
-    );
-    if (hours === null) {
-        DOM.sleepDurationPreview.textContent = '';
-        DOM.sleepDurationPreview.classList.remove('is-short');
-        return;
-    }
-    const target = getSleepTargetHours();
-    DOM.sleepDurationPreview.textContent = `→ ${formatSleepHours(hours)}${hours < target ? `（目標${target}時間に${formatSleepHours(target - hours)}届きません）` : ''}`;
-    DOM.sleepDurationPreview.classList.toggle('is-short', hours < target);
-}
-
-// 睡眠時間(小数)を「6時間45分」の形にする。6.75という小数表記より寝起きに読みやすい。
-function formatSleepHours(hours) {
-    const totalMinutes = Math.round(hours * 60);
-    const h = Math.floor(totalMinutes / 60);
-    const m = totalMinutes % 60;
-    if (h === 0) return `${m}分`;
-    return m === 0 ? `${h}時間` : `${h}時間${m}分`;
-}
-
-// 目標睡眠時間。planSettings.sleepTarget は防衛ラインUIの廃止後もキーだけ残っていた項目で、
-// 睡眠の記録を入れたことで再び意味を持つようになった。
-function getSleepTargetHours() {
-    const s = state.planSettings || DEFAULT_PLAN_SETTINGS;
-    const v = parseFloat(s.sleepTarget);
-    return v > 0 ? v : DEFAULT_PLAN_SETTINGS.sleepTarget;
-}
-
-// 指定日にすでに睡眠の記録があれば、その値をフォームへ復元して注意書きを出す。
-// 他のフォームと同じく、既存日付への上書きを事故ではなく意図的な操作にするため。
-function syncSleepFormWithExistingDataForDate(date) {
-    const existing = state.sleepLogs.find(s => s.date === date);
-    if (DOM.sleepExistingHint && DOM.sleepExistingHintText) {
-        if (existing) {
-            const hours = computeSleepDuration(existing.bedTime, existing.wakeTime);
-            DOM.sleepExistingHintText.textContent =
-                `この日はすでに記録があります（${existing.bedTime}〜${existing.wakeTime}／${formatSleepHours(hours)}）。保存すると上書きされます。`;
-            DOM.sleepExistingHint.classList.remove('is-hidden');
-        } else {
-            DOM.sleepExistingHint.classList.add('is-hidden');
-        }
-    }
-    if (DOM.sleepBedTime) DOM.sleepBedTime.value = existing ? existing.bedTime : '';
-    if (DOM.sleepWakeTime) DOM.sleepWakeTime.value = existing ? existing.wakeTime : '';
-    updateSleepDurationPreview();
-}
-
-function saveSleepLog() {
-    if (!DOM.sleepDate) return;
-    const date = DOM.sleepDate.value;
-    if (!date) {
-        showToast('日付を入力してください');
-        return;
-    }
-
-    const bedTime = DOM.sleepBedTime ? DOM.sleepBedTime.value : '';
-    const wakeTime = DOM.sleepWakeTime ? DOM.sleepWakeTime.value : '';
-    const hours = computeSleepDuration(bedTime, wakeTime);
-    // 何も書き換える前に検証する(失敗時に中途半端な状態を残さない)
-    if (hours === null) {
-        showToast(bedTime && wakeTime && bedTime === wakeTime
-            ? '就寝と起床が同じ時刻になっています'
-            : '就寝時刻と起床時刻を入力してください');
-        return;
-    }
-    // 就寝から起床までが極端に長い場合は、時刻の取り違え(AM/PM)を疑う。
-    // 弾かずに警告だけにすると気づかず保存されるので、ここでは保存を止める
-    if (hours > 16) {
-        showToast(`睡眠時間が${formatSleepHours(hours)}になっています。就寝と起床が逆になっていませんか？`);
-        return;
-    }
-
-    const existingIndex = state.sleepLogs.findIndex(s => s.date === date);
-    const updated = existingIndex !== -1;
-    const record = { date, bedTime, wakeTime };
-    if (updated) {
-        state.sleepLogs[existingIndex] = record;
-    } else {
-        state.sleepLogs.push(record);
-        state.sleepLogs.sort((a, b) => new Date(a.date) - new Date(b.date));
-    }
-
-    saveDataAndSync();
-    syncSleepFormWithExistingDataForDate(date);
-    updateDashboard();
-    updateSleepHistoryList();
-
-    const target = getSleepTargetHours();
-    showToast(`😴 ${updated ? '睡眠を更新しました' : '睡眠を記録しました'}：${formatSleepHours(hours)}`
-        + (hours < target ? `（目標${target}時間に届いていません）` : ''));
 }

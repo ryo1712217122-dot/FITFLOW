@@ -81,9 +81,6 @@ function updateDashboard() {
     // 4.5 週間ランニング目標の達成度
     updateWeeklyRunGoal(todayStr);
 
-    // 4.6 睡眠
-    updateSleepTile(todayStr);
-
     // 5. Training Calendar & Charts
     renderCalendar();
     renderWeightChart();
@@ -145,85 +142,32 @@ function updateWeeklyRunGoal(todayStr) {
     }
 }
 
-// 睡眠タイル。前夜の睡眠時間を主役に、直近7日の平均・不足日数・就寝時刻のばらつきを添える。
-// 就寝時刻のばらつきは生活リズムの安定度で、睡眠時間そのものと同じくらい体調に効く指標。
-function updateSleepTile(todayStr) {
-    if (!DOM.latestSleepNum && !DOM.sleepSummaryDesc) return;
-
-    const target = getSleepTargetHours();
-    const stats = computeSleepStats(state.sleepLogs, todayStr, {
-        days: SLEEP_TREND_WINDOW_DAYS, targetHours: target
-    });
-
-    if (!stats) {
-        if (DOM.latestSleepNum) DOM.latestSleepNum.textContent = '—';
-        if (DOM.sleepSummaryDesc) DOM.sleepSummaryDesc.textContent = '未登録';
-        return;
-    }
-
-    if (DOM.latestSleepNum) {
-        DOM.latestSleepNum.textContent = stats.latest.hours.toFixed(1);
-        DOM.latestSleepNum.classList.toggle('tile-value-danger', stats.latest.hours < target);
-    }
-    if (DOM.sleepSummaryDesc) {
-        const parts = [`${SLEEP_TREND_WINDOW_DAYS}日平均 ${stats.avgHours.toFixed(1)}h（${stats.nights}日分）`];
-        if (stats.shortNights > 0) parts.push(`目標${target}h未満 ${stats.shortNights}日`);
-        if (stats.bedTimeSpreadMin !== null && stats.nights >= 3) {
-            parts.push(`就寝 ${stats.avgBedTime}±${stats.bedTimeSpreadMin}分`);
-        }
-        DOM.sleepSummaryDesc.textContent = parts.join(' / ');
-    }
-}
-
 // Calendar Heatmap rendering
+//
+// 月ごとのページ送り(前月/次月ボタン)は廃止した。月をまたぐたびに表示が切り替わり、
+// 月末→月初と続いている連続記録が2ページに割れて「続いているのか途切れたのか」が
+// 読み取れなかったため。代わりに直近CALENDAR_HEATMAP_WEEKS週を1枚に並べる
+// 連続ヒートマップ(縦=曜日、横=週。右端が今週)にしている。
 function initCalendarControls() {
-    if (DOM.prevMonthBtn) {
-        DOM.prevMonthBtn.addEventListener('click', () => {
-            state.currentMonth--;
-            if (state.currentMonth < 0) {
-                state.currentMonth = 11;
-                state.currentYear--;
-            }
-            renderCalendar();
-        });
-    }
-
-    if (DOM.nextMonthBtn) {
-        DOM.nextMonthBtn.addEventListener('click', () => {
-            state.currentMonth++;
-            if (state.currentMonth > 11) {
-                state.currentMonth = 0;
-                state.currentYear++;
-            }
-            renderCalendar();
-        });
-    }
+    // ページ送りが無くなったため、初期描画で右端(今週)まで横スクロールを寄せるだけ。
+    // renderCalendar()の中で毎回行う(描画のたびに幅が変わりうるため)。
 }
 
 function renderCalendar() {
-    if (!DOM.calendarMonthYear || !DOM.calendarDays) return;
-    const year = state.currentYear;
-    const month = state.currentMonth;
-
-    const monthsJapanese = [
-        '1月', '2月', '3月', '4月', '5月', '6月',
-        '7月', '8月', '9月', '10月', '11月', '12月'
-    ];
-    DOM.calendarMonthYear.textContent = `${year}年 ${monthsJapanese[month]}`;
-
-    DOM.calendarDays.innerHTML = '';
-
-    const firstDay = new Date(year, month, 1).getDay();
-    const totalDays = new Date(year, month + 1, 0).getDate();
-
-    // Empty cells padding
-    for (let i = 0; i < firstDay; i++) {
-        const emptyCell = document.createElement('div');
-        emptyCell.classList.add('calendar-day', 'empty');
-        DOM.calendarDays.appendChild(emptyCell);
-    }
+    if (!DOM.calendarDays) return;
 
     const todayStr = getTodayStr();
+    const today = new Date(todayStr + 'T00:00:00');
+    if (isNaN(today.getTime())) return;
+    const DAY_MS = 24 * 60 * 60 * 1000;
+
+    // 右端の列は「今週」。週の始まりは日曜なので、今日の週の土曜まで描いて
+    // 未来の日は色も操作も無効なプレースホルダーにする(列の高さを揃えるため)。
+    const lastCellDate = new Date(today.getTime() + (6 - today.getDay()) * DAY_MS);
+    const totalCells = CALENDAR_HEATMAP_WEEKS * 7;
+    const firstCellDate = new Date(lastCellDate.getTime() - (totalCells - 1) * DAY_MS);
+
+    const toDateStr = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 
     // O(W) Group workouts by date beforehand for fast O(1) lookup in render loop
     const workoutsByDate = {};
@@ -240,15 +184,48 @@ function renderCalendar() {
     const weightByDate = {};
     state.weightLogs.forEach(w => { weightByDate[w.date] = w; });
 
-    // Render actual days
-    for (let day = 1; day <= totalDays; day++) {
+    DOM.calendarDays.innerHTML = '';
+    DOM.calendarDays.style.setProperty('--calendar-weeks', String(CALENDAR_HEATMAP_WEEKS));
+
+    // 月ラベル。各週の列の上に、その週で新しい月が始まる場合だけ月名を置く。
+    // 1列ぶんの幅しか無いので、ラベルは列の左端を基準にはみ出して表示する(CSS側でoverflow:visible)。
+    const monthsEl = document.getElementById('calendar-months');
+    if (monthsEl) {
+        monthsEl.innerHTML = '';
+        monthsEl.style.setProperty('--calendar-weeks', String(CALENDAR_HEATMAP_WEEKS));
+    }
+
+    for (let week = 0; week < CALENDAR_HEATMAP_WEEKS; week++) {
+        if (!monthsEl) break;
+        const label = document.createElement('span');
+        label.classList.add('calendar-month-label');
+        // その週(日〜土)に「1日」が含まれていれば月の始まり
+        for (let d = 0; d < 7; d++) {
+            const date = new Date(firstCellDate.getTime() + (week * 7 + d) * DAY_MS);
+            if (date.getDate() === 1) {
+                label.textContent = `${date.getMonth() + 1}月`;
+                break;
+            }
+        }
+        monthsEl.appendChild(label);
+    }
+
+    // セルは列(週)ごとに上から日〜土。CSSのgrid-auto-flow:columnで縦に流れる
+    for (let i = 0; i < totalCells; i++) {
+        const week = Math.floor(i / 7);
+        const weekday = i % 7;
+        const date = new Date(firstCellDate.getTime() + (week * 7 + weekday) * DAY_MS);
+        const dateStr = toDateStr(date);
+
         const dayCell = document.createElement('div');
         dayCell.classList.add('calendar-day');
-        dayCell.textContent = day;
 
-        const currentMonthPadded = String(month + 1).padStart(2, '0');
-        const currentDayPadded = String(day).padStart(2, '0');
-        const dateStr = `${year}-${currentMonthPadded}-${currentDayPadded}`;
+        if (date.getTime() > today.getTime()) {
+            // 未来日。列の形を保つためだけのプレースホルダー
+            dayCell.classList.add('empty');
+            DOM.calendarDays.appendChild(dayCell);
+            continue;
+        }
 
         if (dateStr === todayStr) {
             dayCell.classList.add('today');
@@ -261,7 +238,8 @@ function renderCalendar() {
             openDaySummaryModal(dateStr);
         });
 
-        const titleParts = [];
+        // セルが小さく日付の数字は入らないので、日付はツールチップの先頭に置く
+        const titleParts = [`${date.getMonth() + 1}/${date.getDate()}`];
 
         // このカレンダーは「運動した日が一目で分かること」が目的なので、塗り分けるのは
         //   トレーニングした日(走った日を含む) = 濃 / 走っただけの日 = 中
@@ -281,13 +259,21 @@ function renderCalendar() {
         }
         if (hasCardio) titleParts.push('有酸素の記録あり');
         if (hasWeight) titleParts.push('体重の記録あり');
+        if (titleParts.length === 1) titleParts.push('記録なし');
 
-        if (titleParts.length > 0) {
-            dayCell.setAttribute('title', titleParts.join(' | '));
-        }
+        dayCell.setAttribute('title', titleParts.join(' | '));
 
         DOM.calendarDays.appendChild(dayCell);
     }
+
+    const rangeLabel = document.getElementById('calendar-range-label');
+    if (rangeLabel) {
+        rangeLabel.textContent = `${firstCellDate.getMonth() + 1}/${firstCellDate.getDate()} 〜 ${today.getMonth() + 1}/${today.getDate()}`;
+    }
+
+    // 直近が見えている状態で始めたいので、横スクロールは右端に寄せる
+    const scroll = document.getElementById('calendar-scroll');
+    if (scroll) scroll.scrollLeft = scroll.scrollWidth;
 }
 
 // ==========================================
@@ -477,7 +463,9 @@ function renderWeightChart() {
             borderColor: colorPrimary,
             backgroundColor: hexToRgba(colorPrimary, 0.1),
             borderWidth: 2.5,
-            tension: 0.3,
+            // 体重は日々の実測点そのものを見たいので、点と点を直線で結ぶ(スムージングなし)。
+            // tension>0だと存在しない中間の体重を曲線が作ってしまい、増減の転換点も鈍る。
+            tension: 0,
             fill: true,
             pointBackgroundColor: pointColors,
             pointRadius: pointRadii
@@ -489,7 +477,7 @@ function renderWeightChart() {
             backgroundColor: 'transparent',
             borderWidth: 2,
             borderDash: [4, 4],
-            tension: 0.3,
+            tension: 0,
             fill: false,
             pointRadius: 0,
             pointHoverRadius: 3

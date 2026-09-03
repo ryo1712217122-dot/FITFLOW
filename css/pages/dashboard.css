@@ -111,38 +111,96 @@
 
 /* Calendar Heatmap */
 .calendar-wrapper {
+    --calendar-cell-size: 15px;
+    --calendar-cell-gap: 4px;
+    --calendar-weekday-col: 1.5rem;
     margin-top: 1rem;
     background-color: var(--bg-wrapper);
     border-radius: var(--radius-sm);
     padding: 1rem;
 }
 
-.calendar-grid-header {
+/* グリッド項目の既定(min-width:auto)のままだと、はみ出したヒートマップが
+   カードごと横に伸びて画面外へ出てしまう。中で横スクロールさせるために0を明示する */
+.calendar-card,
+.calendar-wrapper {
+    min-width: 0;
+}
+
+/* 直近26週の連続ヒートマップ。縦=曜日(日〜土)、横=週で右端が今週。
+   月ごとのページ送りを廃止したため、月をまたぐ連続記録も途切れずに見える。
+   狭い画面ではこのラッパーだけが横スクロールする。 */
+.calendar-scroll {
+    max-width: 100%;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding-bottom: 0.25rem;
+}
+
+.calendar-layout {
+    display: flex;
+    align-items: flex-start;
+    gap: 6px;
+}
+
+/* 曜日ラベル。全部出すと窮屈なので月・水・金だけ表示する(GitHubの草と同じ) */
+.calendar-weekday-labels {
     display: grid;
-    grid-template-columns: repeat(7, 1fr);
-    text-align: center;
-    font-weight: 600;
-    font-size: 0.8rem;
+    /* 月ラベルの行(高さ1rem)ぶん下げて、セルの行と揃える */
+    margin-top: 1rem;
+    grid-template-rows: repeat(7, var(--calendar-cell-size, 15px));
+    gap: var(--calendar-cell-gap, 4px);
+    font-size: 0.65rem;
+    line-height: var(--calendar-cell-size, 15px);
+    color: var(--text-muted);
+    text-align: right;
+    flex: 0 0 var(--calendar-weekday-col, 1.5rem);
+    width: var(--calendar-weekday-col, 1.5rem);
+}
+
+/* 月ラベルの行。列(週)と同じ幅で並べ、月が変わる週にだけ月名を置く。
+   1列ぶんの幅には収まらないのではみ出しを許可する */
+.calendar-months {
+    display: grid;
+    width: max-content;
+    grid-auto-flow: column;
+    grid-auto-columns: var(--calendar-cell-size, 15px);
+    gap: var(--calendar-cell-gap, 4px);
+    height: 1rem;
+    font-size: 0.65rem;
     color: var(--text-secondary);
-    margin-bottom: 0.5rem;
+}
+
+.calendar-month-label {
+    white-space: nowrap;
+    overflow: visible;
+}
+
+/* 右端の月ラベル(今月)がスクロール領域の縁で切れないよう、内容の右に余白を作る */
+.calendar-scroll > * {
+    padding-right: 2rem;
+}
+
+.calendar-range-label {
+    font-size: 0.75rem;
+    color: var(--text-muted);
 }
 
 .calendar-grid-days {
     display: grid;
-    grid-template-columns: repeat(7, 1fr);
-    gap: 6px;
+    width: max-content;
+    /* 上から日〜土に流し、埋まったら次の列(＝次の週)へ */
+    grid-auto-flow: column;
+    grid-template-rows: repeat(7, var(--calendar-cell-size, 15px));
+    grid-auto-columns: var(--calendar-cell-size, 15px);
+    gap: var(--calendar-cell-gap, 4px);
 }
 
 .calendar-day {
-    aspect-ratio: 1;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 0.85rem;
-    font-weight: 500;
-    border-radius: 8px;
-    color: var(--text-secondary);
-    background-color: rgba(255, 255, 255, 0.02);
+    width: var(--calendar-cell-size, 15px);
+    height: var(--calendar-cell-size, 15px);
+    border-radius: 4px;
+    background-color: rgba(255, 255, 255, 0.04);
     border: 1px solid transparent;
     cursor: pointer;
     transition: var(--transition);
@@ -155,22 +213,22 @@
 }
 
 .calendar-day:not(.empty):active {
-    transform: scale(0.9);
+    transform: scale(0.85);
     transition: var(--transition-press);
 }
 
+/* 今週の未来日。列の高さを揃えるためだけに置く */
 .calendar-day.empty {
     background-color: transparent;
     border: none;
     cursor: default;
+    pointer-events: none;
 }
 
 /* 本日の枠は破線にする。「走っただけの日」を実線リングで表すようにしたため、
    実線のままだと運動した日と紛らわしい */
 .calendar-day.today {
-    border: 1px dashed var(--color-primary);
-    color: var(--color-primary);
-    font-weight: 700;
+    border: 1px solid var(--color-primary);
 }
 
 /* 「運動した日」が一目で分かることが目的なので、状態は2つだけ塗る。
@@ -184,25 +242,19 @@
    濃淡の差だけだと隣接セルで見分けにくいが、べた塗りと輪郭なら一目で違いが分かる。 */
 .calendar-day.cal-intensity-strong {
     background: var(--primary-gradient);
-    color: #fff;
-    font-weight: 800;
     border-color: transparent;
     box-shadow: 0 2px 10px color-mix(in srgb, var(--color-primary) 35%, transparent);
 }
 
 .calendar-day.cal-intensity-medium {
-    background: color-mix(in srgb, var(--color-primary) 12%, transparent);
-    border: 2px solid var(--color-primary);
-    color: var(--color-primary);
-    font-weight: 700;
+    background: color-mix(in srgb, var(--color-primary) 25%, transparent);
+    border: 1px solid var(--color-primary);
 }
 
 /* 運動していない日。塗りを完全に消し、文字も落として背景側へ沈める */
 .calendar-day:not(.empty):not(.cal-intensity-strong):not(.cal-intensity-medium) {
-    background-color: transparent;
-    color: var(--text-muted);
-    opacity: 0.55;
-    font-weight: 400;
+    background-color: rgba(255, 255, 255, 0.05);
+    opacity: 0.7;
 }
 
 .calendar-day:not(.empty):not(.cal-intensity-strong):not(.cal-intensity-medium):hover {
@@ -228,8 +280,9 @@
 
 .calendar-legend {
     display: flex;
+    flex-wrap: wrap;
     justify-content: flex-end;
-    gap: 1.5rem;
+    gap: 0.5rem 1.5rem;
     margin-top: 1rem;
     font-size: 0.75rem;
     color: var(--text-secondary);
@@ -253,18 +306,18 @@
 }
 
 .legend-item .dot.cal-medium {
-    background: color-mix(in srgb, var(--color-primary) 12%, transparent);
-    border: 2px solid var(--color-primary);
+    background: color-mix(in srgb, var(--color-primary) 25%, transparent);
+    border: 1px solid var(--color-primary);
 }
 
 .legend-item .dot.cal-none {
-    background: transparent;
-    border: 1px solid var(--border-color);
-    opacity: 0.55;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid transparent;
+    opacity: 0.7;
 }
 
 .legend-item .dot.today {
-    border: 1px dashed var(--color-primary);
+    border: 1px solid var(--color-primary);
 }
 
 /* 体重推移グラフの期間切替(1週間/1ヶ月)トグル */
@@ -348,11 +401,6 @@
 
 .calorie-summary-tile .tile-value-danger {
     color: var(--color-danger);
-}
-
-/* 睡眠タイル。他のstat-cardと同じ骨格で、アイコンだけセカンダリ色にして区別する */
-.sleep-stat-card .card-icon {
-    background: var(--secondary-gradient);
 }
 
 } /* end @layer pages (dashboard) */
