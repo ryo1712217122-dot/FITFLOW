@@ -121,19 +121,19 @@ function renderPlanTab() {
                 <div class="plan-sub-items">
                     <div class="plan-tier-box compact tier-normal">
                         <div class="plan-tier-header">
-                            <span>🌳 通常日（週${s.daysNormal}日）</span>
+                            <span>🌳 通常日（週${escapeHtml(s.daysNormal)}日）</span>
                             <span class="plan-tier-kcal">${sim.intakeNormal} kcal</span>
                         </div>
                     </div>
                     <div class="plan-tier-box compact tier-milktea">
                         <div class="plan-tier-header">
-                            <span>🍰 少し甘えた日（週${s.daysMilkTea}日）</span>
+                            <span>🍰 少し甘えた日（週${escapeHtml(s.daysMilkTea)}日）</span>
                             <span class="plan-tier-kcal">${sim.intakeSweet} kcal</span>
                         </div>
                     </div>
                     <div class="plan-tier-box compact tier-event">
                         <div class="plan-tier-header">
-                            <span>🍺 イベント日（週${s.daysEvent}日）</span>
+                            <span>🍺 イベント日（週${escapeHtml(s.daysEvent)}日）</span>
                             <span class="plan-tier-kcal">${sim.intakeEvent} kcal</span>
                         </div>
                     </div>
@@ -237,16 +237,20 @@ function isPlanInlineEditorOpen() {
 function openInlineEditor(editorEl, fields, currentSettings, onSave) {
     if (!editorEl) return;
 
+    // planSettingsの値はクラウド(スプレッドシートのPlanSettingsシート)やJSONインポート経由で
+    // 任意の文字列が入りうる。normalizeImportedDataも計画設定は数値化しないため、
+    // value属性へ素で埋めると引用符を抜けてHTMLを注入できてしまう。必ずエスケープする。
     const fieldHtml = (f) => {
         if (f.type === 'select') {
             const current = String(currentSettings[f.key] ?? '');
             return `<select id="inline-edit-${f.key}" class="width-full">
-                ${f.options.map(o => `<option value="${o.value}"${String(o.value) === current ? ' selected' : ''}>${escapeHtml(o.label)}</option>`).join('')}
+                ${f.options.map(o => `<option value="${escapeHtml(o.value)}"${String(o.value) === current ? ' selected' : ''}>${escapeHtml(o.label)}</option>`).join('')}
             </select>`;
         }
-        return `<input type="${f.type || 'number'}" id="inline-edit-${f.key}"
-            ${f.step ? `step="${f.step}"` : ''}
-            value="${f.type === 'date' ? (currentSettings[f.key] || '') : (currentSettings[f.key] ?? '')}"
+        const rawValue = f.type === 'date' ? (currentSettings[f.key] || '') : (currentSettings[f.key] ?? '');
+        return `<input type="${escapeHtml(f.type || 'number')}" id="inline-edit-${f.key}"
+            ${f.step ? `step="${escapeHtml(f.step)}"` : ''}
+            value="${escapeHtml(rawValue)}"
             class="width-full">`;
     };
 

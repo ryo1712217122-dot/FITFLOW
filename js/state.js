@@ -24,101 +24,65 @@ let state = {
 // DATA MANAGEMENT (LocalStorage)
 // ==========================================
 
+// localStorageのJSONを配列として読み出す。JSONとして壊れている場合だけでなく、
+// 「パースはできたが配列ではない」(オブジェクト・数値・null等)も空配列に倒す。
+//
+// 以前は JSON.parse の結果をそのまま state に入れていたため、たとえば
+// fitflow_workouts に "{}" が入っていると直後の .forEach / .sort が TypeError になり、
+// DOMContentLoaded のハンドラごと落ちてアプリが白紙になっていた。
+// この状態は「同期と設定」タブの初期化ボタンにも辿り着けず自力で復旧できない。
+function readStoredArray(key, label) {
+    const raw = localStorage.getItem(key);
+    if (!raw) return [];
+    let parsed;
+    try {
+        parsed = JSON.parse(raw);
+    } catch (e) {
+        console.error(`Error parsing ${label}`, e);
+        return [];
+    }
+    if (!Array.isArray(parsed)) {
+        console.error(`Stored ${label} is not an array. Ignoring.`, parsed);
+        return [];
+    }
+    return parsed;
+}
+
 function loadData() {
     // 1. Workouts
-    const data = localStorage.getItem('fitflow_workouts');
-    if (data) {
-        try {
-            state.workouts = JSON.parse(data);
-        } catch (e) {
-            console.error('Error parsing workouts data', e);
-            state.workouts = [];
-        }
-    } else {
-        state.workouts = [];
-    }
+    state.workouts = readStoredArray('fitflow_workouts', 'workouts data');
 
     // 旧データでtimeが無い場合も架空の時刻で埋めない(以前は配列位置に応じた適当な時刻を
     // 割り当てており、保存・同期でその架空の値が実データとして固定化されてしまっていた)。
     // 空文字のまま保持し、表示側は「時刻なし」として扱う(履歴カードはtimeが空なら非表示)。
     state.workouts.forEach(w => {
-        if (!w.time) w.time = '';
+        if (w && !w.time) w.time = '';
     });
 
     // 2. Weight Logs
-    const weightData = localStorage.getItem('fitflow_weight_logs');
-    if (weightData) {
-        try {
-            state.weightLogs = JSON.parse(weightData);
-        } catch (e) {
-            console.error('Error parsing weight logs', e);
-            state.weightLogs = [];
-        }
-    } else {
-        state.weightLogs = [];
-    }
+    state.weightLogs = readStoredArray('fitflow_weight_logs', 'weight logs');
 
     // Ensure weight logs are sorted chronologically
     state.weightLogs.sort((a, b) => new Date(a.date) - new Date(b.date));
 
     // 3. Cardio Logs
-    const cardioData = localStorage.getItem('fitflow_cardio_logs');
-    if (cardioData) {
-        try {
-            state.cardioLogs = JSON.parse(cardioData);
-        } catch (e) {
-            console.error('Error parsing cardio logs', e);
-            state.cardioLogs = [];
-        }
-    } else {
-        state.cardioLogs = [];
-    }
+    state.cardioLogs = readStoredArray('fitflow_cardio_logs', 'cardio logs');
 
     // Ensure cardio logs are sorted chronologically
     state.cardioLogs.sort((a, b) => new Date(a.date) - new Date(b.date));
 
     // 3.5 Meal Logs (摂取カロリーの内訳: 朝食/昼食/夕食/間食。1日1件、cardioLogsと同じ形)
-    const mealData = localStorage.getItem('fitflow_meal_logs');
-    if (mealData) {
-        try {
-            state.mealLogs = JSON.parse(mealData);
-        } catch (e) {
-            console.error('Error parsing meal logs', e);
-            state.mealLogs = [];
-        }
-    } else {
-        state.mealLogs = [];
-    }
+    state.mealLogs = readStoredArray('fitflow_meal_logs', 'meal logs');
 
     // Ensure meal logs are sorted chronologically
     state.mealLogs.sort((a, b) => new Date(a.date) - new Date(b.date));
 
     // 3.6 Drinking Logs (飲み会の記録: 1日1件、{ date } のみ。体重変化の文脈情報として使う)
-    const drinkingData = localStorage.getItem('fitflow_drinking_logs');
-    if (drinkingData) {
-        try {
-            state.drinkingLogs = JSON.parse(drinkingData);
-        } catch (e) {
-            console.error('Error parsing drinking logs', e);
-            state.drinkingLogs = [];
-        }
-    } else {
-        state.drinkingLogs = [];
-    }
+    state.drinkingLogs = filterValidDrinkingLogs(readStoredArray('fitflow_drinking_logs', 'drinking logs'));
     state.drinkingLogs.sort((a, b) => new Date(a.date) - new Date(b.date));
 
     // 3.7 Sleep Logs (睡眠の記録: 1日1件、{date, bedTime, wakeTime}。dateは「起床日」)
-    const sleepData = localStorage.getItem('fitflow_sleep_logs');
-    if (sleepData) {
-        try {
-            state.sleepLogs = filterValidSleepLogs(JSON.parse(sleepData));
-        } catch (e) {
-            console.error('Error parsing sleep logs', e);
-            state.sleepLogs = [];
-        }
-    } else {
-        state.sleepLogs = [];
-    }
+    state.sleepLogs = filterValidSleepLogs(readStoredArray('fitflow_sleep_logs', 'sleep logs'));
     state.sleepLogs.sort((a, b) => new Date(a.date) - new Date(b.date));
 
     // 3.8 進行中の筋トレセッション。参照先が実在し、かつ「フィットネス上の今日」の
@@ -155,15 +119,20 @@ function loadData() {
     //  新しい設定項目を追加した際、以前から使っているユーザーの設定にはその項目が
     //  存在せずundefinedのままになってしまう)
     const planData = localStorage.getItem('fitflow_plan_settings');
+    state.planSettings = Object.assign({}, DEFAULT_PLAN_SETTINGS);
     if (planData) {
         try {
-            state.planSettings = Object.assign({}, DEFAULT_PLAN_SETTINGS, JSON.parse(planData));
+            const parsed = JSON.parse(planData);
+            // 配列や数値が入っていてもObject.assignは例外を投げずに妙な結果になるため、
+            // 素のオブジェクトの時だけマージする
+            if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+                Object.assign(state.planSettings, parsed);
+            } else {
+                console.error('Stored plan settings is not an object. Using defaults.', parsed);
+            }
         } catch (e) {
             console.error('Error parsing plan settings', e);
-            state.planSettings = Object.assign({}, DEFAULT_PLAN_SETTINGS);
         }
-    } else {
-        state.planSettings = Object.assign({}, DEFAULT_PLAN_SETTINGS);
     }
 
     // 「特別な飲食」機能はv1.11.0で廃止した(クラウド同期側に保存されず、起動時の

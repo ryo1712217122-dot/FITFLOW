@@ -49,15 +49,22 @@ function getPopularExerciseNames() {
     return Array.from(datalist.options).map(opt => opt.value);
 }
 
+// 日付文字列を「2026年9月3日 (水)」形式にする。
+//
+// パースできない値はそのまま返すが、その戻り値は履歴カード・計画タブなど
+// innerHTML に差し込まれる場所で使われる。dateStr はクラウド(スプレッドシート)や
+// JSONインポート由来で任意の文字列になりうるため、素通しさせるとHTMLを注入できる。
+// 正常にパースできた場合の戻り値は組み立て済みの数字なので、
+// エスケープが要るのはこのフォールバック経路だけ。
 function formatDateJp(dateStr) {
     if (!dateStr) return '日付未設定';
     try {
         const date = new Date(dateStr + 'T00:00:00');
-        if (isNaN(date.getTime())) return dateStr;
+        if (isNaN(date.getTime())) return escapeHtml(dateStr);
         const days = ['日', '月', '火', '水', '木', '金', '土'];
         return `${date.getFullYear()}年${date.getMonth() + 1}月${date.getDate()}日 (${days[date.getDay()]})`;
     } catch (e) {
-        return dateStr;
+        return escapeHtml(dateStr);
     }
 }
 
@@ -73,13 +80,21 @@ function getChartThemeColors() {
 }
 
 function hexToRgba(hex, alpha) {
-    if (!hex) return `rgba(134, 172, 65, ${alpha})`;
+    const FALLBACK = [134, 172, 65];
+    if (!hex) return `rgba(${FALLBACK.join(', ')}, ${alpha})`;
     hex = hex.trim().replace('#', '');
     if (hex.length === 3) {
         hex = hex[0] + hex[0] + hex[1] + hex[1] + hex[2] + hex[2];
     }
-    const r = parseInt(hex.substring(0, 2), 16) || 134;
-    const g = parseInt(hex.substring(2, 4), 16) || 172;
-    const b = parseInt(hex.substring(4, 6), 16) || 65;
+    // 各チャンネルの既定値へのフォールバックは「パースできなかった時」だけに限る。
+    // `parseInt(...) || 既定値` だと 00 が falsy として既定値に化けるため、
+    // #00a8ff(ディープオーシャンのプライマリ)のRが0ではなく134になっていた。
+    const channel = (start, fallback) => {
+        const v = parseInt(hex.substring(start, start + 2), 16);
+        return Number.isNaN(v) ? fallback : v;
+    };
+    const r = channel(0, FALLBACK[0]);
+    const g = channel(2, FALLBACK[1]);
+    const b = channel(4, FALLBACK[2]);
     return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 }

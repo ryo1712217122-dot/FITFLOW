@@ -25,6 +25,16 @@ function fetchSheetsWithRetry(url, options, { timeoutMs = 15000, retries = 1, re
     return attempt(retries);
 }
 
+// クラウド/バックアップ由来の計画設定を取り込む。必ずDEFAULT_PLAN_SETTINGSとマージする。
+// (loadData()と同じ理由: アプリの更新で追加した設定項目は、古い環境から同期されてきた
+//  planSettingsには存在しない。素のまま差し替えるとその項目がundefinedになり、
+//  日数配分がparseIntで0に落ちる・活動レベルが既定にフォールバックする等の
+//  「設定タブでは正しく見えるのに計算だけ違う」状態になる)
+function mergePlanSettingsFromRemote(planSettings) {
+    if (!planSettings || typeof planSettings !== 'object' || Array.isArray(planSettings)) return null;
+    return Object.assign({}, DEFAULT_PLAN_SETTINGS, planSettings);
+}
+
 function backupToSheets() {
     triggerSync(false);
 }
@@ -132,7 +142,7 @@ function autoSyncFromCloud() {
             const importedWeights = filterValidWeightLogs(data.weightLogs || []);
             const importedCardio = filterValidCardioLogs(data.cardioLogs || []);
             const importedMaint = data.maintenanceCalories || DEFAULT_MAINTENANCE_CALORIES;
-            const importedPlan = data.planSettings || null;
+            const importedPlan = mergePlanSettingsFromRemote(data.planSettings);
             // GAS側がmealLogsをまだ永続化していない間は data.mealLogs が丸ごと欠落する
             // (未対応パッチ: GAS_MEALLOGS_PATCH.md)。他のフィールドと違いdata.mealLogs||[]で
             // 受けてしまうと、キー欠落=空配列と解釈され、この自動同期のたびにローカルの
@@ -225,7 +235,7 @@ function restoreFromSheets() {
             const importedWeights = filterValidWeightLogs(data.weightLogs || []);
             const importedCardio = filterValidCardioLogs(data.cardioLogs || []);
             const importedMaint = data.maintenanceCalories || DEFAULT_MAINTENANCE_CALORIES;
-            const importedPlan = data.planSettings || null;
+            const importedPlan = mergePlanSettingsFromRemote(data.planSettings);
             // GAS未対応の間はdata.mealLogsが丸ごと欠落する。手動マージなので副作用は
             // 起きにくいが、autoSyncFromCloudと挙動を揃え、欠落時は空配列でマージしない
             const importedMeals = Array.isArray(data.mealLogs) ? filterValidMealLogs(data.mealLogs) : [];

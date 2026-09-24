@@ -68,8 +68,12 @@ function initSettingsControls() {
 }
 
 function exportWorkouts() {
+    // バージョンはサイドバーの表記(index.htmlの.app-version)を単一ソースにする。
+    // ここに直書きしていた頃は v1.5.1 のまま何十回もリリースが進み、
+    // バックアップファイルからは「いつの版で書き出したか」が分からなくなっていた。
+    const versionEl = document.querySelector('.app-version');
     const backupData = {
-        version: '1.5.1',
+        version: versionEl ? versionEl.textContent.trim() : 'unknown',
         workouts: state.workouts,
         weightLogs: state.weightLogs,
         cardioLogs: state.cardioLogs,
@@ -151,6 +155,14 @@ function importWorkouts(event) {
             console.error('Failed to parse JSON file', err);
             showToast('JSONファイルの解析に失敗しました。');
         }
+        DOM.importFileInput.value = '';
+    };
+    // 読み取り自体に失敗した場合(権限・破損・読み取り中に削除された等)。
+    // これが無いと何も起きずに黙って終わり、かつ input に前回のファイルが
+    // 残るため、同じファイルを選び直しても change が発火しなかった。
+    reader.onerror = () => {
+        console.error('Failed to read file', reader.error);
+        showToast('ファイルの読み込みに失敗しました。');
         DOM.importFileInput.value = '';
     };
     reader.readAsText(file);

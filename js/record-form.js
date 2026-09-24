@@ -63,10 +63,15 @@ function populateWorkoutForm(workout, mode) {
     if (DOM.workoutTime) DOM.workoutTime.value = workout.time || '12:00';
     if (DOM.workoutImpression) DOM.workoutImpression.value = workout.impression || '';
 
-    const moodRadio = DOM.workoutForm
-        ? DOM.workoutForm.querySelector(`input[name="workout-mood"][value="${workout.mood}"]`)
-        : null;
-    if (moodRadio) moodRadio.checked = true;
+    // moodはクラウド/インポート経由で任意の文字列が入りうる。セレクタへ素で埋めると
+    // 引用符やブラケットを含む値でquerySelectorがSyntaxErrorを投げ、
+    // フォームの復元そのものが途中で止まる。値の比較で探す
+    const moodRadios = DOM.workoutForm
+        ? DOM.workoutForm.querySelectorAll('input[name="workout-mood"]')
+        : [];
+    Array.from(moodRadios).forEach(radio => {
+        if (radio.value === workout.mood) radio.checked = true;
+    });
 
     if (DOM.exerciseList) {
         DOM.exerciseList.innerHTML = '';

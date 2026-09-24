@@ -19,10 +19,7 @@ function initTheme() {
         const currentPalette = localStorage.getItem('fitflow_theme_id') || 'A';
         applyThemePalette(currentPalette);
 
-        // Re-render active charts to adjust text color for theme
-        if (state.charts.progression) renderProgressionChart();
-        if (state.charts.weight) renderWeightChart();
-        if (state.charts.calorieComparison) renderCalorieChart();
+        rerenderChartsForTheme();
     };
 
     if (DOM.themeToggleBtn) {
@@ -31,6 +28,18 @@ function initTheme() {
     if (DOM.mobileThemeToggleBtn) {
         DOM.mobileThemeToggleBtn.addEventListener('click', handleThemeToggle);
     }
+}
+
+// 描画済みのグラフをテーマの文字色・パレットに合わせて描き直す。
+// ダーク/ライト切替とパレット変更の両方から呼ぶ。
+// 以前は呼び出し側それぞれに3つのチャートを並べており、あとから追加した
+// 総ボリューム推移グラフ(volumeTrend)だけ書き漏れて、テーマを変えても
+// 軸ラベルが前のテーマの色のまま残っていた。
+function rerenderChartsForTheme() {
+    if (state.charts.progression) renderProgressionChart();
+    if (state.charts.weight) renderWeightChart();
+    if (state.charts.calorieComparison) renderCalorieChart();
+    if (state.charts.volumeTrend) renderVolumeTrendChart();
 }
 
 function applyThemePalette(themeId) {
@@ -60,10 +69,7 @@ function setThemePalette(themeId) {
     localStorage.setItem('fitflow_theme_id', themeId);
     applyThemePalette(themeId);
 
-    // Re-render active charts to adjust colors dynamically
-    if (state.charts.progression) renderProgressionChart();
-    if (state.charts.weight) renderWeightChart();
-    if (state.charts.calorieComparison) renderCalorieChart();
+    rerenderChartsForTheme();
 
     showToast(`テーマを「${palette.name}」に変更しました`);
 }
