@@ -26,26 +26,60 @@ function initDaySummaryModal() {
             closeDaySummaryModal();
             if (!dateStr) return;
 
-            const formNavItem = document.querySelector('[data-tab="quick-log"]');
-            if (formNavItem) formNavItem.click();
+            // 進行中の筋トレセッションが別の日のものなら、トレーニングの日付は動かさない。
+            // 記録フォームの日付は次に種目を保存した時点でセッション本体へ反映されるため
+            // (applyOpenWorkoutMetaFromForm)、ここで書き換えると保存済みの種目ごと
+            // セッションがこの日へ移動してしまう。まず今のセッションを締めくくってもらう。
+            const openWorkout = getOpenWorkoutForOtherDate(dateStr);
+            if (openWorkout) {
+                showConfirmModal(
+                    '進行中のトレーニングがあります',
+                    `${formatDateJp(openWorkout.date)}のトレーニングを記録中です（${(openWorkout.exercises || []).length}種目 保存済み）。`
+                    + 'ここで日付を変えると、保存済みの種目ごとこの日に移動してしまいます。'
+                    + '先に「記録する」タブで「トレーニングを記録完了」を押して締めくくってください。'
+                    + `このまま進む場合、体重・食事・有酸素の日付だけ${formatDateJp(dateStr)}に合わせます（トレーニングの日付は変えません）。`,
+                    () => {
+                        openRecordTabForDate(dateStr, { includeWorkout: false });
+                    }
+                );
+                return;
+            }
 
-            // 両方のフォームの日付をこの日に合わせ、既存記録があればすぐ見える状態にする
-            if (DOM.workoutDate) {
-                DOM.workoutDate.value = dateStr;
-            }
-            if (DOM.cardioDate) {
-                DOM.cardioDate.value = dateStr;
-                syncCardioFormWithExistingDataForDate(dateStr);
-            }
-            if (DOM.weightQuickDate) {
-                DOM.weightQuickDate.value = dateStr;
-                syncDailyLogFormWithExistingDataForDate(dateStr);
-            }
-            if (DOM.mealDate) {
-                DOM.mealDate.value = dateStr;
-                syncMealFormWithExistingDataForDate(dateStr);
-            }
+            openRecordTabForDate(dateStr, { includeWorkout: true });
         });
+    }
+}
+
+// 進行中の筋トレセッションが「指定日とは別の日」のものなら、そのワークアウトを返す。
+// セッションが無い・参照先が消えている・同じ日付なら null(=日付を動かして問題ない)。
+function getOpenWorkoutForOtherDate(dateStr) {
+    if (!state.editingWorkoutId) return null;
+    const workout = state.workouts.find(w => w && w.id === state.editingWorkoutId);
+    if (!workout || workout.date === dateStr) return null;
+    return workout;
+}
+
+// 「記録する」タブを開き、各フォームの日付をdateStrに合わせて既存記録を反映する。
+// includeWorkout=false の場合、筋トレフォームの日付だけは現状のまま残す
+// (進行中セッションを別の日へ巻き込まないため)。
+function openRecordTabForDate(dateStr, { includeWorkout = true } = {}) {
+    const formNavItem = document.querySelector('[data-tab="quick-log"]');
+    if (formNavItem) formNavItem.click();
+
+    if (includeWorkout && DOM.workoutDate) {
+        DOM.workoutDate.value = dateStr;
+    }
+    if (DOM.cardioDate) {
+        DOM.cardioDate.value = dateStr;
+        syncCardioFormWithExistingDataForDate(dateStr);
+    }
+    if (DOM.weightQuickDate) {
+        DOM.weightQuickDate.value = dateStr;
+        syncDailyLogFormWithExistingDataForDate(dateStr);
+    }
+    if (DOM.mealDate) {
+        DOM.mealDate.value = dateStr;
+        syncMealFormWithExistingDataForDate(dateStr);
     }
 }
 
