@@ -315,12 +315,18 @@ function renderProgressionChart() {
         try { state.charts.progression.destroy(); } catch(e){}
     }
 
-    const dates = points.map(p => formatDateJp(p.date));
+    // 軸ラベルは体重グラフと同じ「月/日」にする。完全な日付(年・曜日つき)を軸に並べると、
+    // 文字をDADSの最小14pxにした時に斜めのラベルが描画域の半分近くを占めてしまうため。
+    // 年・曜日つきの日付はツールチップに出す。
+    const dates = points.map(p => {
+        const parts = String(p.date).split('-');
+        return parts.length === 3 ? `${parseInt(parts[1])}/${parseInt(parts[2])}` : p.date;
+    });
     const maxWeights = points.map(p => p.maxWeight);
     const est1RMs = points.map(p => p.est1RM);
 
-    const colorPrimary = getComputedStyle(document.documentElement).getPropertyValue('--color-primary').trim() || '#86ac41';
-    const colorSecondary = getComputedStyle(document.documentElement).getPropertyValue('--color-secondary').trim() || '#7da3a1';
+    const colorPrimary = getComputedStyle(document.documentElement).getPropertyValue('--color-primary').trim() || '#0017c1';
+    const colorSecondary = getComputedStyle(document.documentElement).getPropertyValue('--color-secondary').trim() || '#4d4d4d';
 
     state.charts.progression = new Chart(ctx, {
         type: 'line',
@@ -358,17 +364,23 @@ function renderProgressionChart() {
             maintainAspectRatio: false,
             plugins: {
                 legend: {
-                    labels: { color: theme.text, font: { size: 10 } }
+                    labels: { color: theme.text }
+                },
+                tooltip: {
+                    callbacks: {
+                        title: (items) => items.length > 0 ? formatDateJp(points[items[0].dataIndex].date) : ''
+                    }
                 }
             },
             scales: {
                 x: {
                     grid: { display: false },
-                    ticks: { color: theme.text, font: { size: 9 } }
+                    // 斜めの文字は読みにくいので横書きのまま、重なる分は間引く
+                    ticks: { color: theme.text, maxRotation: 0, autoSkip: true }
                 },
                 y: {
                     grid: { color: theme.grid },
-                    ticks: { color: theme.text, font: { size: 9 } },
+                    ticks: { color: theme.text },
                     beginAtZero: false
                 }
             }
@@ -405,7 +417,7 @@ function renderVolumeTrendChart() {
     });
     const volumes = weeklyVolumes.map(w => w.volume);
 
-    const colorPrimary = getComputedStyle(document.documentElement).getPropertyValue('--color-primary').trim() || '#86ac41';
+    const colorPrimary = getComputedStyle(document.documentElement).getPropertyValue('--color-primary').trim() || '#0017c1';
 
     if (state.charts.volumeTrend) {
         try { state.charts.volumeTrend.destroy(); } catch(e){}
@@ -433,11 +445,11 @@ function renderVolumeTrendChart() {
             scales: {
                 x: {
                     grid: { display: false },
-                    ticks: { color: theme.text, font: { size: 9 } }
+                    ticks: { color: theme.text }
                 },
                 y: {
                     grid: { color: theme.grid },
-                    ticks: { color: theme.text, font: { size: 9 } },
+                    ticks: { color: theme.text },
                     beginAtZero: true
                 }
             }

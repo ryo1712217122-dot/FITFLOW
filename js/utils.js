@@ -68,19 +68,28 @@ function formatDateJp(dateStr) {
     }
 }
 
-// Chart.js helper colors
+// Chart.js の軸・目盛り・凡例の色。v1.25.0でDADSのライト配色に一本化したので固定値。
+// 文字は補足色(gray-700)、目盛り線は区切り線より薄い gray-100(装飾なのでコントラスト基準の対象外)。
 function getChartThemeColors() {
-    const isLight = document.body.classList.contains('light-theme');
     return {
-        text: isLight ? '#475569' : '#a8c0be',
-        grid: isLight ? 'rgba(50, 72, 81, 0.05)' : 'rgba(125, 163, 161, 0.1)',
-        border: isLight ? 'rgba(50, 72, 81, 0.08)' : 'rgba(125, 163, 161, 0.15)',
-        surface: isLight ? '#ffffff' : '#1e2d33'
+        text: '#4d4d4d',   // gray-700
+        grid: '#e6e6e6',   // gray-100
+        border: '#cccccc', // gray-200
+        surface: '#ffffff'
     };
 }
 
+// グラフの文字はDADSの書体・最小サイズ(14px)に揃える。個々のグラフで font を
+// 指定し直すと既定値が効かないので、各グラフ側はサイズを書かずにこの既定に任せる。
+function applyChartDefaults() {
+    if (!window.Chart) return;
+    Chart.defaults.font.family = "'Noto Sans JP', -apple-system, BlinkMacSystemFont, sans-serif";
+    Chart.defaults.font.size = 14;
+    Chart.defaults.color = getChartThemeColors().text;
+}
+
 function hexToRgba(hex, alpha) {
-    const FALLBACK = [134, 172, 65];
+    const FALLBACK = [0, 23, 193]; // DADSのキーカラー blue-900 (#0017c1)
     if (!hex) return `rgba(${FALLBACK.join(', ')}, ${alpha})`;
     hex = hex.trim().replace('#', '');
     if (hex.length === 3) {

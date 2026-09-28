@@ -1,65 +1,125 @@
 @layer components {
-/* Buttons */
+/* 部品の見た目はデジタル庁デザインシステム(DADS)の公式HTML実装に揃えている。
+   https://github.com/digital-go-jp/design-system-example-components-html */
+
+/* ---- ボタン(dads-button) ----
+   md: 高さ48px / 角丸8px / 余白8px 16px / 16px太字。ホバーと押下は色を濃くし下線を出す */
 .btn {
+    position: relative;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     gap: 0.5rem;
-    padding: 0.65rem 1.25rem;
+    min-height: 48px;
+    padding: 8px 16px;
     font-family: var(--font-sans);
-    font-size: 0.9rem;
-    font-weight: 600;
+    font-size: 16px;
+    font-weight: 700;
+    line-height: 1;
+    letter-spacing: 0.02em;
+    text-underline-offset: 3px;
     border-radius: var(--radius-sm);
     border: 1px solid transparent;
     cursor: pointer;
     transition: var(--transition);
 }
 
+/* 塗りボタン(solid-fill)。4px二重線の透明枠は、強制カラーモードで輪郭を残すための公式の指定 */
 .btn-primary {
-    background: var(--primary-gradient);
-    color: #fff;
-    box-shadow: 0 4px 15px color-mix(in srgb, var(--color-primary) 35%, transparent);
+    border: 4px double transparent;
+    background-color: var(--key-900);
+    color: var(--white);
 }
 
-.btn-primary:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 20px color-mix(in srgb, var(--color-primary) 45%, transparent);
+@media (hover: hover) {
+    .btn-primary:hover {
+        background-color: var(--key-1000);
+        text-decoration: underline;
+    }
 }
 
+.btn-primary:active {
+    background-color: var(--key-1200);
+    text-decoration: underline;
+}
+
+/* アウトラインボタン(outline) */
 .btn-secondary {
-    background-color: rgba(255, 255, 255, 0.05);
-    border-color: var(--border-color);
-    color: var(--text-primary);
+    border: 1px solid currentColor;
+    background-color: var(--white);
+    color: var(--key-900);
 }
 
-.btn-secondary:hover {
-    background-color: rgba(255, 255, 255, 0.1);
-    border-color: rgba(255, 255, 255, 0.18);
+@media (hover: hover) {
+    .btn-secondary:hover {
+        background-color: var(--key-200);
+        color: var(--key-1000);
+        text-decoration: underline;
+    }
 }
 
+.btn-secondary:active {
+    background-color: var(--key-300);
+    color: var(--key-1200);
+    text-decoration: underline;
+}
+
+/* 取り消せない操作(削除・初期化)の塗りボタン。DADSに危険ボタンの定義は無いため、
+   塗りボタンの形のまま色だけエラー色(red-900)の系統に置き換えている */
 .btn-danger {
-    background: var(--danger-gradient);
-    color: #fff;
+    border: 4px double transparent;
+    background-color: var(--crit);
+    color: var(--white);
 }
 
-.btn-danger:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px color-mix(in srgb, var(--color-danger) 40%, transparent);
+@media (hover: hover) {
+    .btn-danger:hover {
+        background-color: #a90000; /* red-1000 */
+        text-decoration: underline;
+    }
 }
 
-/* 押下時: ホバーの浮き上がりより優先して、その場で沈み込むフィードバックを即座に返す */
+.btn-danger:active {
+    background-color: #850000; /* red-1100 */
+    text-decoration: underline;
+}
+
+.btn:disabled,
+.btn[aria-disabled="true"] {
+    background-color: var(--gray-300);
+    color: var(--gray-50);
+    border-color: transparent;
+    text-decoration: none;
+    cursor: not-allowed;
+}
+
+/* 押した瞬間の沈み込み。DADSは動きを定めていないので以前からのものを残している */
 .btn:active {
     transform: scale(0.96);
     transition: var(--transition-press);
 }
 
+/* sm: 高さ36px / 最小幅80px / 角丸6px。見た目は小さくても当たり判定は ::after で44pxにする */
 .btn-sm {
-    padding: 0.4rem 0.8rem;
-    font-size: 0.8rem;
+    min-height: 36px;
+    min-width: 80px;
+    padding: 2px 12px;
+    font-size: 16px;
     border-radius: 6px;
 }
 
+.btn-sm::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    margin: auto;
+    height: 44px;
+}
+
+/* アイコンだけのボタン。DADSに定義は無いが、指で押せるよう当たり判定を44px四方に広げる
+   (見た目の大きさを変えると密な行のレイアウトが崩れるので、::after で判定だけ広げる) */
 .btn-icon {
+    position: relative;
     background: none;
     border: none;
     color: var(--text-secondary);
@@ -68,13 +128,25 @@
     align-items: center;
     justify-content: center;
     border-radius: 6px;
-    padding: 4px;
+    padding: 6px;
     transition: var(--transition);
 }
 
-.btn-icon:hover {
-    color: var(--text-primary);
-    background-color: rgba(255, 255, 255, 0.05);
+.btn-icon::after {
+    content: "";
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 44px;
+    height: 44px;
+    transform: translate(-50%, -50%);
+}
+
+@media (hover: hover) {
+    .btn-icon:hover {
+        color: var(--text-primary);
+        background-color: var(--gray-100);
+    }
 }
 
 .btn-icon:active {
@@ -82,9 +154,9 @@
     transition: var(--transition-press);
 }
 
-.btn-icon i {
-    width: 18px;
-    height: 18px;
+.btn-icon :is(i, svg) {
+    width: 20px;
+    height: 20px;
 }
 
 .btn-full {
@@ -94,26 +166,19 @@
     align-items: center;
 }
 
+/* ツールバーに置く小さめの選択欄(種目別推移の種目選択) */
 .btn-sm-select {
-    background-color: rgba(255, 255, 255, 0.05);
-    border: 1px solid var(--border-color);
-    border-radius: 8px;
-    padding: 0.4rem 1.5rem 0.4rem 1rem;
-    font-size: 0.85rem;
-    font-weight: 600;
-    cursor: pointer;
+    min-height: 40px;
+    padding: 0 2rem 0 0.75rem;
+    font-size: 16px;
     max-width: 180px;
     text-overflow: ellipsis;
     white-space: nowrap;
     overflow: hidden;
+    cursor: pointer;
 }
 
-/* Inputs & Form Controls */
-.form-container {
-    max-width: 900px;
-    margin: 0 auto;
-}
-
+/* ---- フォーム ---- */
 .form-header-row {
     display: flex;
     justify-content: space-between;
@@ -121,88 +186,42 @@
     margin-bottom: 2rem;
 }
 
-.form-header-row h2 {
-    font-family: var(--font-display);
-    font-weight: 700;
-}
-
-.form-grid {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 1.5rem;
-}
-
 .form-group {
     display: flex;
     flex-direction: column;
-    gap: 0.5rem;
-    margin-bottom: 1.25rem;
+    gap: 8px;
+    margin-bottom: 1.5rem;
 }
 
+/* 項目ラベル(form-control-label): 16px 太字 gray-800。入力欄との間は8px */
 .form-group label {
-    font-size: 0.85rem;
-    font-weight: 600;
-    color: var(--text-secondary);
+    font-size: 16px;
+    font-weight: 700;
+    line-height: 1.5;
+    color: var(--gray-800);
 }
 
+/* 必須マークは色だけに頼らず「*」の記号でも示している(index.html側) */
 .form-group .required {
-    color: var(--color-danger);
+    color: var(--crit);
 }
 
-.form-row-2col {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 1rem;
-}
-
-.form-row-3col {
-    display: grid;
-    grid-template-columns: 1.2fr 1fr auto;
-    gap: 0.75rem;
-    align-items: flex-end;
-}
-
-.dashboard-mini-form {
-    margin-bottom: 1.25rem;
-    background-color: rgba(0, 0, 0, 0.1);
-    border: 1px solid var(--border-color);
-    padding: 0.75rem;
-    border-radius: var(--radius-sm);
-}
-
-.form-group-mini {
-    display: flex;
-    flex-direction: column;
-    gap: 0.25rem;
-}
-
-.form-group-mini input {
-    padding: 0.45rem 0.75rem !important;
-    font-size: 0.85rem !important;
-}
-
-.flex-end-btn {
-    display: flex;
-    justify-content: flex-end;
-}
-
+/* 補足説明。DADSの最小(14px)で、文字色は下限(gray-536)より濃い gray-700 にする。
+   斜体はやめた(和文の斜体は字形を機械的に傾けるだけで読みにくい) */
 .form-hint {
-    font-size: 0.75rem;
-    color: var(--text-muted);
+    font-size: 14px;
+    line-height: 1.7;
+    color: var(--gray-700);
     margin-top: 0.5rem;
-    font-style: italic;
 }
 
 .width-full {
     width: 100%;
 }
 
-.text-2xs {
-    font-size: 0.75rem;
-}
-
+.text-2xs,
 .text-xs {
-    font-size: 0.8rem;
+    font-size: 14px;
 }
 
 /* 表示/非表示を切り替えるユーティリティ。
@@ -219,26 +238,28 @@
 
 /* 日付選択時、その日にすでにある記録をフォームへ自動反映したことを知らせるヒント。
    (何も言わずにチェック済み・入力済みの状態で表示すると、ユーザーが「なぜ？」と
-   混乱するため、必ず理由を明示する) */
+   混乱するため、必ず理由を明示する)
+   DADSの通知バナー(情報)に合わせ、白地に意味の色の枠を付ける(背景は塗らない) */
 .existing-data-hint {
     display: flex;
     align-items: flex-start;
-    gap: 0.4rem;
+    gap: 0.5rem;
     margin-top: 0.5rem;
     padding: 0.5rem 0.75rem;
     border-radius: var(--radius-sm);
-    background: rgba(134, 172, 65, 0.1);
-    border: 1px solid rgba(134, 172, 65, 0.3);
-    color: var(--color-primary);
-    font-size: 0.8rem;
-    line-height: 1.4;
+    background: var(--white);
+    border: 2px solid var(--key-900);
+    color: var(--gray-800);
+    font-size: 14px;
+    line-height: 1.7;
 }
 
-.existing-data-hint i {
-    width: 15px;
-    height: 15px;
+.existing-data-hint :is(i, svg) {
+    width: 18px;
+    height: 18px;
     flex-shrink: 0;
-    margin-top: 0.1rem;
+    margin-top: 0.15rem;
+    color: var(--key-900);
 }
 
 .margin-top-0-5 {
@@ -253,35 +274,54 @@
     margin-top: 1.5rem !important;
 }
 
+/* 入力欄(input-text / select): 枠 gray-600 / 角丸8px / 地は白 / 16px / 高さ48px */
 input[type="text"],
+input[type="url"],
 input[type="date"],
 input[type="time"],
 input[type="number"],
 select,
 textarea {
     background-color: var(--bg-input);
-    border: 1px solid var(--border-color);
+    border: 1px solid var(--border-input);
     border-radius: var(--radius-sm);
-    padding: 0.75rem 1rem;
+    min-height: 48px;
+    padding: 0 16px;
     color: var(--text-primary);
     font-family: var(--font-sans);
-    font-size: 0.95rem;
-    outline: none;
-    transition: var(--transition);
+    font-size: 16px;
+    line-height: 1.5;
+    letter-spacing: 0.02em;
+    transition: border-color 0.2s ease;
     width: 100%;
     max-width: 100%;
     box-sizing: border-box;
 }
 
-input[type="text"]:focus,
-input[type="date"]:focus,
-input[type="time"]:focus,
-input[type="number"]:focus,
-select:focus,
-textarea:focus {
-    border-color: var(--border-focus);
-    box-shadow: 0 0 0 3px color-mix(in srgb, var(--border-focus) 25%, transparent);
+textarea {
+    padding: 12px 16px;
+    line-height: 1.7;
 }
+
+/* プレースホルダは gray-536 より薄くしない(これが白地で4.5:1を満たす下限) */
+::placeholder {
+    color: var(--gray-536);
+    opacity: 1;
+}
+
+@media (hover: hover) {
+    input[type="text"]:hover,
+    input[type="url"]:hover,
+    input[type="date"]:hover,
+    input[type="time"]:hover,
+    input[type="number"]:hover,
+    select:hover,
+    textarea:hover {
+        border-color: var(--black);
+    }
+}
+
+/* フォーカス時の枠・リングは base.css の a11y 層(全部品共通)に任せる */
 
 .input-icon-wrapper {
     position: relative;
@@ -291,16 +331,16 @@ textarea:focus {
 
 .input-icon-wrapper input,
 .input-icon-wrapper select {
-    padding-left: 2.5rem;
+    padding-left: 2.75rem;
     width: 100%;
 }
 
 .input-icon {
     position: absolute;
     left: 0.9rem;
-    color: var(--text-muted);
-    width: 18px;
-    height: 18px;
+    color: var(--gray-700);
+    width: 20px;
+    height: 20px;
     pointer-events: none;
 }
 
@@ -308,24 +348,28 @@ textarea:focus {
 .chart-container {
     position: relative;
     width: 100%;
-    height: 240px;
+    height: 260px;
 }
 
-.pie-container {
-    height: 240px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
+/* 「データがありません」等の空表示。既定は通常の流れに置く。
+   以前は常に position:absolute で、グラフ以外(自己ベスト一覧・計画タブのロードマップ)では
+   基準になる親が無く、下のカードの上へ飛んで重なっていた */
 .no-data-msg {
+    color: var(--gray-700);
+    font-size: 16px;
+    text-align: center;
+    padding: 1rem;
+}
+
+/* グラフの上に重ねて中央に出すのは .chart-container の中だけ。
+   幅を指定しないと中身の幅まで縮み、「データがありませ／ん。」と1字だけ折り返す */
+.chart-container > .no-data-msg {
     position: absolute;
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    color: var(--text-muted);
-    font-size: 0.9rem;
-    text-align: center;
+    width: calc(100% - 2rem);
+    padding: 0;
 }
 
 /* Empty state (used by any list-type panel with zero results) */
@@ -336,36 +380,38 @@ textarea:focus {
     justify-content: center;
     gap: 0.75rem;
     padding: 2.5rem;
-    color: var(--text-muted);
+    color: var(--gray-700);
     text-align: center;
 }
 
-.empty-state i {
+.empty-state :is(i, svg) {
     width: 36px;
     height: 36px;
 }
 
 .text-danger {
-    color: var(--color-danger) !important;
+    color: var(--crit) !important;
 }
 
-.text-danger i {
-    color: var(--color-danger) !important;
+.text-danger :is(i, svg) {
+    color: var(--crit) !important;
 }
 
-/* Toast System */
+/* トースト。DADSに定義が無いので、白地の画面の上で埋もれない濃い地(gray-900)に白文字にする */
 .toast {
     position: fixed;
     bottom: 2rem;
     right: 2rem;
-    background: var(--primary-gradient);
-    color: #fff;
-    padding: 0.85rem 1.5rem;
+    background: var(--gray-900);
+    color: var(--white);
+    padding: 0.875rem 1.25rem;
     border-radius: var(--radius-sm);
-    box-shadow: var(--shadow-lg);
+    box-shadow: var(--elevation-2);
     z-index: 1000;
-    font-weight: 600;
-    font-size: 0.9rem;
+    font-weight: 700;
+    font-size: 16px;
+    line-height: 1.5;
+    max-width: calc(100vw - 2rem);
     display: flex;
     align-items: center;
     gap: 0.5rem;
@@ -380,7 +426,8 @@ textarea:focus {
     pointer-events: none;
 }
 
-/* Modal Styling */
+/* モーダル。背景のぼかし(backdrop-filter)は外し、不透明に近い暗幕だけにする
+   (DADSは可読性を優先して半透明・ぼかしを使わない) */
 .modal {
     position: fixed;
     top: 0;
@@ -388,7 +435,6 @@ textarea:focus {
     width: 100%;
     height: 100%;
     background-color: rgba(0, 0, 0, 0.6);
-    backdrop-filter: blur(4px);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -403,13 +449,13 @@ textarea:focus {
 }
 
 .modal-content {
-    background-color: var(--bg-surface);
-    border: 1px solid var(--border-color);
+    background-color: var(--white);
+    border: none;
     border-radius: var(--radius-lg);
     padding: 2rem;
     width: 90%;
-    max-width: 450px;
-    box-shadow: var(--shadow-lg);
+    max-width: 480px;
+    box-shadow: var(--elevation-3);
     transform: scale(1);
     transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
@@ -418,23 +464,23 @@ textarea:focus {
     transform: scale(0.9);
 }
 
+/* モーダルの見出しは Std-20B-150 */
 .modal-content h3 {
-    font-family: var(--font-display);
-    font-size: 1.3rem;
-    letter-spacing: -0.015em;
+    font-size: 20px;
     margin-bottom: 0.75rem;
 }
 
 .modal-content p {
-    color: var(--text-secondary);
-    font-size: 0.95rem;
-    line-height: 1.5;
+    color: var(--gray-800);
+    font-size: 16px;
+    line-height: 1.7;
     margin-bottom: 1.5rem;
 }
 
 .modal-actions {
     display: flex;
     justify-content: flex-end;
+    flex-wrap: wrap;
     gap: 0.75rem;
 }
 
@@ -446,7 +492,7 @@ textarea:focus {
 
 /* Day Summary Modal */
 .day-summary-modal-content {
-    max-width: 520px;
+    max-width: 560px;
     max-height: 85vh;
     display: flex;
     flex-direction: column;
@@ -473,9 +519,9 @@ textarea:focus {
 
 .day-summary-section-title {
     font-weight: 700;
-    font-size: 0.9rem;
+    font-size: 16px;
     margin-bottom: 0.5rem;
-    color: var(--text-secondary);
+    color: var(--gray-800);
 }
 
 .day-summary-item {
@@ -483,7 +529,7 @@ textarea:focus {
     align-items: flex-start;
     justify-content: space-between;
     gap: 0.75rem;
-    background: var(--bg-surface-hover);
+    background: var(--gray-50);
     border: 1px solid var(--border-color);
     border-radius: var(--radius-sm);
     padding: 0.75rem 1rem;
@@ -500,30 +546,31 @@ textarea:focus {
 }
 
 .day-summary-item-title {
-    font-weight: 600;
-    font-size: 0.9rem;
+    font-weight: 700;
+    font-size: 16px;
     color: var(--text-primary);
 }
 
 .day-summary-item-sub {
-    font-size: 0.8rem;
-    color: var(--text-secondary);
+    font-size: 14px;
+    color: var(--gray-700);
     margin-top: 0.25rem;
 }
 
+/* 当たり判定(44px)どうしが重ならないよう12px空ける(.history-actions と同じ理由) */
 .day-summary-item-actions {
     display: flex;
-    gap: 0.25rem;
+    gap: 0.75rem;
     flex-shrink: 0;
 }
 
 .day-summary-empty {
     text-align: center;
     padding: 2rem 1rem;
-    color: var(--text-muted);
+    color: var(--gray-700);
 }
 
-.day-summary-empty i {
+.day-summary-empty :is(i, svg) {
     width: 2rem;
     height: 2rem;
     margin-bottom: 0.5rem;
@@ -535,23 +582,24 @@ textarea:focus {
     border-top: 1px solid var(--border-color);
 }
 
-/* Progress Bar (目標達成度など) */
+/* Progress Bar (目標達成度など)。地の灰と塗りのキーカラーは3:1以上の差がある */
 .progress-bar-track {
     width: 100%;
-    height: 10px;
+    height: 12px;
     border-radius: 999px;
-    background-color: var(--bg-wrapper);
+    background-color: var(--gray-100);
+    border: 1px solid var(--gray-420);
     overflow: hidden;
 }
 
 .progress-bar-fill {
     height: 100%;
     border-radius: 999px;
-    background: var(--primary-gradient);
+    background: var(--key-900);
     transition: width 0.4s ease;
 }
 
 .progress-bar-fill.progress-bar-fill-complete {
-    background: var(--success-gradient, var(--primary-gradient));
+    background: var(--ok);
 }
-} /* end @layer components */
+}

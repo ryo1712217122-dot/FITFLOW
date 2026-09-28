@@ -5,14 +5,13 @@
     gap: 1.5rem;
 }
 
+/* 設定のまとまりの見出し(Std-18B-160) */
 .settings-group-heading {
     grid-column: 1 / -1;
-    font-family: var(--font-display);
-    font-size: 0.85rem;
+    font-size: 18px;
     font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    color: var(--text-muted);
+    line-height: 1.6;
+    color: var(--gray-900);
     margin: 0.5rem 0 -0.5rem;
 }
 
@@ -25,9 +24,9 @@
 }
 
 .settings-desc {
-    color: var(--text-secondary);
-    font-size: 0.9rem;
-    line-height: 1.6;
+    color: var(--gray-800);
+    font-size: 16px;
+    line-height: 1.7;
     margin-bottom: 1.5rem;
 }
 
@@ -41,13 +40,15 @@
     position: relative;
 }
 
+/* 取り消せない操作をまとめたカード。枠をエラー色にして他のカードと区別する
+   (見出しの文言でも危険な操作だと分かる) */
 .danger-card {
-    border-color: color-mix(in srgb, var(--color-danger) 20%, transparent);
+    border: 2px solid var(--crit);
 }
 
 .help-body h4 {
     margin-bottom: 0.75rem;
-    font-size: 1rem;
+    font-size: 18px;
 }
 
 .help-body ul {
@@ -55,50 +56,8 @@
     display: flex;
     flex-direction: column;
     gap: 0.75rem;
-    color: var(--text-secondary);
-    font-size: 0.9rem;
-    line-height: 1.5;
-}
-
-/* テーマ選択グリッド（元はボタン4つぶんすべてインラインstyleだった） */
-.theme-select-grid {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 1rem;
-    margin-bottom: 1rem;
-}
-
-.theme-select-btn {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    padding: 0.75rem;
-    border-radius: 12px;
-    cursor: pointer;
-    border: 2px solid var(--border-color);
-    background: rgba(0, 0, 0, 0.2);
-    outline: none;
-    -webkit-tap-highlight-color: transparent;
-    transition: var(--transition);
-}
-
-.theme-select-btn:active {
-    transform: scale(0.96);
-    transition: var(--transition-press);
-}
-
-.theme-select-btn.active {
-    border-color: var(--color-primary) !important;
-    background-color: rgba(255, 255, 255, 0.08) !important;
-    box-shadow: 0 0 12px rgba(255, 255, 255, 0.05);
-}
-
-.theme-select-name {
-    font-weight: 700;
-}
-
-.theme-select-desc {
-    font-size: 0.75rem;
-    color: var(--text-secondary);
+    color: var(--gray-800);
+    font-size: 16px;
+    line-height: 1.7;
 }
 } /* end @layer pages (settings) */

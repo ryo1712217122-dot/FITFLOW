@@ -6,14 +6,80 @@
     padding: 0;
 }
 
+/* 本文は DADS の Std-16N-170(16px / 400 / 行間1.7 / 字間0.02em) */
 html, body {
     height: 100%;
     font-family: var(--font-sans);
+    font-size: 16px;
+    font-weight: 400;
+    line-height: 1.7;
+    letter-spacing: 0.02em;
     background-color: var(--bg-base);
     color: var(--text-primary);
     overflow-x: hidden;
     scroll-behavior: smooth;
-    transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* 見出しは太字・行間1.5。字間は詰めない(DADSは +0.01〜0.02em) */
+h1, h2, h3, h4 {
+    font-weight: 700;
+    line-height: 1.5;
+    letter-spacing: 0.01em;
+}
+
+/* 数値は桁が揃うよう等幅数字にする(ダッシュボードやロードマップで縦に並べて比べるため) */
+.big-number,
+.tile-value,
+.weekly-run-goal-value,
+.roadmap-row-weight,
+.roadmap-row-actual,
+.roadmap-row-delta,
+.plan-sim-fact-value,
+.plan-tier-kcal,
+.history-metric-value,
+.history-metric-value-lg,
+.history-metric-value-bold,
+.exercise-pr-value,
+.stat-value {
+    font-variant-numeric: tabular-nums;
+}
+
+/* リンクは常に下線(DADS)。:where() で詳細度0にしておかないと、
+   <a class="nav-item"> のようなボタン型リンクの見た目まで上書きしてしまう */
+:where(a):any-link {
+    color: var(--link);
+    text-decoration: underline;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 3px;
+}
+
+:where(a):visited {
+    color: var(--link-visited);
+}
+
+@media (hover: hover) {
+    :where(a):hover {
+        color: var(--link-hover);
+        text-decoration-thickness: 3px;
+    }
+}
+
+:where(a):active {
+    color: var(--link-active);
+    text-decoration-thickness: 1px;
+}
+
+/* アイコン(Lucide)は読み込み後に <i data-lucide> が <svg class="lucide"> へ置き換わる。
+   部品側の「◯◯ i { ... }」は置き換え後の svg に当たらず、色も大きさも効いていなかった
+   (旧ダークテーマでは親の明るい文字色を継いでいたので目立たなかった)。
+   部品側は :is(i, svg) で指定し、ここでは親の文字色を継ぐことだけを決めておく */
+svg.lucide {
+    flex-shrink: 0;
+}
+
+/* 太字は 700 だけ(DADSのウェイトは 400 / 700 の2種) */
+strong, b {
+    font-weight: 700;
 }
 
 @keyframes fadeIn {
@@ -26,3 +92,21 @@ html, body {
     to { opacity: 1; transform: translateY(0); }
 }
 } /* end @layer base */
+
+@layer a11y {
+/* フォーカス表示は全部品共通(DADS)。黒の太枠＋黄色の縁取りで、どの背景でも見える。
+   層の順(layers.css)で最後に置いているので、部品側の outline:none に負けない */
+:where(a, button, input, select, textarea, summary, label, [tabindex]):focus-visible {
+    outline: 4px solid var(--black);
+    outline-offset: 2px;
+    box-shadow: 0 0 0 2px var(--focus-yellow);
+}
+
+/* 気分の選択肢は input 自体を隠し、見た目のボタン(.mood-btn)で表示している。
+   キーボードで選んでいる時は、見えている方にリングを出す */
+.mood-option input:focus-visible + .mood-btn {
+    outline: 4px solid var(--black);
+    outline-offset: 2px;
+    box-shadow: 0 0 0 2px var(--focus-yellow);
+}
+} /* end @layer a11y */

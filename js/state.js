@@ -138,6 +138,10 @@ function loadData() {
     // 「特別な飲食」機能はv1.11.0で廃止した(クラウド同期側に保存されず、起動時の
     // 自動同期でローカル記録が消えてしまっていた)。残っている保存データも読み込まずに破棄する。
     localStorage.removeItem('fitflow_food_logs');
+    // カラーテーマ(4色)とダーク/ライト切替はv1.25.0でDADSのライト配色に一本化して廃止した。
+    // 保存されていた選択は参照しなくなったので消しておく。
+    localStorage.removeItem('fitflow_theme');
+    localStorage.removeItem('fitflow_theme_id');
 
     saveData();
 }

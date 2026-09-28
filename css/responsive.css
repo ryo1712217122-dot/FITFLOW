@@ -2,28 +2,28 @@
 @media (max-width: 900px) {
     .app-container {
         flex-direction: column;
-        padding-bottom: 74px; /* Room for bottom navigation bar */
+        padding-bottom: 76px; /* 下部ナビの高さぶんの余白 */
     }
 
+    /* 下部ナビ。背景のぼかし(backdrop-filter)と影はやめ、不透明な白地＋区切り線にした */
     .sidebar {
         width: 100%;
-        height: 64px;
+        height: auto;
+        min-height: 64px;
         position: fixed;
         bottom: 0;
         top: auto;
         left: 0;
         right: 0;
-        padding: 0;
+        padding: 0 0 env(safe-area-inset-bottom);
         border-right: none;
-        border-top: 1px solid var(--border-color);
+        border-top: 1px solid var(--gray-420);
         border-bottom: none;
-        background-color: var(--bg-sidebar);
-        backdrop-filter: blur(10px);
+        background-color: var(--white);
         z-index: 1000;
         flex-direction: row;
         justify-content: space-around;
-        align-items: center;
-        box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.2);
+        align-items: stretch;
     }
 
     .brand {
@@ -33,59 +33,59 @@
     .nav-menu {
         flex-direction: row;
         justify-content: space-around;
-        align-items: center;
+        align-items: stretch;
         width: 100%;
-        height: 100%;
         gap: 0;
     }
 
+    /* 文字はDADSの最小14px。5項目を等分すると1項目78pxしかなく「ダッシュボード」は
+       1行に収まらないため、index.html側の <wbr> の位置でだけ2行に折り返す
+       (keep-all にしないと「ダッシュボ／ード」のように語の途中で折れる) */
     .nav-item {
         flex-direction: column;
-        gap: 4px;
-        padding: 6px 0;
-        font-size: 0.72rem;
-        border: none;
+        gap: 2px;
+        min-height: 64px;
+        padding: 8px 2px;
+        font-size: 14px;
+        line-height: 1.3;
+        text-align: center;
+        word-break: keep-all;
         align-items: center;
         justify-content: center;
         flex: 1;
+        min-width: 0;
         border-radius: 0;
-        height: 100%;
-        color: var(--text-secondary);
-        background: none !important;
-        box-shadow: none !important;
+        color: var(--gray-800);
+        background: none;
+        box-shadow: none;
     }
 
-    .nav-item i {
-        width: 18px;
-        height: 18px;
+    .nav-item :is(i, svg) {
+        width: 22px;
+        height: 22px;
     }
 
+    /* 現在地は色だけでなく上端の太線と太字でも示す */
     .nav-item.active {
-        color: var(--color-primary);
-    }
-
-    .sidebar-footer {
-        display: none;
-    }
-
-    .theme-toggle-mobile {
-        display: flex;
-        width: 40px;
-        height: 40px;
+        color: var(--key-900);
+        background-color: var(--key-50);
+        box-shadow: inset 0 3px 0 var(--key-900);
     }
 
     .main-content {
         margin-left: 0;
         width: 100%;
-        padding: 1.25rem;
+        padding: 1.25rem 1rem;
+    }
+
+    /* 挨拶は狭い画面では Std-20B に落とす(24pxだと2〜3行に折れる) */
+    .welcome h2 {
+        font-size: 20px;
     }
 
     .dashboard-grid,
-    .form-grid,
     .filter-grid,
-    .settings-grid,
-    .form-row-2col,
-    .form-row-3col {
+    .settings-grid {
         grid-template-columns: 1fr;
     }
 
@@ -135,11 +135,81 @@
         grid-template-columns: 1fr;
         gap: 1.25rem;
     }
+
+    /* トーストが下部ナビに重ならないよう、ナビの上に出す */
+    .toast {
+        left: 1rem;
+        right: 1rem;
+        bottom: calc(76px + env(safe-area-inset-bottom));
+    }
+
+    .modal-content {
+        padding: 1.5rem;
+    }
 }
 
 @media (max-width: 480px) {
     .btn-sm-select {
-        max-width: 120px;
+        max-width: 140px;
+    }
+
+    /* 記録タブは カード > 種目パネル > 種目枠 と入れ子になっており、余白だけで左右120px
+       近くを使っていた。文字をDADSの16pxに上げるとセットの入力表が入らなくなるので、
+       狭い画面では入れ子の余白を詰める */
+    .card {
+        padding: 1.25rem 1rem;
+    }
+
+    .exercise-details-panel {
+        padding: 0.25rem 0.5rem 0.75rem;
+    }
+
+    .exercise-item {
+        padding: 0.75rem 0.625rem;
+    }
+
+    /* 種目名は横幅いっぱいに使い、合計セット数と削除ボタンはその下の行に回す
+       (3列のままだと種目名の欄が150px程度まで潰れて入力内容が読めない) */
+    .exercise-item-header {
+        grid-template-columns: 1fr auto;
+        gap: 0.5rem;
+    }
+
+    .exercise-name-input-wrapper {
+        grid-column: 1 / -1;
+    }
+
+    .workout-resume-hint {
+        margin: 0 0 0.75rem;
+    }
+
+    /* 入力欄は60px(中身48px)でも「100.5」が16pxで収まる */
+    .sets-table input {
+        width: 60px;
+        padding: 0 6px;
+    }
+
+    .sets-table .set-count {
+        width: 48px;
+    }
+
+    .sets-table th,
+    .sets-table td {
+        padding-right: 4px;
+    }
+
+    .set-num {
+        width: 36px;
+    }
+
+    /* 「×」は文字幅(16px)より細くならないので、余白のほうを外す */
+    .sets-table td.set-multiply {
+        width: 16px;
+        padding-right: 0;
+    }
+
+    .set-action {
+        padding-left: 0;
     }
 }
 
@@ -159,30 +229,19 @@
     .btn:active,
     .btn-icon:active,
     .nav-item:active,
-    .theme-select-btn:active,
     .history-sub-tab-btn:active,
     .chart-period-btn:active,
     .plan-sim-pace-btn:active,
     .calendar-day:active,
-    .mood-option:active .mood-btn,
-    .mood-option input:checked + .mood-btn,
-    .btn-primary:hover,
-    .btn-danger:hover,
-    .stat-card:hover .card-icon {
+    .mood-option:active .mood-btn {
         transform: none !important;
     }
 }
 
-/* 半透明素材(モーダルの背景スクリム)を低減設定時はほぼ不透明にし、
-   ぼかしに頼らず視認性を確保する */
+/* 半透明の暗幕を減らす設定では、ほぼ不透明にして背面の文字が透けないようにする */
 @media (prefers-reduced-transparency: reduce) {
     .modal {
-        backdrop-filter: none;
         background-color: rgba(0, 0, 0, 0.85);
-    }
-
-    .sidebar {
-        backdrop-filter: none;
     }
 }
 } /* end @layer responsive */

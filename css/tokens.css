@@ -1,69 +1,111 @@
 @layer tokens {
-/* CSS Variables and Design Tokens */
+/* デザイントークン。値はデジタル庁デザインシステム(DADS)の公式トークン
+   (@digital-go-jp/design-tokens v2.0.1)から取っている。記憶で書かないこと
+   (例: キーカラー #0017c1 は blue-900 であって blue-1000 ではない)。
+
+   v1.25.0 で4色のカラーテーマ切替とダーク/ライト切替を廃止し、DADSのライト配色に
+   一本化した。DADSはライト配色しか定義しておらず、ダーク配色は可読性の基準
+   (コントラスト)を保証できないため。
+
+   変数名(--bg-base / --color-primary など)は旧テーマ時代のものを残している。
+   全CSSがこの名前で参照しているので、名前を変えずに値だけDADSに差し替えた。 */
 :root {
-    --bg-base: #141f23;
-    --bg-surface: #1e2d33;
-    --bg-surface-hover: #273941;
-    --bg-sidebar: #182429;
-    --border-color: rgba(125, 163, 161, 0.15);
-    --border-focus: #86ac41;
+    /* ---- DADS 原色(必要なものだけ) ---- */
+    --key-50: #e8f1fe;      /* blue-50 */
+    --key-200: #c5d7fb;     /* blue-200 */
+    --key-300: #9db7f9;     /* blue-300 */
+    --key-900: #0017c1;     /* blue-900: キーカラー */
+    --key-1000: #00118f;    /* blue-1000 */
+    --key-1200: #000060;    /* blue-1200 */
 
-    --text-primary: #f0f4f3;
-    --text-secondary: #a8c0be;
-    --text-muted: #7da3a1;
+    --white: #ffffff;
+    --black: #000000;
+    --gray-50: #f2f2f2;
+    --gray-100: #e6e6e6;
+    --gray-200: #cccccc;    /* 区切り線 */
+    --gray-300: #b3b3b3;
+    --gray-420: #949494;    /* UI部品の枠の下限(白地で3:1) */
+    --gray-536: #767676;    /* 文字色の下限(白地で4.5:1)。これより薄い文字は使わない */
+    --gray-600: #666666;    /* 入力欄の枠 */
+    --gray-700: #4d4d4d;    /* 補足の文字 */
+    --gray-800: #333333;
+    --gray-900: #1a1a1a;    /* 本文 */
 
-    --primary-gradient: linear-gradient(135deg, #86ac41 0%, #34675c 100%);
-    --secondary-gradient: linear-gradient(135deg, #7da3a1 0%, #324851 100%);
-    --success-gradient: linear-gradient(135deg, #86ac41 0%, #34675c 100%);
-    --danger-gradient: linear-gradient(135deg, #e05a47 0%, #c0392b 100%);
+    --ok: #197a4b;          /* green-800 */
+    --ok-bg: #e6f5ec;       /* green-50 */
+    --warn: #ac3e00;        /* orange-900 */
+    --warn-bg: #ffeee2;     /* orange-50 */
+    --crit: #ce0000;        /* red-900 */
+    --crit-bg: #fdeeee;     /* red-50 */
 
-    --color-primary: #86ac41;
-    --color-secondary: #7da3a1;
-    --color-success: #86ac41;
-    --color-danger: #e05a47;
-    --color-warning: #d9a05b;
+    --link: #00118f;        /* blue-1000 */
+    --link-hover: #0017c1;  /* blue-900 */
+    --link-visited: #8b008b;
+    --link-active: #c74700;
+    --focus-yellow: #ffd43d; /* yellow-300 */
 
-    --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.2);
-    --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.3);
-    --shadow-lg: 0 16px 48px rgba(0, 0, 0, 0.45);
+    --elevation-1: 0 2px 8px 1px rgba(0, 0, 0, 0.1), 0 1px 5px 0 rgba(0, 0, 0, 0.3);
+    --elevation-2: 0 2px 12px 2px rgba(0, 0, 0, 0.1), 0 1px 6px 0 rgba(0, 0, 0, 0.3);
+    --elevation-3: 0 4px 16px 3px rgba(0, 0, 0, 0.1), 0 1px 6px 0 rgba(0, 0, 0, 0.3);
 
-    --radius-sm: 8px;
-    --radius-md: 14px;
-    --radius-lg: 20px;
-    --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    /* ---- アプリ側の意味づけ(旧テーマ時代の変数名) ---- */
+    --bg-base: var(--gray-50);
+    --bg-surface: var(--white);
+    --bg-surface-hover: var(--gray-50);
+    --bg-sidebar: var(--white);
+    --bg-input: var(--white);
+    --bg-wrapper: var(--gray-50);
+    --bg-item: var(--white);
+    --bg-impression: var(--gray-50);
+    --bg-icon-neutral: var(--key-50);
+
+    --border-color: var(--gray-200);   /* 区切り線・カードの輪郭 */
+    --border-ui: var(--gray-420);      /* 押せる部品の輪郭(3:1を満たす) */
+    --border-input: var(--gray-600);   /* 入力欄の枠 */
+    --border-focus: var(--key-900);    /* 選択中の部品の輪郭 */
+
+    --text-primary: var(--gray-900);
+    --text-secondary: var(--gray-700);
+    --text-muted: var(--gray-600);
+
+    /* グラデーションは廃止し、単色に置き換えた(DADSにグラデーションの定義は無い)。
+       変数名だけ残しているのは、参照側を一括で書き換えずに済ませるため */
+    --primary-gradient: var(--key-900);
+    --secondary-gradient: var(--key-1000);
+    --success-gradient: var(--ok);
+    --danger-gradient: var(--crit);
+
+    --color-primary: var(--key-900);
+    /* グラフで主系列(キーカラー)と並べて見分けられるよう、二次色は灰にしている */
+    --color-secondary: var(--gray-700);
+    --color-success: var(--ok);
+    --color-danger: var(--crit);
+    --color-warning: var(--warn);
+
+    /* カードは影ではなく輪郭線で区切る。浮かせるのはモーダルとトーストだけ */
+    --shadow-sm: none;
+    --shadow-md: none;
+    --shadow-lg: var(--elevation-2);
+
+    --radius-sm: 8px;   /* ボタン・入力欄(DADS md) */
+    --radius-md: 12px;  /* カード */
+    --radius-lg: 16px;  /* モーダル */
+
+    /* 動きはDADSが定めていない領域なので、以前からのものを残す。
+       ただし対象を all から色・変形・不透明度に絞っている。all のままだと
+       フォーカスリング(outline / box-shadow)まで0.3秒かけて現れ、キーボードで
+       移動した直後はリングが薄い・細い状態になっていた(リングは即座に出す) */
+    --transition: background-color 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+                  color 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+                  border-color 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+                  transform 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+                  opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     /* 押下時の即座なフィードバック用。ホバーより短く・オーバーシュートなし(非ジェスチャー操作のため) */
     --transition-press: transform 0.12s cubic-bezier(0.4, 0, 0.2, 1);
-    /* 'Inter'は日本語グリフを持たないため、日本語部分は明示的にM PLUS 1p(ゴシック体)へ
-       フォールバックさせる。OSのデフォルト(system-ui等)任せにすると端末ごとに書体がばらつくため。 */
-    --font-sans: 'Inter', 'M PLUS 1p', system-ui, -apple-system, sans-serif;
-    --font-display: 'Outfit', 'M PLUS 1p', sans-serif;
 
-    --bg-input: rgba(0, 0, 0, 0.2);
-    --bg-wrapper: rgba(0, 0, 0, 0.1);
-    --bg-item: rgba(0, 0, 0, 0.15);
-    --bg-impression: rgba(0, 0, 0, 0.12);
-    --bg-icon-neutral: rgba(255, 255, 255, 0.03);
-}
-
-/* Light Theme overrides if toggled */
-body.light-theme {
-    /* 背景・枠線・文字色・アクセント(--bg-base / --bg-surface / --border-color /
-       --text-* / --color-primary/secondary 等)はここでは指定しない。
-       これらは applyThemePalette() が選択中パレット(A/B/C/D)の値を <html> にインラインで
-       適用する。body側で再宣言すると、bodyの方が近い祖先になるため <html> のパレット値を
-       上書きしてしまい、ライトモードでパレットを切り替えても背景が白一色のままになる(既知の不具合)。
-       ここにはパレットが扱わないライト専用のトークン(影・入力欄背景・success/danger等)だけを残す。 */
-    --color-success: #86ac41;
-    --color-danger: #e05a47;
-
-    --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.05);
-    --shadow-md: 0 8px 20px rgba(0, 0, 0, 0.08);
-    --shadow-lg: 0 12px 30px rgba(0, 0, 0, 0.12);
-
-    --bg-input: #f7faf9;
-    --bg-wrapper: #e5ecea;
-    --bg-item: #f7faf9;
-    --bg-impression: #e5ecea;
-    --bg-icon-neutral: rgba(0, 0, 0, 0.03);
+    /* DADSの書体は Noto Sans JP の 400 / 700 のみ。見出し用に別書体は使わない */
+    --font-sans: 'Noto Sans JP', -apple-system, BlinkMacSystemFont, sans-serif;
+    --font-display: var(--font-sans);
+    --font-mono: 'Noto Sans Mono', monospace;
 }
 } /* end @layer tokens */

@@ -32,26 +32,27 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 0.75rem;
-    padding: 0.6rem 0.85rem;
-    background-color: rgba(0, 0, 0, 0.15);
+    flex-wrap: wrap;
+    gap: 0.25rem 0.75rem;
+    padding: 0.625rem 1rem;
+    background-color: var(--gray-50);
+    border: 1px solid var(--border-color);
     border-radius: var(--radius-sm);
 }
 
 .exercise-pr-name {
-    font-weight: 600;
+    font-weight: 700;
     flex: 1;
 }
 
 .exercise-pr-value {
-    font-family: var(--font-display);
     font-weight: 700;
-    color: var(--color-primary);
+    color: var(--key-900);
 }
 
 .exercise-pr-date {
-    font-size: 0.75rem;
-    color: var(--text-secondary);
+    font-size: 14px;
+    color: var(--gray-700);
     white-space: nowrap;
 }
 
@@ -63,7 +64,7 @@
     gap: 0.75rem;
     flex-wrap: wrap;
     padding: 0.5rem 0.25rem;
-    border-bottom: 2px solid var(--color-primary);
+    border-bottom: 2px solid var(--key-900);
     margin-top: 0.5rem;
 }
 
@@ -73,30 +74,28 @@
 }
 
 .history-month-label {
-    font-family: var(--font-display);
-    font-size: 1.05rem;
+    font-size: 18px;
     font-weight: 700;
-    color: var(--text-primary);
+    color: var(--gray-900);
 }
 
 .history-month-summary {
-    font-size: 0.85rem;
-    font-weight: 600;
-    color: var(--color-primary);
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--gray-800);
 }
 
 /* 履歴カードの数値表示(有酸素・体重・食事・カロリー収支で共通)。
    以前は各カードのテンプレートにインラインstyleで直書きされており、
-   同じ見た目の指定が12箇所に散っていた上、色が #86ac41 固定でテーマパレットに
-   追従していなかったため、クラスへ集約している。 */
+   同じ見た目の指定が12箇所に散っていたため、クラスへ集約している。 */
 .history-metric-label {
     display: block;
-    font-size: 0.85rem;
-    color: var(--text-muted);
+    font-size: 14px;
+    color: var(--gray-700);
 }
 
 .history-metric-value {
-    font-weight: 600;
+    font-weight: 700;
 }
 
 .history-metric-value-bold {
@@ -106,18 +105,18 @@
 /* 走行距離・体重など、そのカードの主役になる数値 */
 .history-metric-value-lg {
     font-weight: 700;
-    font-size: 1.2rem;
-    color: var(--color-primary);
+    font-size: 20px;
+    color: var(--key-900);
 }
 
 .history-metric-total {
     font-weight: 700;
-    color: var(--color-primary);
+    color: var(--key-900);
 }
 
 .history-metric-unit {
-    font-size: 0.85rem;
-    font-weight: normal;
+    font-size: 14px;
+    font-weight: 400;
 }
 
 /* 数値を横並びに並べる行 */
@@ -129,7 +128,8 @@
 
 .cardio-history-value-row {
     display: flex;
-    gap: 2rem;
+    flex-wrap: wrap;
+    gap: 1rem 2rem;
     margin-top: 1rem;
 }
 
@@ -153,17 +153,18 @@
 /* カロリー収支履歴カード: 摂取/消費/収支を横並びで表示 */
 .calorie-balance-value-row {
     display: flex;
-    gap: 1.5rem;
+    gap: 1rem 1.5rem;
     flex-wrap: wrap;
     margin-top: 1rem;
 }
 
+/* 収支は符号(+/-)でも示しているので、色は補助 */
 .calorie-balance-value-row .value-positive {
-    color: var(--color-primary);
+    color: var(--ok);
 }
 
 .calorie-balance-value-row .value-negative {
-    color: var(--color-danger);
+    color: var(--crit);
 }
 
 .history-list-header {
@@ -176,9 +177,7 @@
 }
 
 .history-list-header h3 {
-    font-family: var(--font-display);
-    font-size: 1.2rem;
-    font-weight: 600;
+    font-size: 20px;
 }
 
 .history-cards-container {
@@ -190,7 +189,7 @@
 /* Meal History Card: 修正フォームの4項目(朝食/昼食/夕食/間食)グリッド */
 .meal-history-edit-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
     gap: 0.75rem;
 }
 
@@ -198,24 +197,25 @@
     margin: 0;
 }
 
-/* Workout History Card */
+/* Workout History Card。左の太線は部位の目印(色の値はDADSの各色相の900番) */
 .workout-history-card {
-    border-left: 4px solid var(--color-primary);
+    border-left: 4px solid var(--key-900);
 }
 
-.workout-history-card.chest { border-left-color: #f87171; }
-.workout-history-card.back { border-left-color: #60a5fa; }
-.workout-history-card.shoulders { border-left-color: #fbbf24; }
-.workout-history-card.arms { border-left-color: #a78bfa; }
-.workout-history-card.legs { border-left-color: #34d399; }
-.workout-history-card.core { border-left-color: #22d3ee; }
-.workout-history-card.cardio { border-left-color: #ec4899; }
-.workout-history-card.other { border-left-color: #94a3b8; }
+.workout-history-card.chest { border-left-color: #ce0000; }     /* red-900 */
+.workout-history-card.back { border-left-color: #0017c1; }      /* blue-900 */
+.workout-history-card.shoulders { border-left-color: #927200; } /* yellow-900 */
+.workout-history-card.arms { border-left-color: #5109ad; }      /* purple-900 */
+.workout-history-card.legs { border-left-color: #115a36; }      /* green-900 */
+.workout-history-card.core { border-left-color: #006f83; }      /* cyan-900 */
+.workout-history-card.cardio { border-left-color: #8b008b; }    /* magenta-900 */
+.workout-history-card.other { border-left-color: var(--gray-600); }
 
 .history-card-header {
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
+    gap: 0.75rem;
     margin-bottom: 1rem;
 }
 
@@ -223,52 +223,58 @@
     display: flex;
     flex-direction: column;
     gap: 0.25rem;
+    min-width: 0;
 }
 
 .history-title-row {
     display: flex;
     align-items: center;
-    gap: 0.75rem;
+    gap: 0.5rem;
     flex-wrap: wrap;
 }
 
 .history-title-row h4 {
-    font-family: var(--font-display);
-    font-size: 1.25rem;
-    font-weight: 700;
-    letter-spacing: -0.015em;
+    font-size: 20px;
 }
 
+/* 種類のタグはDADSのチップラベル(灰): 枠 gray-700 / 文字 gray-800 / 地 gray-50 */
 .category-tag {
-    font-size: 0.75rem;
-    font-weight: 600;
-    padding: 0.2rem 0.6rem;
-    border-radius: 20px;
-    background-color: rgba(255, 255, 255, 0.08);
+    font-size: 14px;
+    font-weight: 700;
+    line-height: 1.5;
+    padding: 1px 7px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--gray-700);
+    color: var(--gray-800);
+    background-color: var(--gray-50);
 }
 
-/* 有酸素カードの「有酸素」タグ。以前は #86ac41 直書きでパレットA固定だった */
+/* 有酸素カードの「有酸素」タグはチップラベル(青) */
 .category-tag-cardio {
-    background-color: var(--color-primary);
-    color: #fff;
+    border-color: #264af4; /* blue-700 */
+    color: #0031d8;        /* blue-800 */
+    background-color: var(--key-50);
 }
 
 .history-date-row {
     display: flex;
     align-items: center;
     gap: 0.4rem;
-    font-size: 0.85rem;
-    color: var(--text-secondary);
+    font-size: 14px;
+    color: var(--gray-700);
 }
 
-.history-date-row i {
-    width: 14px;
-    height: 14px;
+.history-date-row :is(i, svg) {
+    width: 16px;
+    height: 16px;
 }
 
+/* アイコンボタンは当たり判定を44pxに広げている(見た目は32px)。間隔が12px未満だと
+   隣どうしの判定が重なり、「編集」の端を押して「削除」が反応してしまう */
 .history-actions {
     display: flex;
-    gap: 0.5rem;
+    gap: 0.75rem;
+    flex-shrink: 0;
 }
 
 .history-impression {
@@ -276,8 +282,8 @@
     border: 1px solid var(--border-color);
     border-radius: var(--radius-sm);
     padding: 0.75rem 1rem;
-    font-size: 0.9rem;
-    line-height: 1.5;
+    font-size: 16px;
+    line-height: 1.7;
     margin-bottom: 1.25rem;
 }
 
@@ -285,29 +291,27 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 28px;
-    height: 28px;
+    width: 32px;
+    height: 32px;
     border-radius: 50%;
-    background-color: rgba(255, 255, 255, 0.05);
-    font-size: 1.1rem;
-    margin-right: 0.5rem;
+    background-color: var(--gray-100);
+    font-size: 18px;
+    flex-shrink: 0;
 }
 
 .history-exercises-title {
-    font-size: 0.85rem;
-    font-weight: 600;
-    color: var(--text-muted);
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--gray-800);
     margin-bottom: 0.75rem;
     display: flex;
     align-items: center;
     gap: 0.5rem;
 }
 
-.history-exercises-title i {
-    width: 14px;
-    height: 14px;
+.history-exercises-title :is(i, svg) {
+    width: 16px;
+    height: 16px;
 }
 
 .history-exercises-grid {
@@ -317,38 +321,42 @@
 }
 
 .history-exercise-box {
-    background-color: rgba(255, 255, 255, 0.02);
+    background-color: var(--gray-50);
     border: 1px solid var(--border-color);
-    border-radius: 8px;
+    border-radius: var(--radius-sm);
     padding: 0.75rem 1rem;
 }
 
 .history-exercise-name {
-    font-weight: 600;
-    font-size: 0.95rem;
+    font-weight: 700;
+    font-size: 16px;
     margin-bottom: 0.5rem;
-    color: var(--text-primary);
+    color: var(--gray-900);
 }
 
-/* 種目ごとの自己ベスト(全ワークアウト横断で最大重量を更新した記録)に付けるバッジ */
+/* 種目ごとの自己ベスト(全ワークアウト横断で最大重量を更新した記録)に付けるバッジ。
+   DADSのチップラベル(橙): 枠と文字 orange-900 / 地 orange-50 */
 .pr-badge {
     display: inline-block;
-    font-size: 0.7rem;
+    font-size: 14px;
     font-weight: 700;
-    color: var(--color-warning);
-    background: rgba(217, 160, 91, 0.12);
-    border: 1px solid rgba(217, 160, 91, 0.35);
-    border-radius: 10px;
-    padding: 0.1rem 0.5rem;
+    line-height: 1.5;
+    color: var(--warn);
+    background: var(--warn-bg);
+    border: 1px solid var(--warn);
+    border-radius: var(--radius-sm);
+    padding: 0 7px;
     vertical-align: middle;
 }
 
+/* セットの並びは密な表示なので Dns-14N(14px) */
 .history-sets-list {
-    font-size: 0.85rem;
-    color: var(--text-secondary);
+    font-size: 14px;
+    line-height: 1.7;
+    color: var(--gray-800);
     display: flex;
     flex-direction: column;
-    gap: 0.25rem;
+    gap: 0.125rem;
 }
 
 .history-set-item {
@@ -357,11 +365,12 @@
 }
 
 .history-set-detail {
-    font-family: var(--font-display);
-    font-weight: 500;
+    font-weight: 400;
+    font-variant-numeric: tabular-nums;
 }
 
-/* サブナビ（筋トレ/有酸素/体重のセグメントコントロール） */
+/* サブナビ(筋トレ/有酸素/体重…の切り替え)。アウトラインボタン(sm)を並べ、
+   選択中だけ塗りにする(色だけでなく塗り/白抜きの形で区別できる) */
 .history-sub-tabs {
     display: flex;
     gap: 0.5rem;
@@ -370,16 +379,17 @@
 }
 
 .history-sub-tab-btn {
-    padding: 0.5rem 1rem;
-    border-radius: 8px;
-    background-color: rgba(255, 255, 255, 0.05);
-    border-color: var(--border-color);
-    color: var(--text-primary);
+    border: 1px solid var(--key-900);
+    background-color: var(--white);
+    color: var(--key-900);
 }
 
-.history-sub-tab-btn:hover {
-    background-color: rgba(255, 255, 255, 0.1);
-    border-color: rgba(255, 255, 255, 0.18);
+@media (hover: hover) {
+    .history-sub-tab-btn:not(.active):hover {
+        background-color: var(--key-200);
+        color: var(--key-1000);
+        text-decoration: underline;
+    }
 }
 
 .history-sub-tab-btn:active {
@@ -388,10 +398,9 @@
 }
 
 .history-sub-tab-btn.active {
-    background: var(--primary-gradient);
-    color: #fff;
-    box-shadow: 0 4px 15px color-mix(in srgb, var(--color-primary) 30%, transparent);
-    border-color: transparent;
+    background-color: var(--key-900);
+    border-color: var(--key-900);
+    color: var(--white);
 }
 
 } /* end @layer pages (history) */

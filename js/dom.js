@@ -4,8 +4,6 @@
 const DOM = {
     navItems: document.querySelectorAll('.nav-item'),
     tabContents: document.querySelectorAll('.tab-content'),
-    themeToggleBtn: document.getElementById('theme-toggle-btn'),
-    mobileThemeToggleBtn: document.getElementById('mobile-theme-toggle-btn'),
     greetingText: document.getElementById('greeting-text'),
     dateText: document.getElementById('date-text'),
     streakCount: document.getElementById('streak-count'),

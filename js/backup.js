@@ -1,17 +1,7 @@
-// FITFLOW - 同期と設定タブ: テーマ選択の配線 + JSONエクスポート/インポート/マージ/初期化
+// FITFLOW - 同期と設定タブ: JSONエクスポート/インポート/マージ/初期化
 // メンテナンスカロリー設定の配線はダッシュボードに移設したためjs/dashboard.jsのinitDashboardControls()にある。
 
 function initSettingsControls() {
-    // Theme select buttons click events
-    ['A', 'B', 'C', 'D'].forEach(themeId => {
-        const btn = document.getElementById('theme-btn-' + themeId);
-        if (btn) {
-            btn.addEventListener('click', () => {
-                setThemePalette(themeId);
-            });
-        }
-    });
-
     if (DOM.sheetsUrlInput) {
         DOM.sheetsUrlInput.value = state.sheetsUrl;
     }

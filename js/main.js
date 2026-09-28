@@ -5,7 +5,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // 一回限りのデータ移行は、画面描画・クラウド同期より先に済ませる
     // (移行前の古いデータで描画・アップロードしてしまわないように)
     runOneTimeMigrations();
-    initTheme();
+    // グラフを描く前に、書体と最小文字サイズ(DADS)を Chart.js の既定に入れておく
+    applyChartDefaults();
     initNavigation();
     initDateTexts();
     initCalendarControls();

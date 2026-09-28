@@ -443,9 +443,9 @@ function renderWeightChart() {
         }
     }
 
-    const colorPrimary = getComputedStyle(document.documentElement).getPropertyValue('--color-primary').trim() || '#86ac41';
-    const colorSecondary = getComputedStyle(document.documentElement).getPropertyValue('--color-secondary').trim() || '#7da3a1';
-    const colorWarning = getComputedStyle(document.documentElement).getPropertyValue('--color-warning').trim() || '#d9a05b';
+    const colorPrimary = getComputedStyle(document.documentElement).getPropertyValue('--color-primary').trim() || '#0017c1';
+    const colorSecondary = getComputedStyle(document.documentElement).getPropertyValue('--color-secondary').trim() || '#4d4d4d';
+    const colorWarning = getComputedStyle(document.documentElement).getPropertyValue('--color-warning').trim() || '#ac3e00';
 
     if (state.charts.weight) {
         try { state.charts.weight.destroy(); } catch(e){}
@@ -528,7 +528,7 @@ function renderWeightChart() {
                 legend: {
                     display: true,
                     position: 'top',
-                    labels: { color: theme.text, font: { size: 10 } }
+                    labels: { color: theme.text }
                 },
                 tooltip: {
                     callbacks: {
@@ -543,11 +543,12 @@ function renderWeightChart() {
             scales: {
                 x: {
                     grid: { display: false },
-                    ticks: { color: theme.text, font: { size: 9 } }
+                    // 斜めの文字は読みにくいので横書きのまま、重なる分は間引く
+                    ticks: { color: theme.text, maxRotation: 0, autoSkip: true }
                 },
                 y: {
                     grid: { color: theme.grid },
-                    ticks: { color: theme.text, font: { size: 9 } },
+                    ticks: { color: theme.text },
                     beginAtZero: false
                 }
             }
@@ -618,7 +619,7 @@ function renderCalorieChart() {
                 {
                     label: '総消費（メンテナンス＋運動）',
                     data: totalExpenditure,
-                    backgroundColor: getComputedStyle(document.documentElement).getPropertyValue('--color-primary').trim() || '#86ac41',
+                    backgroundColor: getComputedStyle(document.documentElement).getPropertyValue('--color-primary').trim() || '#0017c1',
                     borderRadius: 4,
                     barThickness: 16
                 },
@@ -626,7 +627,7 @@ function renderCalorieChart() {
                     label: 'メンテナンス基準',
                     data: maintenanceLimit,
                     type: 'line',
-                    borderColor: getComputedStyle(document.documentElement).getPropertyValue('--color-secondary').trim() || '#7da3a1',
+                    borderColor: getComputedStyle(document.documentElement).getPropertyValue('--color-secondary').trim() || '#4d4d4d',
                     borderWidth: 2,
                     borderDash: [5, 5],
                     fill: false,
@@ -637,7 +638,7 @@ function renderCalorieChart() {
                     label: '摂取カロリー（食事記録）',
                     data: intakeCalories,
                     type: 'line',
-                    borderColor: getComputedStyle(document.documentElement).getPropertyValue('--color-warning').trim() || '#d9a05b',
+                    borderColor: getComputedStyle(document.documentElement).getPropertyValue('--color-warning').trim() || '#ac3e00',
                     backgroundColor: 'transparent',
                     borderWidth: 2,
                     fill: false,
@@ -653,17 +654,17 @@ function renderCalorieChart() {
             plugins: {
                 legend: {
                     position: 'top',
-                    labels: { color: theme.text, font: { size: 10 } }
+                    labels: { color: theme.text }
                 }
             },
             scales: {
                 x: {
                     grid: { display: false },
-                    ticks: { color: theme.text, font: { size: 9 } }
+                    ticks: { color: theme.text }
                 },
                 y: {
                     grid: { color: theme.grid },
-                    ticks: { color: theme.text, font: { size: 9 } },
+                    ticks: { color: theme.text },
                     beginAtZero: true
                 }
             }

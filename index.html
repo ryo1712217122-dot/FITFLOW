@@ -7,7 +7,8 @@
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&family=M+PLUS+1p:wght@400;500;700;800&display=swap" rel="stylesheet">
+    <!-- 書体はデジタル庁デザインシステム(DADS)に合わせ Noto Sans JP の 400 / 700 だけを読む -->
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700&family=Noto+Sans+Mono:wght@400;700&display=swap" rel="stylesheet">
     <!-- Chart.js / Lucide Icons
          CDN直読みはやめてバージョン固定のファイルをvendor/に同梱している。
          (CDN側のメジャー更新・改ざん・オフライン(ジム)での全滅を避けるため。
@@ -16,17 +17,17 @@
     <script src="vendor/lucide-0.469.0.min.js"></script>
     <!-- CSSはカスケードレイヤーで管理。layers.cssの宣言順が優先度を決めるため、
          必ずこれを他のどのスタイルシートよりも先に読み込むこと（<link>の物理的な順番には依存しない）。 -->
-    <link rel="stylesheet" href="css/layers.css?v=1.24.2">
-    <link rel="stylesheet" href="css/tokens.css?v=1.24.2">
-    <link rel="stylesheet" href="css/base.css?v=1.24.2">
-    <link rel="stylesheet" href="css/layout.css?v=1.24.2">
-    <link rel="stylesheet" href="css/components.css?v=1.24.2">
-    <link rel="stylesheet" href="css/pages/record.css?v=1.24.2">
-    <link rel="stylesheet" href="css/pages/dashboard.css?v=1.24.2">
-    <link rel="stylesheet" href="css/pages/plan.css?v=1.24.2">
-    <link rel="stylesheet" href="css/pages/history.css?v=1.24.2">
-    <link rel="stylesheet" href="css/pages/settings.css?v=1.24.2">
-    <link rel="stylesheet" href="css/responsive.css?v=1.24.2">
+    <link rel="stylesheet" href="css/layers.css?v=1.25.0">
+    <link rel="stylesheet" href="css/tokens.css?v=1.25.0">
+    <link rel="stylesheet" href="css/base.css?v=1.25.0">
+    <link rel="stylesheet" href="css/layout.css?v=1.25.0">
+    <link rel="stylesheet" href="css/components.css?v=1.25.0">
+    <link rel="stylesheet" href="css/pages/record.css?v=1.25.0">
+    <link rel="stylesheet" href="css/pages/dashboard.css?v=1.25.0">
+    <link rel="stylesheet" href="css/pages/plan.css?v=1.25.0">
+    <link rel="stylesheet" href="css/pages/history.css?v=1.25.0">
+    <link rel="stylesheet" href="css/pages/settings.css?v=1.25.0">
+    <link rel="stylesheet" href="css/responsive.css?v=1.25.0">
 </head>
 <body>
     <div class="app-container">
@@ -38,7 +39,7 @@
                 </div>
                 <div class="brand-text">
                     <h1>FITFLOW</h1>
-                    <span class="app-version">v1.24.2</span>
+                    <span class="app-version">v1.25.0</span>
                 </div>
             </div>
 
@@ -49,29 +50,21 @@
                 </a>
                 <a href="#analytics" class="nav-item" data-tab="analytics">
                     <i data-lucide="layout-dashboard"></i>
-                    <span>ダッシュボード</span>
+                    <span>ダッシュ<wbr>ボード</span>
                 </a>
                 <a href="#plan" class="nav-item" data-tab="plan">
                     <i data-lucide="target"></i>
-                    <span>最適化計画</span>
+                    <span>最適化<wbr>計画</span>
                 </a>
                 <a href="#history" class="nav-item" data-tab="history">
                     <i data-lucide="history"></i>
-                    <span>履歴リスト</span>
+                    <span>履歴<wbr>リスト</span>
                 </a>
                 <a href="#settings" class="nav-item" data-tab="settings">
                     <i data-lucide="settings"></i>
-                    <span>同期と設定</span>
+                    <span>同期と<wbr>設定</span>
                 </a>
             </nav>
-
-            <div class="sidebar-footer">
-                <div class="theme-toggle" id="theme-toggle-btn">
-                    <i data-lucide="moon" class="dark-icon"></i>
-                    <i data-lucide="sun" class="light-icon"></i>
-                    <span>テーマ切り替え</span>
-                </div>
-            </div>
         </aside>
 
         <!-- Main Content Area -->
@@ -79,7 +72,7 @@
             <!-- Top bar -->
             <header class="top-bar">
                 <div class="welcome">
-                    <h2 id="greeting-text">こんにちは！<span class="app-version-badge">v1.24.2</span></h2>
+                    <h2 id="greeting-text">こんにちは！<span class="app-version-badge">v1.25.0</span></h2>
                     <p id="date-text">2026年7月3日 金曜日</p>
                 </div>
                 <div class="header-right-controls">
@@ -89,10 +82,6 @@
                             <span class="stat-value" id="streak-count">0 日</span>
                         </div>
                     </div>
-                    <button class="btn-icon theme-toggle-mobile" id="mobile-theme-toggle-btn" title="テーマ切り替え">
-                        <i data-lucide="moon" class="dark-icon"></i>
-                        <i data-lucide="sun" class="light-icon"></i>
-                    </button>
                 </div>
             </header>
 
@@ -763,38 +752,6 @@
             <!-- Settings Tab: 外観 / データ / ヘルプ -->
             <section id="settings" class="tab-content">
                 <div class="settings-grid">
-                    <div class="settings-group-heading">外観</div>
-                    <!-- Color Theme Settings Card -->
-                    <div class="card settings-card">
-                        <div class="card-header">
-                            <div class="header-title">
-                                <i data-lucide="palette"></i>
-                                <h3>カラーテーマの選択</h3>
-                            </div>
-                        </div>
-                        <div class="card-body">
-                            <p class="settings-desc">アプリのアクセントカラーと全体の色調を選択します。</p>
-                            <div class="theme-select-grid">
-                                <button class="theme-select-btn" id="theme-btn-A" type="button">
-                                    <span class="theme-select-name" style="color: #86ac41;">🌳 フォレスト</span>
-                                    <span class="theme-select-desc">オリーブ＆セージ</span>
-                                </button>
-                                <button class="theme-select-btn" id="theme-btn-B" type="button">
-                                    <span class="theme-select-name" style="color: #00a8ff;">🌌 ディープオーシャン</span>
-                                    <span class="theme-select-desc">ネイビー＆シアン</span>
-                                </button>
-                                <button class="theme-select-btn" id="theme-btn-C" type="button">
-                                    <span class="theme-select-name" style="color: #e05a47;">🌇 サンセット</span>
-                                    <span class="theme-select-desc">クリムゾン＆ゴールド</span>
-                                </button>
-                                <button class="theme-select-btn" id="theme-btn-D" type="button">
-                                    <span class="theme-select-name" style="color: #9b5de5;">🔮 アメジスト</span>
-                                    <span class="theme-select-desc">パープル＆ピンク</span>
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-
                     <div class="settings-group-heading">データ</div>
                     <!-- Google Sheets Cloud Sync Card -->
                     <div class="card settings-card">
@@ -929,26 +886,25 @@
     </div>
 
     <!-- lib/data-utils.js: DOM非依存の純粋関数（node --testでもテストされる）。他のどのjs/*.jsよりも先に読み込む -->
-    <script src="lib/data-utils.js?v=1.24.2"></script>
+    <script src="lib/data-utils.js?v=1.25.0"></script>
     <!-- js/*.js: すべてグローバルスコープに関数を定義するクラシックscript。
          ESモジュールにはしていない（index.htmlをダブルクリックしてfile://で開いても動作させるため）。
          依存関係は読み込み順で解決するので、この順番を変えないこと。 -->
-    <script src="js/config.js?v=1.24.2"></script>
-    <script src="js/state.js?v=1.24.2"></script>
-    <script src="js/utils.js?v=1.24.2"></script>
-    <script src="js/dom.js?v=1.24.2"></script>
-    <script src="js/notifications.js?v=1.24.2"></script>
-    <script src="js/theme.js?v=1.24.2"></script>
-    <script src="js/navigation.js?v=1.24.2"></script>
-    <script src="js/dashboard.js?v=1.24.2"></script>
-    <script src="js/record-form.js?v=1.24.2"></script>
-    <script src="js/history-workouts.js?v=1.24.2"></script>
-    <script src="js/history-logs.js?v=1.24.2"></script>
-    <script src="js/history-nav.js?v=1.24.2"></script>
-    <script src="js/day-summary.js?v=1.24.2"></script>
-    <script src="js/plan.js?v=1.24.2"></script>
-    <script src="js/sync.js?v=1.24.2"></script>
-    <script src="js/backup.js?v=1.24.2"></script>
-    <script src="js/main.js?v=1.24.2"></script>
+    <script src="js/config.js?v=1.25.0"></script>
+    <script src="js/state.js?v=1.25.0"></script>
+    <script src="js/utils.js?v=1.25.0"></script>
+    <script src="js/dom.js?v=1.25.0"></script>
+    <script src="js/notifications.js?v=1.25.0"></script>
+    <script src="js/navigation.js?v=1.25.0"></script>
+    <script src="js/dashboard.js?v=1.25.0"></script>
+    <script src="js/record-form.js?v=1.25.0"></script>
+    <script src="js/history-workouts.js?v=1.25.0"></script>
+    <script src="js/history-logs.js?v=1.25.0"></script>
+    <script src="js/history-nav.js?v=1.25.0"></script>
+    <script src="js/day-summary.js?v=1.25.0"></script>
+    <script src="js/plan.js?v=1.25.0"></script>
+    <script src="js/sync.js?v=1.25.0"></script>
+    <script src="js/backup.js?v=1.25.0"></script>
+    <script src="js/main.js?v=1.25.0"></script>
 </body>
 </html>

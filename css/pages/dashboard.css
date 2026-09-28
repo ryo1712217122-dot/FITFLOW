@@ -1,18 +1,27 @@
 @layer pages {
 /* 体重推移グラフの「直近7日間で-0.8kg」サマリー。日々の変動ノイズに埋もれがちな
-   トレンドを数値でも見せる（減少=緑、増加=warning色、変化なし=通常色） */
+   トレンドを数値でも見せる（減少=成功色、増加=警告色、変化なし=通常色）。
+   増減は符号(+/-)の文字でも示しているので、色だけに頼っていない */
 .weight-change-summary {
-    font-size: 0.8rem;
+    flex-basis: 100%;
+    font-size: 16px;
     font-weight: 700;
-    color: var(--text-secondary);
+    color: var(--gray-800);
 }
 
 .weight-change-summary.weight-change-down {
-    color: var(--color-primary);
+    color: var(--ok);
 }
 
 .weight-change-summary.weight-change-up {
-    color: var(--color-warning);
+    color: var(--warn);
+}
+
+/* 飲み会の影響は補足なので本文の太さに落とす */
+.weight-change-summary.drinking-impact-summary {
+    font-size: 14px;
+    font-weight: 400;
+    color: var(--gray-700);
 }
 
 /* Stat Cards */
@@ -25,97 +34,86 @@
 .stat-card .card-icon {
     width: 56px;
     height: 56px;
-    border-radius: 12px;
+    border-radius: var(--radius-sm);
     background-color: var(--bg-icon-neutral);
-    border: 1px solid var(--border-color);
     display: flex;
     align-items: center;
     justify-content: center;
-    color: var(--color-primary);
-    transition: var(--transition);
+    color: var(--key-900);
+    flex-shrink: 0;
 }
 
-.stat-card:hover .card-icon {
-    background: var(--primary-gradient);
-    color: #fff;
-    border-color: transparent;
-    transform: scale(1.05);
-}
-
-.stat-card .card-icon i {
-    width: 26px;
-    height: 26px;
+.stat-card .card-icon :is(i, svg) {
+    width: 28px;
+    height: 28px;
 }
 
 .stat-card .card-info h3 {
-    font-size: 0.85rem;
-    color: var(--text-secondary);
-    font-weight: 500;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
+    font-size: 16px;
+    color: var(--gray-800);
     margin-bottom: 0.25rem;
 }
 
+/* 大きな数値は Std-36B-140 */
 .stat-card .big-number {
-    font-family: var(--font-display);
-    font-size: 2rem;
+    font-size: 36px;
     font-weight: 700;
-    letter-spacing: -0.02em;
-    line-height: 1;
-    margin-bottom: 0.25rem;
+    line-height: 1.4;
+    letter-spacing: 0.01em;
 }
 
 .stat-card .big-number .unit {
-    font-size: 1rem;
-    color: var(--text-secondary);
+    font-size: 16px;
+    color: var(--gray-700);
     font-weight: 400;
 }
 
 .stat-card .stat-desc {
-    font-size: 0.75rem;
-    color: var(--text-muted);
+    font-size: 14px;
+    color: var(--gray-700);
 }
 
 /* Weekly Running Distance Goal */
 .weekly-run-goal-card .card-body {
     display: flex;
     flex-direction: column;
-    gap: 0.6rem;
+    gap: 0.75rem;
 }
 
 .weekly-run-goal-value {
-    font-family: var(--font-display);
-    font-size: 1.75rem;
+    font-size: 36px;
     font-weight: 700;
-    letter-spacing: -0.02em;
-    line-height: 1;
+    line-height: 1.4;
+    letter-spacing: 0.01em;
 }
 
 .weekly-run-goal-value .unit {
-    font-size: 1rem;
+    font-size: 16px;
     font-weight: 400;
-    color: var(--text-secondary);
+    color: var(--gray-700);
 }
 
 .weekly-run-goal-target {
-    font-size: 1rem;
-    font-weight: 500;
-    color: var(--text-secondary);
+    font-size: 16px;
+    font-weight: 400;
+    color: var(--gray-700);
     margin-left: 0.25rem;
 }
 
 .weekly-run-goal-card .stat-desc {
-    font-size: 0.75rem;
-    color: var(--text-muted);
+    font-size: 14px;
+    color: var(--gray-700);
 }
 
-/* Calendar Heatmap */
+/* Calendar Heatmap。
+   ラベルをDADSの最小14pxに上げたので、行の高さを確保するためにセルも16pxに広げている */
 .calendar-wrapper {
-    --calendar-cell-size: 15px;
+    --calendar-cell-size: 16px;
     --calendar-cell-gap: 4px;
     --calendar-weekday-col: 1.5rem;
+    --calendar-month-row: 24px;
     margin-top: 1rem;
-    background-color: var(--bg-wrapper);
+    background-color: var(--gray-50);
     border-radius: var(--radius-sm);
     padding: 1rem;
 }
@@ -146,13 +144,14 @@
 /* 曜日ラベル。全部出すと窮屈なので月・水・金だけ表示する(GitHubの草と同じ) */
 .calendar-weekday-labels {
     display: grid;
-    /* 月ラベルの行(高さ1rem)ぶん下げて、セルの行と揃える */
-    margin-top: 1rem;
-    grid-template-rows: repeat(7, var(--calendar-cell-size, 15px));
+    /* 月ラベルの行ぶん下げて、セルの行と揃える */
+    margin-top: var(--calendar-month-row, 24px);
+    grid-template-rows: repeat(7, var(--calendar-cell-size, 16px));
     gap: var(--calendar-cell-gap, 4px);
-    font-size: 0.65rem;
-    line-height: var(--calendar-cell-size, 15px);
-    color: var(--text-muted);
+    font-size: 14px;
+    line-height: var(--calendar-cell-size, 16px);
+    letter-spacing: 0;
+    color: var(--gray-700);
     text-align: right;
     flex: 0 0 var(--calendar-weekday-col, 1.5rem);
     width: var(--calendar-weekday-col, 1.5rem);
@@ -164,11 +163,13 @@
     display: grid;
     width: max-content;
     grid-auto-flow: column;
-    grid-auto-columns: var(--calendar-cell-size, 15px);
+    grid-auto-columns: var(--calendar-cell-size, 16px);
     gap: var(--calendar-cell-gap, 4px);
-    height: 1rem;
-    font-size: 0.65rem;
-    color: var(--text-secondary);
+    height: var(--calendar-month-row, 24px);
+    font-size: 14px;
+    line-height: 1.3;
+    letter-spacing: 0;
+    color: var(--gray-800);
 }
 
 .calendar-month-label {
@@ -182,8 +183,8 @@
 }
 
 .calendar-range-label {
-    font-size: 0.75rem;
-    color: var(--text-muted);
+    font-size: 14px;
+    color: var(--gray-700);
 }
 
 .calendar-grid-days {
@@ -191,25 +192,32 @@
     width: max-content;
     /* 上から日〜土に流し、埋まったら次の列(＝次の週)へ */
     grid-auto-flow: column;
-    grid-template-rows: repeat(7, var(--calendar-cell-size, 15px));
-    grid-auto-columns: var(--calendar-cell-size, 15px);
+    grid-template-rows: repeat(7, var(--calendar-cell-size, 16px));
+    grid-auto-columns: var(--calendar-cell-size, 16px);
     gap: var(--calendar-cell-gap, 4px);
 }
 
+/* 「運動した日」が一目で分かることが目的なので、状態は2つだけ塗る。
+   区別は「濃さ」ではなく「形」で付ける:
+     トレーニングした日 = キーカラーのべた塗り
+     走っただけの日     = 白地にキーカラーの太い輪郭
+     運動していない日   = 灰のべた塗り(背景側へ沈める)
+   濃淡の差だけだと隣接セルで見分けにくいが、べた塗りと輪郭なら一目で違いが分かる。 */
 .calendar-day {
-    width: var(--calendar-cell-size, 15px);
-    height: var(--calendar-cell-size, 15px);
-    border-radius: 4px;
-    background-color: rgba(255, 255, 255, 0.04);
+    width: var(--calendar-cell-size, 16px);
+    height: var(--calendar-cell-size, 16px);
+    border-radius: 3px;
+    background-color: var(--gray-200);
     border: 1px solid transparent;
     cursor: pointer;
     transition: var(--transition);
     position: relative;
 }
 
-.calendar-day:hover {
-    background-color: rgba(255, 255, 255, 0.06);
-    color: var(--text-primary);
+@media (hover: hover) {
+    .calendar-day:not(.empty):hover {
+        border-color: var(--black);
+    }
 }
 
 .calendar-day:not(.empty):active {
@@ -225,57 +233,21 @@
     pointer-events: none;
 }
 
-/* 本日の枠は破線にする。「走っただけの日」を実線リングで表すようにしたため、
-   実線のままだと運動した日と紛らわしい */
-.calendar-day.today {
-    border: 1px solid var(--color-primary);
-}
-
-/* 「運動した日」が一目で分かることが目的なので、状態は2つだけ塗る。
-   以前は濃度3段階(筋トレ=濃/有酸素=中/体重のみ=薄)だったが、体重はほぼ毎日測るため
-   薄い色が全面に広がり、運動した日とのコントラストが落ちていた。
-
-   区別は「濃さ」ではなく「形」で付ける:
-     筋トレした日   = べた塗り(グラデーション)＋白文字＋影
-     走っただけの日 = 塗りなし＋太いリング＋パレット色の文字
-     運動していない日 = 塗りも枠もなく、文字も落とす
-   濃淡の差だけだと隣接セルで見分けにくいが、べた塗りと輪郭なら一目で違いが分かる。 */
 .calendar-day.cal-intensity-strong {
-    background: var(--primary-gradient);
-    border-color: transparent;
-    box-shadow: 0 2px 10px color-mix(in srgb, var(--color-primary) 35%, transparent);
+    background-color: var(--key-900);
+    border-color: var(--key-900);
 }
 
 .calendar-day.cal-intensity-medium {
-    background: color-mix(in srgb, var(--color-primary) 25%, transparent);
-    border: 1px solid var(--color-primary);
+    background-color: var(--white);
+    border: 3px solid var(--key-900);
 }
 
-/* 運動していない日。塗りを完全に消し、文字も落として背景側へ沈める */
-.calendar-day:not(.empty):not(.cal-intensity-strong):not(.cal-intensity-medium) {
-    background-color: rgba(255, 255, 255, 0.05);
-    opacity: 0.7;
-}
-
-.calendar-day:not(.empty):not(.cal-intensity-strong):not(.cal-intensity-medium):hover {
-    background-color: rgba(255, 255, 255, 0.06);
-    opacity: 1;
-}
-
-/* 本日は運動の有無に関わらず分かるようにする。塗りのある日は白い内側リング、
-   塗りのない日は通常どおりパレット色の枠で示す */
+/* 本日は運動の有無に関わらず分かるよう、セルの外側に黒の枠を付ける
+   (キーカラーの輪郭=走っただけの日 と取り違えないよう、色も形も変える) */
 .calendar-day.today {
-    opacity: 1;
-}
-
-.calendar-day.cal-intensity-strong.today {
-    box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.9),
-                0 2px 10px color-mix(in srgb, var(--color-primary) 35%, transparent);
-}
-
-.calendar-day.cal-intensity-medium.today {
-    border-color: var(--border-focus);
-    box-shadow: inset 0 0 0 1px var(--border-focus);
+    outline: 2px solid var(--black);
+    outline-offset: 1px;
 }
 
 .calendar-legend {
@@ -284,8 +256,8 @@
     justify-content: flex-end;
     gap: 0.5rem 1.5rem;
     margin-top: 1rem;
-    font-size: 0.75rem;
-    color: var(--text-secondary);
+    font-size: 14px;
+    color: var(--gray-800);
 }
 
 .legend-item {
@@ -295,54 +267,79 @@
 }
 
 .legend-item .dot {
-    width: 10px;
-    height: 10px;
+    width: 14px;
+    height: 14px;
     border-radius: 3px;
+    flex-shrink: 0;
 }
 
-/* 凡例のドットもカレンダーのセルと同じ「べた塗り / リング / 無地」で揃える */
+/* 凡例のドットもカレンダーのセルと同じ「べた塗り / 輪郭 / 灰」で揃える */
 .legend-item .dot.cal-strong {
-    background: var(--primary-gradient);
+    background-color: var(--key-900);
 }
 
 .legend-item .dot.cal-medium {
-    background: color-mix(in srgb, var(--color-primary) 25%, transparent);
-    border: 1px solid var(--color-primary);
+    background-color: var(--white);
+    border: 3px solid var(--key-900);
 }
 
 .legend-item .dot.cal-none {
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid transparent;
-    opacity: 0.7;
+    background-color: var(--gray-200);
 }
 
 .legend-item .dot.today {
-    border: 1px solid var(--color-primary);
+    background-color: var(--gray-200);
+    outline: 2px solid var(--black);
+    outline-offset: 1px;
 }
 
-/* 体重推移グラフの期間切替(1週間/1ヶ月)トグル */
+/* 2〜3択の切り替え(体重グラフの期間・食事の入力方法・TDEEの推定/実測で共用)。
+   DADSに「セグメント切替」は無いので、アウトラインボタン(sm)を連結した形にしている。
+   選択中は塗り、それ以外は白抜きなので、色だけでなく形でも区別できる */
 .chart-period-toggle {
-    display: flex;
-    gap: 4px;
-    background: color-mix(in srgb, var(--color-primary) 8%, transparent);
-    border-radius: 8px;
-    padding: 3px;
+    display: inline-flex;
+    border: 1px solid var(--key-900);
+    border-radius: 6px;
+    overflow: hidden;
+    flex-shrink: 0;
 }
 
 .chart-period-btn {
+    position: relative;
+    min-height: 36px;
+    padding: 2px 12px;
     border: none;
-    background: transparent;
-    color: var(--text-secondary);
-    font-size: 0.75rem;
-    font-weight: 600;
-    padding: 4px 10px;
-    border-radius: 6px;
+    background: var(--white);
+    color: var(--key-900);
+    font-family: var(--font-sans);
+    font-size: 16px;
+    font-weight: 700;
+    line-height: 1;
+    letter-spacing: 0.02em;
+    text-underline-offset: 3px;
     cursor: pointer;
     transition: var(--transition);
 }
 
-.chart-period-btn:hover {
-    color: var(--text-primary);
+/* 見た目は36pxでも、当たり判定は44pxに広げる(DADSの sm ボタンと同じ) */
+.chart-period-btn::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    margin: auto;
+    height: 44px;
+}
+
+.chart-period-btn + .chart-period-btn {
+    border-left: 1px solid var(--key-900);
+}
+
+@media (hover: hover) {
+    .chart-period-btn:not(.active):not([disabled]):hover {
+        background-color: var(--key-200);
+        color: var(--key-1000);
+        text-decoration: underline;
+    }
 }
 
 .chart-period-btn:active {
@@ -351,8 +348,8 @@
 }
 
 .chart-period-btn.active {
-    background: var(--color-primary);
-    color: #fff;
+    background: var(--key-900);
+    color: var(--white);
 }
 
 /* Calorie Balance Widget */
@@ -370,37 +367,38 @@
 }
 
 .calorie-summary-tile {
-    background-color: rgba(0, 0, 0, 0.15);
+    background-color: var(--gray-50);
     border: 1px solid var(--border-color);
     border-radius: var(--radius-sm);
-    padding: 0.75rem;
+    padding: 0.75rem 1rem;
     display: flex;
     flex-direction: column;
     gap: 0.25rem;
 }
 
 .calorie-summary-tile .tile-label {
-    font-size: 0.75rem;
-    color: var(--text-secondary);
-    font-weight: 500;
+    font-size: 14px;
+    line-height: 1.5;
+    color: var(--gray-800);
+    font-weight: 700;
 }
 
 .calorie-summary-tile .tile-value {
-    font-family: var(--font-display);
     font-weight: 700;
-    font-size: 1.25rem;
-    letter-spacing: -0.015em;
-    color: var(--color-primary);
+    font-size: 24px;
+    line-height: 1.4;
+    color: var(--key-900);
 }
 
 .calorie-summary-tile .tile-value .unit {
-    font-size: 0.8rem;
+    font-size: 14px;
     font-weight: 400;
-    color: var(--text-secondary);
+    color: var(--gray-700);
 }
 
+/* 収支が赤字(摂取超過)。値には符号(-)も付くので色だけの表示ではない */
 .calorie-summary-tile .tile-value-danger {
-    color: var(--color-danger);
+    color: var(--crit);
 }
 
 } /* end @layer pages (dashboard) */
