@@ -74,6 +74,8 @@ function updateDashboard() {
         DOM.currentMaintenanceKcal.innerHTML = `${state.maintenanceCalories} <span class="unit">kcal</span>`;
     }
 
+    updateTodayIntakeBudget(todayStr, todayMeal);
+
     // 4. Streaks
     const streak = calculateStreak(state.workouts);
     if (DOM.streakCount) DOM.streakCount.textContent = `${streak} 日`;
@@ -81,10 +83,127 @@ function updateDashboard() {
     // 4.5 週間ランニング目標の達成度
     updateWeeklyRunGoal(todayStr);
 
+    // 4.6 週のまとめ(今週と先週)
+    renderWeeklySummary(todayStr);
+
     // 5. Training Calendar & Charts
     renderCalendar();
     renderWeightChart();
     renderCalorieChart();
+}
+
+// 週のまとめ(v1.26.0)。今週(日曜〜今日)と先週を1枚の表で比べる。
+// 回数・ボリューム・距離は今週がまだ途中なので「差」を出さない(週の前半は必ずマイナスに
+// 見えてしまうため)。差を出すのは平均で比べられる体重と摂取だけ。
+// 差は独立した列にせず、今週の値の下に「先週比」として添える。4列にするとスマホ幅で
+// 差の列が横スクロールの先に隠れ、いちばん見たい体重の増減が見えなくなったため。
+function renderWeeklySummary(todayStr) {
+    const body = document.getElementById('weekly-summary-body');
+    const rangeEl = document.getElementById('weekly-summary-range');
+    if (!body) return;
+
+    const sum = computeWeeklySummary({
+        weightLogs: state.weightLogs, workouts: state.workouts,
+        cardioLogs: state.cardioLogs, mealLogs: state.mealLogs
+    }, todayStr);
+    if (!sum) { body.innerHTML = ''; return; }
+
+    const md = (d) => { const p = d.split('-'); return `${Number(p[1])}/${Number(p[2])}`; };
+    if (rangeEl) {
+        rangeEl.textContent = `今週 ${md(sum.thisWeek.from)}〜${md(sum.thisWeek.to)} ／ 先週 ${md(sum.lastWeek.from)}〜${md(sum.lastWeek.to)}`;
+    }
+
+    const num = (n) => Number(n).toLocaleString('ja-JP');
+    const none = '<span class="weekly-summary-none">記録なし</span>';
+    const signed = (v, digits = 0) => (v > 0 ? '+' : v < 0 ? '−' : '±') + Math.abs(v).toFixed(digits);
+
+    const weightCell = (w) => w.weightAvg === null ? none
+        : `${w.weightAvg.toFixed(1)} kg<span class="weekly-summary-sub">${w.weightCount}回測定</span>`;
+    const intakeCell = (w) => w.intakeAvg === null ? none
+        : `${num(w.intakeAvg)} kcal<span class="weekly-summary-sub">${w.mealDays}日分</span>`;
+
+    // 体重の差は「減った=成功色 / 増えた=警告色」。符号も付けるので色だけの表示ではない
+    let weightDiff = '';
+    if (sum.weightChange !== null) {
+        const cls = sum.weightChange < 0 ? 'is-down' : sum.weightChange > 0 ? 'is-up' : '';
+        weightDiff = `<span class="weekly-summary-diff ${cls}">先週比 ${signed(sum.weightChange, 1)}&nbsp;kg</span>`;
+    }
+    let intakeDiff = '';
+    if (sum.thisWeek.intakeAvg !== null && sum.lastWeek.intakeAvg !== null) {
+        intakeDiff = `<span class="weekly-summary-diff">先週比 ${signed(sum.thisWeek.intakeAvg - sum.lastWeek.intakeAvg)}&nbsp;kcal</span>`;
+    }
+
+    const rows = [
+        ['体重（週平均）', weightCell(sum.thisWeek) + weightDiff, weightCell(sum.lastWeek)],
+        ['筋トレ', `${sum.thisWeek.sessions}回`, `${sum.lastWeek.sessions}回`],
+        ['総ボリューム', `${num(sum.thisWeek.volume)} kg`, `${num(sum.lastWeek.volume)} kg`],
+        ['走行距離', `${sum.thisWeek.runKm.toFixed(1)} km`, `${sum.lastWeek.runKm.toFixed(1)} km`],
+        ['平均摂取', intakeCell(sum.thisWeek) + intakeDiff, intakeCell(sum.lastWeek)]
+    ];
+
+    const projection = typeof getTargetWeightProjection === 'function' ? getTargetWeightProjection() : null;
+    const targetHtml = projection
+        ? `<p class="weekly-summary-target">🎯 目標 ${projection.target.toFixed(1)}kg：${escapeHtml(describeTargetWeightProjection(projection))}</p>`
+        : '';
+
+    body.innerHTML = `
+        <div class="weekly-summary-table-wrap">
+            <table class="weekly-summary-table">
+                <thead>
+                    <tr>
+                        <th scope="col">項目</th>
+                        <th scope="col">今週</th>
+                        <th scope="col">先週</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${rows.map(r => `<tr><th scope="row">${r[0]}</th><td>${r[1]}</td><td>${r[2]}</td></tr>`).join('')}
+                </tbody>
+            </table>
+        </div>
+        <p class="weekly-summary-note">今週は日曜〜今日の途中経過なので、先週と比べているのは平均で比べられる体重と摂取だけです。摂取は食事を記録した日の平均で、今日（食べかけ）は含みません。</p>
+        ${targetHtml}
+    `;
+}
+
+// 今日あと何kcal食べられるか(v1.26.0)。目標は計画タブのシミュレーションと同じ値
+// (getPlanProjectionBasis の目標摂取3区分)を使い、画面によって目標が食い違わないようにする。
+// どの区分の日かはアプリからは分からないため、飲み会を記録した日だけイベント日、
+// それ以外は通常日を基準にし、他の区分で見た場合の残りも添える。
+function updateTodayIntakeBudget(todayStr, todayMeal) {
+    if (!DOM.todayIntakeRemaining) return;
+    const fmt = (n) => Math.abs(Math.round(n)).toLocaleString('ja-JP');
+    let budget = null;
+    try {
+        const sim = getPlanProjectionBasis().sim;
+        const isDrinkingDay = state.drinkingLogs.some(d => d.date === todayStr);
+        budget = computeTodayIntakeBudget(sim, todayMeal, isDrinkingDay);
+    } catch (e) {
+        console.error('今日の残りカロリーを計算できませんでした', e);
+    }
+
+    if (!budget) {
+        DOM.todayIntakeRemaining.innerHTML = `— <span class="unit">kcal</span>`;
+        DOM.todayIntakeRemaining.classList.remove('tile-value-danger');
+        if (DOM.todayIntakeRemainingDesc) DOM.todayIntakeRemainingDesc.textContent = '計画タブで減量ペースを選ぶと表示されます';
+        return;
+    }
+
+    const over = budget.remaining < 0;
+    // 超過は色だけでなく「超過」の文言と符号でも示す
+    DOM.todayIntakeRemaining.innerHTML = over
+        ? `${fmt(budget.remaining)} <span class="unit">kcal 超過</span>`
+        : `${fmt(budget.remaining)} <span class="unit">kcal</span>`;
+    DOM.todayIntakeRemaining.classList.toggle('tile-value-danger', over);
+
+    if (DOM.todayIntakeRemainingDesc) {
+        const others = budget.others
+            .map(o => `${o.label}なら${o.remaining < 0 ? `${fmt(o.remaining)}超過` : `あと${fmt(o.remaining)}`}`)
+            .join('・');
+        DOM.todayIntakeRemainingDesc.textContent =
+            `${budget.label}の目標 ${fmt(budget.target)} − 記録 ${fmt(budget.eaten)} kcal` +
+            (others ? `（${others}）` : '');
+    }
 }
 
 function calculateStreak(workouts) {

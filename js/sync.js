@@ -49,6 +49,15 @@ function scheduleSync(isSilent = false) {
 function triggerSync(isSilent = false) {
     if (!state.sheetsUrl || !state.sheetsUrl.trim()) return;
 
+    // オフライン(ジムの地下など)では送っても必ず失敗する。未送信の印(DIRTY_KEY)は
+    // saveDataAndSync で立っているので、オンラインに戻った時に main.js の online イベントで
+    // 自動送信される。ここで失敗させると「接続設定を確認してください」と設定を疑わせてしまう
+    if (navigator.onLine === false) {
+        localStorage.setItem(DIRTY_KEY, 'true');
+        if (!isSilent) showToast('オフラインです。記録は端末に保存済みで、オンラインに戻ったら自動でクラウドへ送ります');
+        return;
+    }
+
     if (isSyncing) {
         pendingSync = true;
         return;

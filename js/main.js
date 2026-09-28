@@ -54,4 +54,14 @@ document.addEventListener('DOMContentLoaded', () => {
     if (window.lucide) {
         lucide.createIcons();
     }
+
+    // オフラインでも開けるよう Service Worker を登録する(v1.26.0。方針は sw.js)。
+    // file:// で直接開いた場合など、使えない環境では何もしない(従来どおり動く)
+    if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('sw.js').catch(err => {
+                console.warn('Service Worker を登録できませんでした(オフラインでは開けません)', err);
+            });
+        });
+    }
 });

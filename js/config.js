@@ -118,6 +118,8 @@ const DEFAULT_PLAN_SETTINGS = {
     weightPlanStartDate: null,
     // シミュレーションで選択中の減量ペース(kg/月)。SIM_PACE_OPTIONSのいずれか
     targetPaceKgMonth: 2,
+    // 目標体重(kg)。null は未設定。今のペースで「いつ届くか」を計画タブと週のまとめに出す(v1.26.0)
+    targetWeight: null,
     // シミュレーションのTDEEをどちらから取るか: 'estimated'(推定式) / 'measured'(実測=食事記録と
     // 体重推移からの逆算)。'measured'選択中でもデータ不足時は推定式にフォールバックする
     tdeeSource: 'estimated',

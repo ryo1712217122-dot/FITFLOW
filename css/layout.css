@@ -236,6 +236,12 @@
     grid-column: span 2;
 }
 
+/* グリッドの項目は既定(min-width:auto)だと中身の最小幅まで広がり、幅320pxの画面で
+   カードごと右へ14pxはみ出していた。0にして列幅に収め、収まらない中身は中で折り返させる */
+.dashboard-grid > * {
+    min-width: 0;
+}
+
 /* App Version and Typography additions */
 .app-version {
     font-size: 14px;

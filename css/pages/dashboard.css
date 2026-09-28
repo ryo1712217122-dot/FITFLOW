@@ -24,6 +24,105 @@
     color: var(--gray-700);
 }
 
+/* 週のまとめ(v1.26.0)。ダッシュボードの横幅いっぱいに置く。
+   表はDADSの table: 見出し行は灰地・太字・黒の下線、データ行は gray-420 の区切り線 */
+.weekly-summary-card {
+    grid-column: 1 / -1;
+    min-width: 0;
+}
+
+.weekly-summary-range {
+    font-size: 14px;
+    color: var(--gray-700);
+}
+
+/* 狭い画面で列が潰れないよう、入り切らなければ表だけ横スクロールさせる */
+.weekly-summary-table-wrap {
+    overflow-x: auto;
+}
+
+.weekly-summary-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 16px;
+    font-variant-numeric: tabular-nums;
+}
+
+.weekly-summary-table th,
+.weekly-summary-table td {
+    padding: 0.5rem 0.75rem;
+    border-bottom: 1px solid var(--gray-420);
+    text-align: right;
+    vertical-align: top;
+}
+
+.weekly-summary-table thead th {
+    background: var(--gray-50);
+    font-weight: 700;
+    color: var(--gray-900);
+    border-bottom: 1px solid var(--gray-900);
+    white-space: nowrap;
+}
+
+.weekly-summary-table th:first-child {
+    text-align: left;
+}
+
+.weekly-summary-table tbody th {
+    font-weight: 700;
+    color: var(--gray-800);
+    white-space: nowrap;
+}
+
+.weekly-summary-table td {
+    white-space: nowrap;
+}
+
+/* 測定回数・記録日数は値の下に小さく添える */
+.weekly-summary-sub {
+    display: block;
+    font-size: 14px;
+    color: var(--gray-700);
+}
+
+.weekly-summary-none {
+    font-size: 14px;
+    color: var(--gray-700);
+}
+
+/* 先週比は今週の値の下に添える(独立した列にするとスマホで隠れるため) */
+.weekly-summary-diff {
+    display: block;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--gray-800);
+}
+
+.weekly-summary-diff.is-down {
+    color: var(--ok);
+}
+
+.weekly-summary-diff.is-up {
+    color: var(--warn);
+}
+
+.weekly-summary-note {
+    margin-top: 0.75rem;
+    font-size: 14px;
+    line-height: 1.7;
+    color: var(--gray-700);
+}
+
+.weekly-summary-target {
+    margin-top: 0.75rem;
+    padding: 0.5rem 0.75rem;
+    border-radius: var(--radius-sm);
+    background: var(--key-50);
+    font-size: 16px;
+    line-height: 1.7;
+    color: var(--gray-900);
+}
+
 /* Stat Cards */
 .stat-card {
     display: flex;
@@ -360,6 +459,10 @@
     align-items: center;
 }
 
+.calorie-analytics-wrapper > * {
+    min-width: 0;
+}
+
 .calorie-stats-column {
     display: flex;
     flex-direction: column;
@@ -394,6 +497,18 @@
     font-size: 14px;
     font-weight: 400;
     color: var(--gray-700);
+}
+
+.calorie-summary-tile .tile-desc {
+    font-size: 14px;
+    line-height: 1.5;
+    color: var(--gray-700);
+}
+
+/* 今日あと食べられる量。その日の行動に直結するので、他のタイルより枠を強める */
+.calorie-summary-tile.intake-budget-tile {
+    background-color: var(--white);
+    border: 2px solid var(--key-900);
 }
 
 /* 収支が赤字(摂取超過)。値には符号(-)も付くので色だけの表示ではない */

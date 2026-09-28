@@ -106,6 +106,8 @@ function renderPlanTab() {
                     この食事を続けた場合に落ち着く体重（平衡体重）は <strong>${equilibrium.toFixed(1)} kg</strong>
                     <span class="plan-sim-fact-sub">現在との差が半分まで縮むのに約${halfLifeDays}日。体重が減るとTDEEも下がるため、減量は一定ペースではなくここへ向かって減速していきます。</span>
                 </p>` : ''}
+                ${targetWeightBlockHtml()}
+                <div id="plan-target-weight-editor" class="plan-inline-editor is-hidden"></div>
                 ${sim.paceLimited
                     ? `<p class="plan-sim-clamp-warning">⚠️ このペースは毎日を基礎代謝(${profile.bmr}kcal)未満にしないと届かないため、達成できません。全日を基礎代謝に揃えても実際は約${sim.achievablePaceKgMonth}kg/月です。ペースを落とすか、運動でTDEEを上げてください。</p>`
                     : (sim.clamped
@@ -391,6 +393,31 @@ function wirePlanInlineEditors(s) {
         });
     }
 
+    // 目標体重。0で未設定に戻せるようにする(openInlineEditor は空欄を受け付けないため)
+    const targetBtn = document.getElementById('btn-edit-target-weight');
+    const targetEditor = document.getElementById('plan-target-weight-editor');
+    if (targetBtn && targetEditor) {
+        targetBtn.addEventListener('click', () => {
+            if (!targetEditor.classList.contains('is-hidden')) {
+                targetEditor.classList.add('is-hidden');
+                targetEditor.innerHTML = '';
+                return;
+            }
+            const current = Object.assign({}, s, { targetWeight: Number(s.targetWeight) > 0 ? s.targetWeight : '' });
+            openInlineEditor(targetEditor, [
+                { key: 'targetWeight', label: '目標体重 (kg)　0 で未設定', step: '0.1', min: 0 }
+            ], current, (values) => {
+                const v = values.targetWeight;
+                if (v !== 0 && (v < 30 || v > 300)) {
+                    showToast('目標体重は30〜300kgの範囲で入力してください（0で未設定）');
+                    return;
+                }
+                savePlanSettingsPatch({ targetWeight: v === 0 ? null : v },
+                    v === 0 ? '目標体重を未設定にしました' : `目標体重を ${v.toFixed(1)} kg にしました`);
+            });
+        });
+    }
+
     const startBtn = document.getElementById('btn-edit-plan-start');
     const startEditor = document.getElementById('plan-start-editor');
     if (startBtn && startEditor) {
@@ -459,6 +486,66 @@ function tdeeSubtextHtml(tdeeChoice, profile) {
 // 計画の予測に必要な前提を1か所で組み立てる。
 // ロードマップ表(計画タブ)と体重グラフの予測線(ダッシュボード)はどちらもここを通るので、
 // 両者が食い違うことがない。ペースやTDEEの選択を変えれば両方が同時に動く。
+// 目標体重まで今のペースで何日かかるか(v1.26.0)。計画タブと、ダッシュボードの
+// 週のまとめの両方がこれを通る(画面ごとに到達日が食い違わないように)。
+// 起点は「現在の体重」と、シミュレーションの実効アンダーカロリー・減速係数で、
+// 平衡体重・ロードマップと同じ前提。体重の記録が無い時や目標が未設定なら null。
+function getTargetWeightProjection() {
+    const s = state.planSettings || DEFAULT_PLAN_SETTINGS;
+    const target = Number(s.targetWeight);
+    if (!(target > 0) || !state.weightLogs || state.weightLogs.length === 0) return null;
+    const basis = getPlanProjectionBasis();
+    const r = computeDaysToTargetWeight(basis.latestWeight, target, basis.dailyDeficit, basis.kcalPerKgPerDay);
+    if (!r) return null;
+    return Object.assign({
+        target,
+        current: basis.latestWeight,
+        remainingKg: Math.round((basis.latestWeight - target) * 10) / 10,
+        date: r.status === 'ok' ? addDaysToDateString(basis.todayStr, r.days) : null
+    }, r);
+}
+
+// 目標体重の到達見込みを1文で返す(計画タブと週のまとめで共用)
+function describeTargetWeightProjection(p) {
+    if (!p) return '';
+    switch (p.status) {
+        case 'reached':
+            return `目標の ${p.target.toFixed(1)}kg に届いています。`;
+        case 'no-deficit':
+            return '今の目標摂取ではアンダーカロリーが無いため、このままでは目標に近づきません。';
+        case 'below-equilibrium':
+            return `目標の ${p.target.toFixed(1)}kg は、今の食事を続けた場合に落ち着く体重（${p.equilibrium.toFixed(1)}kg）より軽いため、このペースのままでは届きません。途中でペースを上げるか、目標摂取カロリーを見直してください。`;
+        case 'ok':
+            return `今のペースなら ${formatDateJp(p.date)} ごろに到達（あと${p.days}日・${p.remainingKg.toFixed(1)}kg）`;
+        default:
+            return '';
+    }
+}
+
+function targetWeightBlockHtml() {
+    const s = state.planSettings || DEFAULT_PLAN_SETTINGS;
+    const target = Number(s.targetWeight);
+    const p = getTargetWeightProjection();
+    const editBtn = `<button type="button" class="plan-inline-edit-btn" id="btn-edit-target-weight" title="目標体重を変更する">
+                        <i data-lucide="pencil"></i> ${target > 0 ? '目標体重' : '目標体重を設定'}
+                    </button>`;
+    if (!(target > 0)) {
+        return `<div class="plan-target-weight">
+                <div class="plan-target-weight-head"><span class="plan-target-weight-label">目標体重</span> <span class="plan-sim-fact-sub">未設定</span> ${editBtn}</div>
+                <p class="plan-target-weight-desc">目標体重を設定すると、今のペースでいつ届くかを表示します。</p>
+            </div>`;
+    }
+    const warn = p && (p.status === 'below-equilibrium' || p.status === 'no-deficit');
+    return `<div class="plan-target-weight${warn ? ' is-unreachable' : ''}">
+            <div class="plan-target-weight-head">
+                <span class="plan-target-weight-label">目標体重</span>
+                <strong class="plan-target-weight-value">${escapeHtml(target.toFixed(1))} kg</strong>
+                ${editBtn}
+            </div>
+            <p class="plan-target-weight-desc">${p ? (warn ? '⚠️ ' : '') + escapeHtml(describeTargetWeightProjection(p)) : '体重を記録すると到達見込みを表示します。'}</p>
+        </div>`;
+}
+
 function getPlanProjectionBasis() {
     const s = state.planSettings || DEFAULT_PLAN_SETTINGS;
     const latestWeight = getLatestWeight();

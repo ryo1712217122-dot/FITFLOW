@@ -41,6 +41,8 @@ const DOM = {
     currentMaintenanceKcal: document.getElementById('current-maintenance-kcal'),
     todayIntakeKcal: document.getElementById('today-intake-kcal'),
     todayCalorieDiffKcal: document.getElementById('today-calorie-diff-kcal'),
+    todayIntakeRemaining: document.getElementById('today-intake-remaining'),
+    todayIntakeRemainingDesc: document.getElementById('today-intake-remaining-desc'),
     cardioExistingHint: document.getElementById('cardio-existing-hint'),
     cardioExistingHintText: document.getElementById('cardio-existing-hint-text'),
 

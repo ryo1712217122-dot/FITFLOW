@@ -124,6 +124,13 @@ function initFormControls() {
         });
     }
 
+    // 「前回の記録」はフォームの日付以前から探すので、日付を変えたら出し直す
+    if (DOM.workoutDate && DOM.exerciseList) {
+        DOM.workoutDate.addEventListener('change', () => {
+            DOM.exerciseList.querySelectorAll('.exercise-item').forEach(updateExerciseLastHint);
+        });
+    }
+
     // 調子・メモは種目の保存に付随して保存されるが、種目を保存し直さずに
     // これらだけを変更した場合(既存記録の編集など)も、その場で反映されるようにする
     if (DOM.workoutImpression) {
@@ -284,6 +291,7 @@ function addExerciseBlock(data = null, existingIndex = null) {
                 <i data-lucide="trash-2"></i>
             </button>
         </div>
+        <div class="exercise-last-hint is-hidden" aria-live="polite"></div>
         <div class="sets-table-wrapper">
             <table class="sets-table">
                 <thead>
@@ -332,10 +340,14 @@ function addExerciseBlock(data = null, existingIndex = null) {
             }
             namePicker.value = '';
             applyExerciseWeightMode(exerciseBlock);
+            updateExerciseLastHint(exerciseBlock);
         });
     }
     if (nameInput) {
-        nameInput.addEventListener('input', () => applyExerciseWeightMode(exerciseBlock));
+        nameInput.addEventListener('input', () => {
+            applyExerciseWeightMode(exerciseBlock);
+            updateExerciseLastHint(exerciseBlock);
+        });
     }
     if (toggleWeightBtn) {
         toggleWeightBtn.addEventListener('click', () => {
@@ -366,10 +378,78 @@ function addExerciseBlock(data = null, existingIndex = null) {
     }
 
     applyExerciseWeightMode(exerciseBlock);
+    updateExerciseLastHint(exerciseBlock);
 
     if (window.lucide) {
         lucide.createIcons();
     }
+}
+
+// 種目名から「前回の記録」と「次の目安」を出す(v1.26.0)。ジムで種目を選んだその場で、
+// 前回どれだけ挙げたかと今日どこを狙うかが分かるようにする。
+// 前回 = 記録中(編集中)のワークアウト以外で、フォームの日付以前の直近セッション。
+// 過去の記録を履歴から編集している時は、その日より前の記録が「前回」になる。
+function updateExerciseLastHint(exerciseBlockEl) {
+    if (!exerciseBlockEl) return;
+    const hint = exerciseBlockEl.querySelector('.exercise-last-hint');
+    const nameInput = exerciseBlockEl.querySelector('.exercise-name');
+    if (!hint || !nameInput) return;
+
+    const name = nameInput.value.trim();
+    if (!name) {
+        hint.classList.add('is-hidden');
+        hint.textContent = '';
+        return;
+    }
+
+    const refDate = (DOM.workoutDate && DOM.workoutDate.value) || getTodayStr();
+    const last = findLastExerciseSession(state.workouts, name, {
+        excludeWorkoutId: state.editingWorkoutId,
+        onOrBeforeDate: refDate
+    });
+
+    hint.textContent = '';
+    if (!last) {
+        // 表記ゆれ(「ベンチプレス」と「ベンチ」等)で前回が見つからないこともあるので、
+        // 黙って消さずに「無い」ことを出す
+        const none = document.createElement('span');
+        none.className = 'exercise-last-hint-none';
+        none.textContent = 'この種目の過去の記録はありません';
+        hint.appendChild(none);
+        hint.classList.remove('is-hidden');
+        return;
+    }
+
+    // textContent で組み立てる(種目名はユーザー入力なので innerHTML に入れない)
+    const row = (label, text, sub) => {
+        const line = document.createElement('div');
+        line.className = 'exercise-last-hint-row';
+        const l = document.createElement('span');
+        l.className = 'exercise-last-hint-label';
+        l.textContent = label;
+        const v = document.createElement('span');
+        v.className = 'exercise-last-hint-value';
+        v.textContent = text;
+        line.append(l, v);
+        if (sub) {
+            const s2 = document.createElement('span');
+            s2.className = 'exercise-last-hint-sub';
+            s2.textContent = sub;
+            line.appendChild(s2);
+        }
+        return line;
+    };
+
+    const parts = last.date.split('-');
+    const dateLabel = parts.length === 3 ? `${Number(parts[1])}/${Number(parts[2])}` : last.date;
+    hint.appendChild(row(`前回 ${dateLabel}`, formatSetsSummary(last.sets)));
+
+    const next = suggestNextExerciseTarget(last.sets);
+    if (next) {
+        const text = next.weight > 0 ? `${next.weight}kg × ${next.reps}回` : `各セット ${next.reps}回`;
+        hint.appendChild(row('次の目安', text, `（${next.reason}）`));
+    }
+    hint.classList.remove('is-hidden');
 }
 
 // 自重種目なら重量の列を隠す。手動で「重量を入力する」を押した種目(data-weight-mode="forced")は

@@ -362,6 +362,46 @@
     font-size: 20px;
 }
 
+/* 目標体重と到達見込み(v1.26.0)。平衡体重の直下に置き、「どこまで・いつまでに」を並べて見せる */
+.plan-target-weight {
+    background: var(--white);
+    border: 2px solid var(--key-900);
+    border-radius: var(--radius-sm);
+    padding: 0.75rem 1rem;
+    margin: -0.5rem 0 1.25rem;
+}
+
+/* 届かない見込み(平衡体重より軽い目標・アンダーカロリー無し)は通知バナー(警告)の枠にする。
+   先頭の⚠️と文言でも分かるので、色だけの表示ではない */
+.plan-target-weight.is-unreachable {
+    border-color: #927200; /* yellow-900 */
+}
+
+.plan-target-weight-head {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.25rem 0.75rem;
+}
+
+.plan-target-weight-label {
+    font-size: 16px;
+    font-weight: 700;
+}
+
+.plan-target-weight-value {
+    font-size: 20px;
+    color: var(--key-900);
+    font-variant-numeric: tabular-nums;
+}
+
+.plan-target-weight-desc {
+    margin-top: 0.25rem;
+    font-size: 16px;
+    line-height: 1.7;
+    color: var(--gray-800);
+}
+
 .plan-sim-pace-row {
     display: flex;
     align-items: center;

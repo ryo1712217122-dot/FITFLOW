@@ -233,6 +233,46 @@
     color: var(--gray-900);
 }
 
+/* 種目ごとの「前回の記録」と「次の目安」(v1.26.0)。
+   情報の補足なので薄い青の地に置き、ラベル(太字)と値を1行ずつ並べる */
+.exercise-last-hint {
+    margin-bottom: 0.75rem;
+    padding: 0.5rem 0.75rem;
+    border-radius: var(--radius-sm);
+    background: var(--key-50);
+    font-size: 14px;
+    line-height: 1.7;
+    color: var(--gray-800);
+}
+
+.exercise-last-hint-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0 0.5rem;
+    align-items: baseline;
+}
+
+.exercise-last-hint-label {
+    font-weight: 700;
+    color: var(--gray-900);
+    white-space: nowrap;
+}
+
+.exercise-last-hint-value {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--key-900);
+    font-variant-numeric: tabular-nums;
+}
+
+.exercise-last-hint-sub {
+    color: var(--gray-700);
+}
+
+.exercise-last-hint-none {
+    color: var(--gray-700);
+}
+
 /* それでも入り切らない幅の画面では、表だけを横スクロールさせる
    (DADSの表の指針: 列が多い表は潰さずに横スクロールにする) */
 .sets-table-wrapper {

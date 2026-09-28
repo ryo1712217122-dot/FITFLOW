@@ -202,6 +202,28 @@
         width: 36px;
     }
 
+    /* 減量ペースの4択は横幅いっぱいに等分し、余白を詰めて1行に収める(320pxで右にはみ出していた) */
+    .plan-sim-pace-buttons {
+        width: 100%;
+    }
+
+    .plan-sim-pace-btn {
+        flex: 1;
+        padding: 2px 4px;
+    }
+
+    /* 週のまとめの表: 3列を横スクロールなしで収める。項目名と「先週比」は折り返してよい
+       (数値そのものは折り返すと読み違えるので折り返さない) */
+    .weekly-summary-table th,
+    .weekly-summary-table td {
+        padding: 0.5rem 0.375rem;
+    }
+
+    .weekly-summary-table tbody th,
+    .weekly-summary-diff {
+        white-space: normal;
+    }
+
     /* 「×」は文字幅(16px)より細くならないので、余白のほうを外す */
     .sets-table td.set-multiply {
         width: 16px;
