@@ -15,7 +15,7 @@
 // リリース時は CACHE_VERSION も上げること(index.html と同じ版番号)。上げ忘れても
 // 画面はネット優先なので新しい版は届くが、古い保存分が端末に残り続ける。
 
-const CACHE_VERSION = 'fitflow-v1.26.0';
+const CACHE_VERSION = 'fitflow-v1.27.0';
 const SHELL_CACHE = `${CACHE_VERSION}-shell`;
 const FONT_CACHE = 'fitflow-fonts';
 const NAVIGATION_TIMEOUT_MS = 3000;

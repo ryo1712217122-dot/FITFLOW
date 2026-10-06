@@ -31,14 +31,13 @@ const DOM = {
     addExerciseBtn: document.getElementById('add-exercise-btn'),
     saveWorkoutBtn: document.getElementById('save-workout-btn'),
 
-    // Cardio Logger (有酸素単独記録フォーム)
-    cardioForm: document.getElementById('cardio-form'),
-    cardioDate: document.getElementById('cardio-date'),
+    // 有酸素(v1.27.0でトレーニングの記録フォームに統合。日付はworkoutDateと共通)
     logCardioDist: document.getElementById('log-cardio-dist'),
     cardioCalcHint: document.getElementById('cardio-calc-hint'),
     workoutCalorieHint: document.getElementById('workout-calorie-hint'),
     todayBurnedKcal: document.getElementById('today-burned-kcal'),
     currentMaintenanceKcal: document.getElementById('current-maintenance-kcal'),
+    currentMaintenanceDesc: document.getElementById('current-maintenance-desc'),
     todayIntakeKcal: document.getElementById('today-intake-kcal'),
     todayCalorieDiffKcal: document.getElementById('today-calorie-diff-kcal'),
     todayIntakeRemaining: document.getElementById('today-intake-remaining'),
@@ -68,19 +67,13 @@ const DOM = {
     mealExistingHint: document.getElementById('meal-existing-hint'),
     mealExistingHintText: document.getElementById('meal-existing-hint-text'),
 
-    // Drinking Logger (飲み会単独記録フォーム: 日付のみ)
-    drinkingForm: document.getElementById('drinking-form'),
-    drinkingDate: document.getElementById('drinking-date'),
-    drinkingSubmitBtn: document.getElementById('drinking-submit-btn'),
-    drinkingExistingHint: document.getElementById('drinking-existing-hint'),
-    drinkingExistingHintText: document.getElementById('drinking-existing-hint-text'),
+    // 飲み会(v1.27.0で食事の記録の「夕食」の分岐に統合)
+    mealDinnerDrinking: document.getElementById('meal-dinner-drinking'),
+    mealDrinkingPanel: document.getElementById('meal-drinking-panel'),
+    mealDrinkingEstimate: document.getElementById('meal-drinking-estimate'),
+    mealDrinkingHint: document.getElementById('meal-drinking-hint'),
+    mealDrinkingHintText: document.getElementById('meal-drinking-hint-text'),
     drinkingImpactSummary: document.getElementById('drinking-impact-summary'),
-    // 飲み会の推定摂取カロリー(保存先はその日のmealLogsの夕食)
-    drinkingCalorieGroup: document.getElementById('drinking-calorie-group'),
-    drinkingCalories: document.getElementById('drinking-calories'),
-    drinkingCaloriesEstimate: document.getElementById('drinking-calories-estimate'),
-    drinkingMealHint: document.getElementById('drinking-meal-hint'),
-    drinkingMealHintText: document.getElementById('drinking-meal-hint-text'),
 
 
     // History
@@ -93,8 +86,6 @@ const DOM = {
     historyContainer: document.getElementById('history-container'),
 
     // Settings
-    maintenanceInput: document.getElementById('maintenance-input'),
-    saveMaintenanceBtn: document.getElementById('save-maintenance-btn'),
     sheetsUrlInput: document.getElementById('sheets-url-input'),
     saveSheetsUrlBtn: document.getElementById('save-sheets-url-btn'),
     sheetsBackupBtn: document.getElementById('sheets-backup-btn'),
@@ -111,7 +102,6 @@ const DOM = {
     daySummaryModal: document.getElementById('day-summary-modal'),
     daySummaryTitle: document.getElementById('day-summary-title'),
     daySummaryBody: document.getElementById('day-summary-body'),
-    daySummaryAddBtn: document.getElementById('day-summary-add-btn'),
     modalMessage: document.getElementById('modal-message'),
     modalCancelBtn: document.getElementById('modal-cancel-btn'),
     modalConfirmBtn: document.getElementById('modal-confirm-btn')

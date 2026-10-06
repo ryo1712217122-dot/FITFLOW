@@ -50,6 +50,7 @@ function createCardioHistoryCard(c) {
     card.classList.add('card');
     card.classList.add('history-card');
     card.classList.add('cardio');
+    card.dataset.date = c.date;
 
     const formattedDate = formatDateJp(c.date);
 
@@ -63,7 +64,7 @@ function createCardioHistoryCard(c) {
                 </div>
                 <div class="history-date-row">
                     <i data-lucide="calendar"></i>
-                    <span>${formattedDate}</span>
+                    <button type="button" class="history-date-link" data-date="${escapeHtml(c.date)}" title="この日の記録をまとめて見る">${formattedDate}</button>
                 </div>
             </div>
             <div class="history-actions">
@@ -138,6 +139,7 @@ function updateWeightHistoryList() {
     sortedLogs.forEach((w) => {
         const card = document.createElement('div');
         card.classList.add('card', 'history-card', 'weight-history-card');
+        card.dataset.date = w.date;
 
         const formattedDate = formatDateJp(w.date);
         const isDrinkingDay = drinkingSet.has(w.date);
@@ -152,7 +154,7 @@ function updateWeightHistoryList() {
                     </div>
                     <div class="history-date-row">
                         <i data-lucide="calendar"></i>
-                        <span>${formattedDate}</span>
+                        <button type="button" class="history-date-link" data-date="${escapeHtml(w.date)}" title="この日の記録をまとめて見る">${formattedDate}</button>
                     </div>
                 </div>
                 <div class="history-actions">
@@ -258,6 +260,7 @@ function updateMealHistoryList() {
     sortedLogs.forEach((m) => {
         const card = document.createElement('div');
         card.classList.add('card', 'history-card', 'meal-history-card');
+        card.dataset.date = m.date;
 
         const formattedDate = formatDateJp(m.date);
         const total = sumMealCalories(m);
@@ -271,7 +274,7 @@ function updateMealHistoryList() {
                     </div>
                     <div class="history-date-row">
                         <i data-lucide="calendar"></i>
-                        <span>${formattedDate}</span>
+                        <button type="button" class="history-date-link" data-date="${escapeHtml(m.date)}" title="この日の記録をまとめて見る">${formattedDate}</button>
                     </div>
                 </div>
                 <div class="history-actions">
@@ -390,7 +393,7 @@ function updateCalorieBalanceHistoryList() {
     if (!container || !countSpan) return;
 
     const balances = computeDailyCalorieBalances(
-        state.mealLogs, state.cardioLogs, state.workouts, state.maintenanceCalories, WORKOUT_CALORIES_PER_SET
+        state.mealLogs, state.cardioLogs, state.workouts, getMaintenanceForDate, WORKOUT_CALORIES_PER_SET
     ).slice().reverse(); // 新しい日付順
 
     countSpan.textContent = balances.length;
@@ -410,10 +413,16 @@ function updateCalorieBalanceHistoryList() {
     balances.forEach((b) => {
         const card = document.createElement('div');
         card.classList.add('card', 'history-card', 'calorie-balance-history-card');
+        card.dataset.date = b.date;
 
         const formattedDate = formatDateJp(b.date);
         const diffClass = b.diff < 0 ? 'value-negative' : 'value-positive';
         const diffSign = b.diff > 0 ? '+' : '';
+        // 食事の記録が無い日は収支を出さない(摂取0として大きな赤字に見せない)
+        const intakeHtml = b.hasMeal ? `${Math.round(b.intake)} kcal` : '<span class="text-muted">未記録</span>';
+        const diffHtml = b.hasMeal
+            ? `<span class="history-metric-value-bold ${diffClass}">${diffSign}${Math.round(b.diff)} kcal</span>`
+            : '<span class="history-metric-value text-muted">—（食事の記録なし）</span>';
 
         card.innerHTML = `
             <div class="history-card-header">
@@ -424,7 +433,7 @@ function updateCalorieBalanceHistoryList() {
                     </div>
                     <div class="history-date-row">
                         <i data-lucide="calendar"></i>
-                        <span>${formattedDate}</span>
+                        <button type="button" class="history-date-link" data-date="${escapeHtml(b.date)}" title="この日の記録をまとめて見る">${formattedDate}</button>
                     </div>
                 </div>
             </div>
@@ -432,7 +441,7 @@ function updateCalorieBalanceHistoryList() {
             <div class="calorie-balance-value-row">
                 <div>
                     <span class="history-metric-label">摂取</span>
-                    <span class="history-metric-value">${Math.round(b.intake)} kcal</span>
+                    <span class="history-metric-value">${intakeHtml}</span>
                 </div>
                 <div>
                     <span class="history-metric-label">消費</span>
@@ -440,7 +449,7 @@ function updateCalorieBalanceHistoryList() {
                 </div>
                 <div>
                     <span class="history-metric-label">収支(消費-摂取)</span>
-                    <span class="history-metric-value-bold ${diffClass}">${diffSign}${Math.round(b.diff)} kcal</span>
+                    ${diffHtml}
                 </div>
             </div>
         `;

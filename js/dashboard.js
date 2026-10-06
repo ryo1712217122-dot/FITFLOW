@@ -1,6 +1,46 @@
-// FITFLOW - ダッシュボードタブ（統計カード・カレンダー・体重/カロリーグラフ・メンテナンスカロリー設定）
-// メンテナンスカロリー設定はv2再構成で「同期と設定」タブからここへ移設した
-// （カロリーバランスグラフに直接効く入力なので、入力→表示の距離を縮めるため）。
+// FITFLOW - ダッシュボードタブ（起動時に最初に開く。統計カード・週のまとめ・カレンダー・
+// 体重/カロリーグラフ・最近のトレーニング）。カレンダー・グラフの日付・最近のトレーニングから
+// 日別サマリーや履歴タブのその日のカードへ移動できる(v1.27.0)。
+//
+// メンテナンスカロリー(運動を除いた1日の消費の基準線)は v1.27.0 から手入力をやめ、
+// 「基礎代謝×生活活動レベル」を体重の記録から毎回出す(getMaintenanceForDate)。
+// 以前は保存した数値を使い続けていたため、体重が減っても基準線が下がらず、
+// 収支が実際より大きな赤字に見えていた。
+
+// 指定日の体重(その日以前で最も新しい記録。無ければ最初の記録)
+function getWeightOnOrBefore(dateStr) {
+    const logs = state.weightLogs || [];
+    if (logs.length === 0) return getLatestWeight();
+    let found = null;
+    for (const l of logs) {
+        if (l.date <= dateStr) found = l;
+        else break;
+    }
+    return (found || logs[0]).weight;
+}
+
+// 指定日のメンテナンスカロリー(基礎代謝×生活活動レベル)。その日の体重で計算するので、
+// 過去の日の収支も当時の体重に合わせた基準線で出る。体格(身長・年齢・性別)が
+// 計画タブで設定されていれば基礎代謝は式で出す(computeBmr)。
+function getMaintenanceForDate(dateStr) {
+    // 体重の記録がまだ無い間は、保存済みの値(初期値2000)のまま使う
+    if (!state.weightLogs || state.weightLogs.length === 0) return state.maintenanceCalories;
+    const s = state.planSettings || DEFAULT_PLAN_SETTINGS;
+    const pal = Number(s.lifestyleActivityLevel) > 0 ? Number(s.lifestyleActivityLevel) : DEFAULT_PLAN_SETTINGS.lifestyleActivityLevel;
+    const { bmr } = computeBmr(getWeightOnOrBefore(dateStr), getBodyProfile(), BMR_KCAL_PER_KG);
+    return Math.round(bmr * pal);
+}
+
+// 今日のメンテナンスを state.maintenanceCalories にも入れておく(クラウドのシートと
+// JSONバックアップに残る値。値が変わった時だけ端末に保存する)
+function refreshMaintenanceCalories(todayStr) {
+    if (!state.weightLogs || state.weightLogs.length === 0) return;
+    const v = getMaintenanceForDate(todayStr);
+    if (v > 0 && v !== state.maintenanceCalories) {
+        state.maintenanceCalories = v;
+        saveData();
+    }
+}
 
 // 指定日付に記録された筋トレセッション(複数あれば合算)の推定消費カロリー合計を返す。
 // 有酸素と同様、「本日の総消費」「カロリーバランスグラフ」の両方に合算するために使う。
@@ -32,6 +72,7 @@ function updateDashboard() {
 
     // 3. Stats: Today's running
     const todayStr = getTodayStr();
+    refreshMaintenanceCalories(todayStr);
     let todayCalories = 0;
     let todayDistance = 0;
 
@@ -73,11 +114,21 @@ function updateDashboard() {
     if (DOM.currentMaintenanceKcal) {
         DOM.currentMaintenanceKcal.innerHTML = `${state.maintenanceCalories} <span class="unit">kcal</span>`;
     }
+    if (DOM.currentMaintenanceDesc) {
+        const s = state.planSettings || DEFAULT_PLAN_SETTINGS;
+        const bodySet = computeBmr(70, getBodyProfile()).source === 'formula';
+        DOM.currentMaintenanceDesc.textContent =
+            `基礎代謝 × 生活活動「${getLifestyleLevelLabel(s.lifestyleActivityLevel || DEFAULT_PLAN_SETTINGS.lifestyleActivityLevel)}」。最新の体重から自動で計算`
+            + (bodySet ? '' : '（計画タブで身長・年齢・性別を入れると基礎代謝の精度が上がります）');
+    }
 
     updateTodayIntakeBudget(todayStr, todayMeal);
 
-    // 4. Streaks
-    const streak = calculateStreak(state.workouts);
+    // 4. 記録の継続日数(筋トレに限らず、食事・体重・有酸素のどれかを記録した日の連続)
+    const recordDates = [].concat(
+        state.workouts.map(w => w.date), state.mealLogs.map(m => m.date),
+        state.weightLogs.map(w => w.date), state.cardioLogs.map(c => c.date));
+    const streak = computeRecordStreak(recordDates, todayStr);
     if (DOM.streakCount) DOM.streakCount.textContent = `${streak} 日`;
 
     // 4.5 週間ランニング目標の達成度
@@ -90,6 +141,29 @@ function updateDashboard() {
     renderCalendar();
     renderWeightChart();
     renderCalorieChart();
+    renderRecentWorkouts();
+}
+
+// 最近のトレーニング(新しい順に3件)。押すと履歴タブのそのセッションのカードへ移動する
+function renderRecentWorkouts() {
+    const list = document.getElementById('recent-workouts-list');
+    if (!list) return;
+    const recent = state.workouts.slice()
+        .sort((a, b) => (b.date + (b.time || '')).localeCompare(a.date + (a.time || '')))
+        .slice(0, 3);
+    if (recent.length === 0) {
+        list.innerHTML = '<p class="recent-workouts-empty">まだトレーニングの記録がありません。「記録する」の「トレーニング」から記録できます。</p>';
+        return;
+    }
+    list.innerHTML = recent.map(w => {
+        const names = (w.exercises || []).map(ex => ex.name);
+        const shown = names.slice(0, 3).join('、') + (names.length > 3 ? ` ほか${names.length - 3}種目` : '');
+        return `
+            <a href="#history" class="recent-workout-item" data-history-jump="workouts" data-history-date="${escapeHtml(w.date)}">
+                <span class="recent-workout-date">${escapeHtml(formatDateJp(w.date))}</span>
+                <span class="recent-workout-names">${names.length > 0 ? escapeHtml(shown) : '種目の記録なし'}</span>
+            </a>`;
+    }).join('');
 }
 
 // 週のまとめ(v1.26.0)。今週(日曜〜今日)と先週を1枚の表で比べる。
@@ -206,41 +280,6 @@ function updateTodayIntakeBudget(todayStr, todayMeal) {
     }
 }
 
-function calculateStreak(workouts) {
-    if (!workouts || workouts.length === 0) return 0;
-
-    // Get unique date strings sorted descending
-    const dates = workouts.map(w => w.date);
-    const uniqueDates = [...new Set(dates)].sort((a, b) => new Date(b) - new Date(a));
-
-    const todayStr = getTodayStr();
-    // 「昨日」もフィットネス上の今日を基準に取る(実時刻の昨日ではない)
-    const yesterdayStr = addDaysToDateString(todayStr, -1);
-
-    // Check if user has logged a workout today or yesterday
-    if (uniqueDates[0] !== todayStr && uniqueDates[0] !== yesterdayStr) {
-        return 0;
-    }
-
-    let streak = 1;
-    let currentDate = new Date(uniqueDates[0] + 'T00:00:00');
-
-    for (let i = 1; i < uniqueDates.length; i++) {
-        const prevDate = new Date(uniqueDates[i] + 'T00:00:00');
-        const diffTime = Math.abs(currentDate - prevDate);
-        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
-        if (diffDays === 1) {
-            streak++;
-            currentDate = prevDate;
-        } else if (diffDays > 1) {
-            break; // Streak broken
-        }
-    }
-
-    return streak;
-}
-
 // 週間ランニング目標（デフォルト15km、最適化計画タブで編集可能）に対する今週(日〜土)の達成度を表示する
 function updateWeeklyRunGoal(todayStr) {
     if (!DOM.weeklyRunDistanceNum && !DOM.weeklyRunProgressFill) return;
@@ -336,15 +375,18 @@ function renderCalendar() {
         const date = new Date(firstCellDate.getTime() + (week * 7 + weekday) * DAY_MS);
         const dateStr = toDateStr(date);
 
-        const dayCell = document.createElement('div');
-        dayCell.classList.add('calendar-day');
-
         if (date.getTime() > today.getTime()) {
             // 未来日。列の形を保つためだけのプレースホルダー
-            dayCell.classList.add('empty');
-            DOM.calendarDays.appendChild(dayCell);
+            const placeholder = document.createElement('div');
+            placeholder.classList.add('calendar-day', 'empty');
+            DOM.calendarDays.appendChild(placeholder);
             continue;
         }
+
+        // 押せるセルはボタンにする(キーボードでも選べ、読み上げでも日付と記録が伝わるように)
+        const dayCell = document.createElement('button');
+        dayCell.type = 'button';
+        dayCell.classList.add('calendar-day');
 
         if (dateStr === todayStr) {
             dayCell.classList.add('today');
@@ -381,6 +423,7 @@ function renderCalendar() {
         if (titleParts.length === 1) titleParts.push('記録なし');
 
         dayCell.setAttribute('title', titleParts.join(' | '));
+        dayCell.setAttribute('aria-label', `${date.getMonth() + 1}月${date.getDate()}日 ${titleParts.slice(1).join('、')}`);
 
         DOM.calendarDays.appendChild(dayCell);
     }
@@ -396,43 +439,26 @@ function renderCalendar() {
 }
 
 // ==========================================
-// メンテナンスカロリー設定（ダッシュボードのカロリーバランスカードに同居）
+// ダッシュボードの操作(体重グラフの期間切替・週間ランニング目標の編集)
 // ==========================================
 
 function initDashboardControls() {
     // 体重推移グラフの表示期間切替(1週間/1ヶ月)
-    document.querySelectorAll('.chart-period-btn').forEach(btn => {
+    // 体重グラフのカードの中だけを対象にする。以前はページ中の .chart-period-btn をすべて拾っており、
+    // 期間を切り替えると食事フォームの「手動入力/目安から選択」や計画タブのTDEE切替の
+    // 選択表示まで外れていた
+    const periodBtns = document.querySelectorAll('.weight-progress-card .chart-period-btn[data-days]');
+    periodBtns.forEach(btn => {
         btn.addEventListener('click', () => {
             const days = parseInt(btn.getAttribute('data-days'));
             if (!days || days === weightChartPeriodDays) return;
             weightChartPeriodDays = days;
-            document.querySelectorAll('.chart-period-btn').forEach(b => {
+            periodBtns.forEach(b => {
                 b.classList.toggle('active', b === btn);
             });
             renderWeightChart();
         });
     });
-
-    if (DOM.maintenanceInput) {
-        DOM.maintenanceInput.value = state.maintenanceCalories;
-    }
-
-    if (DOM.saveMaintenanceBtn) {
-        DOM.saveMaintenanceBtn.addEventListener('click', () => {
-            const val = parseInt(DOM.maintenanceInput.value) || DEFAULT_MAINTENANCE_CALORIES;
-            state.maintenanceCalories = val;
-            saveDataAndSync();
-            showToast('メンテナンスカロリーを保存しました！');
-            updateDashboard();
-        });
-    }
-
-    const autoCalcMaintBtn = document.getElementById('auto-calc-maintenance-btn');
-    if (autoCalcMaintBtn) {
-        autoCalcMaintBtn.addEventListener('click', () => {
-            calculateFluidMaintenance();
-        });
-    }
 
     // 週間ランニング目標距離の編集。計画タブの一括編集画面を廃止したため、
     // この値が表示されているこのカードで直接編集できるようにしている
@@ -462,33 +488,6 @@ function initDashboardControls() {
             });
         });
     }
-}
-
-// メンテナンスカロリー(生活代謝の基準線)を実績から再計算する。
-// 算出式はlib/data-utils.jsのcomputeActivityProfileに一本化している
-// (以前はここにBMR 23×体重・PAL閾値(直近30日で12/8/4回)を別実装で持っており、
-//  計画タブのTDEE推定と同じ意味の値が2箇所で微妙に食い違う状態だった)。
-//
-// 採用するのはprofile.tdeeではなくprofile.baseBurn。
-// state.maintenanceCaloriesは「運動分を含まない基準線」であり、
-// ダッシュボードでは maintenance + 有酸素 + 筋トレ で総消費を組み立てるため、
-// ここに運動分を含むtdeeを入れると二重計上になる。
-// v1.21.0でPALが筋トレ頻度に連動しなくなったので、baseBurnは本当に運動を含まない
-// 値になった(それ以前はPAL経由で筋トレ分が暗黙に入っており、なお二重計上だった)。
-function calculateFluidMaintenance() {
-    const latestWeight = getLatestWeight();
-    const profile = getActivityProfile(latestWeight);
-    const calculatedCalories = profile.baseBurn;
-
-    // Apply to input and state
-    if (DOM.maintenanceInput) {
-        DOM.maintenanceInput.value = calculatedCalories;
-    }
-    state.maintenanceCalories = calculatedCalories;
-    saveDataAndSync();
-
-    showToast(`メンテナンスカロリーを再計算しました：${calculatedCalories} kcal (基礎${profile.bmr}×活動${profile.pal}「${getLifestyleLevelLabel(profile.pal)}」, 最新体重: ${latestWeight.toFixed(1)}kg)`);
-    updateDashboard();
 }
 
 // 体重推移グラフの表示期間(日数)。ヘッダーの「1週間/1ヶ月」トグルで切り替える(デフォルト1ヶ月)
@@ -643,6 +642,15 @@ function renderWeightChart() {
         options: {
             responsive: true,
             maintainAspectRatio: false,
+            // 点を押すと、その日の記録をまとめた日別サマリーを開く
+            onClick: (evt, elements) => {
+                if (!elements || elements.length === 0) return;
+                const log = recentLogs[elements[0].index];
+                if (log) openDaySummaryModal(log.date);
+            },
+            onHover: (evt, elements) => {
+                if (evt.native && evt.native.target) evt.native.target.style.cursor = elements.length ? 'pointer' : 'default';
+            },
             plugins: {
                 legend: {
                     display: true,
@@ -651,6 +659,7 @@ function renderWeightChart() {
                 },
                 tooltip: {
                     callbacks: {
+                        footer: () => '押すとこの日の記録を表示',
                         // 飲み会だった日はツールチップにも明示する(点の色だけだと意味が伝わらないため)
                         afterTitle: (items) => {
                             const log = items.length > 0 ? recentLogs[items[0].dataIndex] : null;
@@ -711,19 +720,20 @@ function renderCalorieChart() {
         return sum;
     });
 
-    const maintenanceLimit = datesYmd.map(() => state.maintenanceCalories);
+    // 基準線はその日の体重から出す(体重が減れば基準線も下がる)
+    const maintenanceLimit = datesYmd.map(ymd => getMaintenanceForDate(ymd));
 
     // 棒グラフは「メンテナンス（生活代謝の基準線）＋ 運動による追加消費」の合計消費とする。
     // 運動消費だけをメンテナンスと直接比較すると、メンテナンス自体が既に1日の基礎的な消費を
     // 表しているため、常に「大幅な消費不足」に見えてしまい誤解を招く。
     const totalExpenditure = datesYmd.map((ymd, i) => maintenanceLimit[i] + activeCalories[i]);
 
-    // 摂取カロリー(食事記録)。未記録の日は0(=線が0に落ちる)のままにする
-    // (「記録していない=食べていない」ではないが、そう見せてしまうより、
-    //  記録した日だけ正しく比較できる方を優先する。将来的には未記録日を欠測扱いにしたい)
+    // 摂取カロリー(食事記録)。未記録の日は欠測(null)にして線を途切れさせる。
+    // 以前は0として描いており、記録し忘れた日に線が0kcalまで落ちて「食べていない日」に見えていた
     const intakeCalories = datesYmd.map(ymd => {
         const meal = state.mealLogs.find(m => m.date === ymd);
-        return sumMealCalories(meal);
+        const total = sumMealCalories(meal);
+        return total > 0 ? total : null;
     });
 
     if (state.charts.calorieComparison) {
@@ -756,6 +766,7 @@ function renderCalorieChart() {
                 {
                     label: '摂取カロリー（食事記録）',
                     data: intakeCalories,
+                    spanGaps: false,
                     type: 'line',
                     borderColor: getComputedStyle(document.documentElement).getPropertyValue('--color-warning').trim() || '#ac3e00',
                     backgroundColor: 'transparent',
@@ -770,6 +781,15 @@ function renderCalorieChart() {
         options: {
             responsive: true,
             maintainAspectRatio: false,
+            // 棒を押すと、その日の記録をまとめた日別サマリーを開く
+            onClick: (evt, elements) => {
+                if (!elements || elements.length === 0) return;
+                const ymd = datesYmd[elements[0].index];
+                if (ymd) openDaySummaryModal(ymd);
+            },
+            onHover: (evt, elements) => {
+                if (evt.native && evt.native.target) evt.native.target.style.cursor = elements.length ? 'pointer' : 'default';
+            },
             plugins: {
                 legend: {
                     position: 'top',

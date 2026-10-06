@@ -257,6 +257,8 @@ function setOpenWorkoutId(id) {
     } else {
         localStorage.removeItem(OPEN_WORKOUT_KEY);
     }
+    // 記録タブの「トレーニング」に出す「記録中」の目印も合わせる(record-form.js。読み込み順が後なので存在確認)
+    if (typeof updateRecordTrainingBadge === 'function') updateRecordTrainingBadge();
 }
 
 // GAS ウェブアプリURLの保存は、ユーザーが「接続情報を保存」ボタンを押した時だけ行う

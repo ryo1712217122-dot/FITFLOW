@@ -239,7 +239,6 @@ function mergeImportedData(workouts, weights, cardio, maintenance, planSettings 
     // 4. Update maintenance
     if (typeof maintenance === 'number' && maintenance > 0) {
         state.maintenanceCalories = maintenance;
-        if (DOM.maintenanceInput) DOM.maintenanceInput.value = maintenance;
     }
 
     // 5. Merge plan settings (incoming values take precedence when provided)

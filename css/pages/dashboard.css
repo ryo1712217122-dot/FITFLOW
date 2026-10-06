@@ -224,6 +224,17 @@
     min-width: 0;
 }
 
+/* 週のまとめのすぐ下に、横幅いっぱいで置く(v1.27.0) */
+.calendar-card {
+    grid-column: 1 / -1;
+}
+
+.calendar-hint {
+    margin-top: 0.75rem;
+    font-size: 14px;
+    color: var(--gray-700);
+}
+
 /* 直近26週の連続ヒートマップ。縦=曜日(日〜土)、横=週で右端が今週。
    月ごとのページ送りを廃止したため、月をまたぐ連続記録も途切れずに見える。
    狭い画面ではこのラッパーだけが横スクロールする。 */
@@ -303,6 +314,9 @@
      運動していない日   = 灰のべた塗り(背景側へ沈める)
    濃淡の差だけだと隣接セルで見分けにくいが、べた塗りと輪郭なら一目で違いが分かる。 */
 .calendar-day {
+    display: block;
+    padding: 0;
+    appearance: none;
     width: var(--calendar-cell-size, 16px);
     height: var(--calendar-cell-size, 16px);
     border-radius: 3px;
@@ -514,6 +528,78 @@
 /* 収支が赤字(摂取超過)。値には符号(-)も付くので色だけの表示ではない */
 .calorie-summary-tile .tile-value-danger {
     color: var(--crit);
+}
+
+/* ダッシュボードから履歴へのリンク(v1.27.0)。画面を移動するのでリンクの見た目(常に下線) */
+.stat-card-link {
+    display: block;
+    width: fit-content;
+    margin-top: 0.5rem;
+    font-size: 14px;
+}
+
+.card-header-link {
+    font-size: 14px;
+    white-space: nowrap;
+    margin-left: auto;
+}
+
+.card-footer-link {
+    display: inline-block;
+    margin-top: 0.75rem;
+    font-size: 16px;
+}
+
+/* 最近のトレーニング。1行ずつが履歴へのリンク。
+   隣のカロリーバランス(背の高いカード)に合わせて縦に伸ばさない */
+.recent-workouts-card {
+    align-self: start;
+}
+
+.recent-workouts-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.recent-workout-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
+    padding: 0.625rem 0.75rem;
+    min-height: 44px;
+    border: 1px solid var(--border-ui);
+    border-radius: var(--radius-sm);
+    background-color: var(--white);
+    color: var(--gray-900);
+    text-decoration: none;
+}
+
+@media (hover: hover) {
+    .recent-workout-item:hover {
+        border-color: var(--black);
+        background-color: var(--key-50);
+    }
+    .recent-workout-item:hover .recent-workout-date {
+        text-decoration-thickness: 3px;
+    }
+}
+
+.recent-workout-date {
+    font-weight: 700;
+    color: var(--link);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+}
+
+.recent-workout-names {
+    font-size: 14px;
+    color: var(--gray-800);
+}
+
+.recent-workouts-empty {
+    font-size: 14px;
+    color: var(--gray-700);
 }
 
 } /* end @layer pages (dashboard) */

@@ -69,7 +69,7 @@ function renderExercisePRList() {
     container.innerHTML = bests.map(b => `
         <div class="exercise-pr-item">
             <span class="exercise-pr-name">${escapeHtml(b.name)}</span>
-            <span class="exercise-pr-value">${b.weight}kg × ${b.reps}回</span>
+            <span class="exercise-pr-value">${Number(b.weight) > 0 ? `${Number(b.weight)}kg × ${Number(b.reps)}回` : `${Number(b.reps)}回（自重）`}</span>
             <span class="exercise-pr-date">${formatDateJp(b.date)}</span>
         </div>
     `).join('');
@@ -78,6 +78,8 @@ function renderExercisePRList() {
 function createHistoryCard(workout, prs) {
     const card = document.createElement('div');
     card.classList.add('card', 'workout-history-card');
+    card.dataset.date = workout.date;
+    card.dataset.workoutId = workout.id;
 
     const categoryClassMap = {
         '胸 (Chest)': 'chest',
@@ -105,16 +107,21 @@ function createHistoryCard(workout, prs) {
     if (workout.exercises) {
         workout.exercises.forEach((ex, exIdx) => {
             let setsListHtml = '';
+            // 自重種目(全セット0kg)は「0 kg × 20 回」ではなく回数だけを出す
+            const isBodyweightRecord = ex.sets.every(s => !(Number(s.weight) > 0));
             ex.sets.forEach((s, idx) => {
                 // innerHTMLへ埋め込む値はNumber()で数値化してから使う
                 // (スキーマ検証済みでも、描画層で文字列を直接埋め込まない方針)
                 const weight = Number(s.weight) || 0;
                 const reps = Number(s.reps) || 0;
                 const est1RM = reps > 1 ? Math.round(weight * (1 + reps / 30)) : weight;
+                const detail = isBodyweightRecord
+                    ? `${reps} 回`
+                    : `${weight} kg × ${reps} 回 <span class="text-muted">(1RM ~${est1RM}kg)</span>`;
                 setsListHtml += `
                     <div class="history-set-item">
                         <span>Set ${idx + 1}</span>
-                        <span class="history-set-detail">${weight} kg × ${reps} 回 <span class="text-muted">(1RM ~${est1RM}kg)</span></span>
+                        <span class="history-set-detail">${detail}</span>
                     </div>
                 `;
             });
@@ -140,7 +147,7 @@ function createHistoryCard(workout, prs) {
                 </div>
                 <div class="history-date-row">
                     <i data-lucide="calendar"></i>
-                    <span>${formattedDate} ${workout.time ? `&nbsp; ${escapeHtml(workout.time)}` : ''}</span>
+                    <span><button type="button" class="history-date-link" data-date="${escapeHtml(workout.date)}" title="この日の記録をまとめて見る">${formattedDate}</button>${workout.time ? `&nbsp; ${escapeHtml(workout.time)}` : ''}</span>
                 </div>
                 ${workout.estimatedCalories ? `<div class="history-date-row"><i data-lucide="flame"></i><span>筋トレ消費目安: ${Math.round(Number(workout.estimatedCalories) || 0)} kcal</span></div>` : ''}
             </div>
@@ -190,8 +197,8 @@ function editWorkout(id) {
     // (ただし「フィットネス上の今日」以外の記録は復元対象外。state.jsのloadData参照)
     setOpenWorkoutId(id);
 
-    const formNavItem = document.querySelector('[data-tab="quick-log"]');
-    if (formNavItem) formNavItem.click();
+    switchTab('quick-log');
+    switchRecordPage('training');
 
     // フォームの組み立ては記録フォーム側と共用する(見出し・ボタン・案内文だけが違う)
     populateWorkoutForm(workout, 'edit');

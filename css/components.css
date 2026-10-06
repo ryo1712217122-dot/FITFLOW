@@ -523,11 +523,66 @@ textarea {
     gap: 1.25rem;
 }
 
+.day-summary-section-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.75rem;
+    margin-bottom: 0.5rem;
+}
+
 .day-summary-section-title {
     font-weight: 700;
     font-size: 16px;
-    margin-bottom: 0.5rem;
     color: var(--gray-800);
+}
+
+/* 「履歴で見る」。画面を移動するのでリンクの見た目(常に下線)にする */
+.day-summary-history-link {
+    font-size: 14px;
+    white-space: nowrap;
+}
+
+/* 筋トレの種目ごとの中身(60kg×10回×3 など) */
+.day-summary-exercises {
+    list-style: none;
+    margin: 0.375rem 0 0;
+    padding: 0;
+    font-size: 14px;
+    line-height: 1.7;
+}
+
+.day-summary-exercise-name {
+    font-weight: 700;
+    color: var(--gray-900);
+    margin-right: 0.5rem;
+}
+
+.day-summary-exercise-sets {
+    color: var(--gray-800);
+    font-variant-numeric: tabular-nums;
+}
+
+/* この日に記録を追加(＋食事 / ＋トレーニング / ＋体重) */
+.day-summary-add {
+    margin-top: 1.25rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border-color);
+}
+
+.day-summary-add-label {
+    display: block;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--gray-800);
+    margin-bottom: 0.5rem;
+}
+
+/* 当たり判定(44px)が重ならないよう12px空ける */
+.day-summary-add-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
 }
 
 .day-summary-item {
@@ -583,9 +638,51 @@ textarea {
 }
 
 .day-summary-footer {
-    margin-top: 1.25rem;
-    padding-top: 1rem;
-    border-top: 1px solid var(--border-color);
+    margin-top: 1rem;
+}
+
+/* 補足の薄い文字。gray-536 より薄くはしない(DADS) */
+.text-muted {
+    color: var(--gray-700);
+}
+
+/* 履歴カードの日付。押すとその日の記録をまとめた日別サマリーが開く。
+   画面は移動せず小窓を開く操作なのでボタンだが、押せることが分かるよう下線を付ける */
+.history-date-link {
+    background: none;
+    border: none;
+    padding: 0;
+    font: inherit;
+    color: var(--link);
+    text-decoration: underline;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 3px;
+    cursor: pointer;
+    position: relative;
+}
+
+/* 見た目は文字の高さのまま、当たり判定だけ44pxに広げる */
+.history-date-link::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 50%;
+    height: 44px;
+    transform: translateY(-50%);
+}
+
+@media (hover: hover) {
+    .history-date-link:hover {
+        color: var(--link-hover);
+        text-decoration-thickness: 3px;
+    }
+}
+
+/* ダッシュボード・日別サマリーから飛んできた履歴カード。数秒だけキーカラーの太枠で示す */
+.card.is-highlighted {
+    box-shadow: 0 0 0 3px var(--key-900);
+    transition: box-shadow 0.2s ease;
 }
 
 /* Progress Bar (目標達成度など)。地の灰と塗りのキーカラーは3:1以上の差がある */

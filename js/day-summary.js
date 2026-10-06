@@ -1,6 +1,6 @@
 // FITFLOW - 日別サマリーモーダル
 //
-// カレンダーの日付をクリックすると、その日の筋トレ・有酸素・体重の
+// カレンダー・体重グラフ・履歴カードの日付をクリックすると、その日の筋トレ・有酸素・食事・体重の
 // 記録を横断的にまとめて表示する。「入力した情報と履歴の日別対応が分かりにくい」
 // (履歴タブが種類別タブに分かれていて、ある1日に何を記録したか横断的に見れない)
 // という要望に応え、日付を起点に全種類の記録を一望できるようにする。
@@ -20,9 +20,11 @@ function initDaySummaryModal() {
         });
     }
 
-    if (DOM.daySummaryAddBtn) {
-        DOM.daySummaryAddBtn.addEventListener('click', () => {
+    // 「＋食事」「＋トレーニング」「＋体重」。押した種類の記録ページを、この日の日付で開く
+    document.querySelectorAll('.day-summary-add-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
             const dateStr = daySummaryCurrentDate;
+            const page = btn.getAttribute('data-record-page');
             closeDaySummaryModal();
             if (!dateStr) return;
 
@@ -30,24 +32,24 @@ function initDaySummaryModal() {
             // 記録フォームの日付は次に種目を保存した時点でセッション本体へ反映されるため
             // (applyOpenWorkoutMetaFromForm)、ここで書き換えると保存済みの種目ごと
             // セッションがこの日へ移動してしまう。まず今のセッションを締めくくってもらう。
-            const openWorkout = getOpenWorkoutForOtherDate(dateStr);
+            const openWorkout = page === 'training' ? getOpenWorkoutForOtherDate(dateStr) : null;
             if (openWorkout) {
                 showConfirmModal(
                     '進行中のトレーニングがあります',
                     `${formatDateJp(openWorkout.date)}のトレーニングを記録中です（${(openWorkout.exercises || []).length}種目 保存済み）。`
                     + 'ここで日付を変えると、保存済みの種目ごとこの日に移動してしまいます。'
-                    + '先に「記録する」タブで「トレーニングを記録完了」を押して締めくくってください。'
-                    + `このまま進む場合、体重・食事・有酸素の日付だけ${formatDateJp(dateStr)}に合わせます（トレーニングの日付は変えません）。`,
+                    + '先に「トレーニングを記録完了」を押して締めくくってください。'
+                    + 'このまま進むと、記録中のトレーニングをそのまま開きます（日付は変えません）。',
                     () => {
-                        openRecordTabForDate(dateStr, { includeWorkout: false });
+                        openRecordTabForDate(dateStr, page, { includeWorkout: false });
                     }
                 );
                 return;
             }
 
-            openRecordTabForDate(dateStr, { includeWorkout: true });
+            openRecordTabForDate(dateStr, page, { includeWorkout: true });
         });
-    }
+    });
 }
 
 // 進行中の筋トレセッションが「指定日とは別の日」のものなら、そのワークアウトを返す。
@@ -59,19 +61,16 @@ function getOpenWorkoutForOtherDate(dateStr) {
     return workout;
 }
 
-// 「記録する」タブを開き、各フォームの日付をdateStrに合わせて既存記録を反映する。
-// includeWorkout=false の場合、筋トレフォームの日付だけは現状のまま残す
+// 「記録する」タブの指定のページを開き、各フォームの日付をdateStrに合わせて既存記録を反映する。
+// includeWorkout=false の場合、トレーニング(と有酸素)の日付だけは現状のまま残す
 // (進行中セッションを別の日へ巻き込まないため)。
-function openRecordTabForDate(dateStr, { includeWorkout = true } = {}) {
-    const formNavItem = document.querySelector('[data-tab="quick-log"]');
-    if (formNavItem) formNavItem.click();
+function openRecordTabForDate(dateStr, page = 'meal', { includeWorkout = true } = {}) {
+    switchTab('quick-log');
+    switchRecordPage(page);
 
-    if (includeWorkout && DOM.workoutDate) {
+    if (includeWorkout && DOM.workoutDate && !state.editingWorkoutId) {
         DOM.workoutDate.value = dateStr;
-    }
-    if (DOM.cardioDate) {
-        DOM.cardioDate.value = dateStr;
-        syncCardioFormWithExistingDataForDate(dateStr);
+        DOM.workoutDate.dispatchEvent(new Event('change'));
     }
     if (DOM.weightQuickDate) {
         DOM.weightQuickDate.value = dateStr;
@@ -98,10 +97,17 @@ function closeDaySummaryModal() {
     if (DOM.daySummaryModal) DOM.daySummaryModal.classList.add('hidden');
 }
 
-function daySummarySectionHtml(title, contentHtml) {
+// historyKind を渡すと、見出しの右に「履歴で見る」を置く(押すと履歴タブのその日のカードへ移動)
+function daySummarySectionHtml(title, contentHtml, historyKind = null, dateStr = null) {
+    const link = historyKind
+        ? `<a href="#history" class="day-summary-history-link" data-history-jump="${historyKind}" data-history-date="${escapeHtml(dateStr)}">履歴で見る</a>`
+        : '';
     return `
         <div class="day-summary-section">
-            <div class="day-summary-section-title">${title}</div>
+            <div class="day-summary-section-head">
+                <div class="day-summary-section-title">${title}</div>
+                ${link}
+            </div>
             ${contentHtml}
         </div>
     `;
@@ -120,14 +126,19 @@ function renderDaySummaryBody(dateStr) {
 
     if (dayWorkouts.length > 0) {
         const workoutsHtml = dayWorkouts.map(w => {
-            const exerciseNames = (w.exercises || []).map(ex => escapeHtml(ex.name)).join('、');
             const exerciseCount = (w.exercises || []).length;
+            // 種目ごとに「60kg×10回×3」の形で中身まで見せる(何をやった日かがここで分かるように)
+            const exerciseRows = (w.exercises || []).map(ex => `
+                <li><span class="day-summary-exercise-name">${escapeHtml(ex.name)}</span>
+                    <span class="day-summary-exercise-sets">${escapeHtml(formatSetsSummary(ex.sets || []))}</span></li>
+            `).join('');
             return `
                 <div class="day-summary-item">
                     <div class="day-summary-item-main">
                         <div class="day-summary-item-title">
-                            ${w.time ? `${escapeHtml(w.time)} ・ ` : ''}${exerciseCount}種目${exerciseNames ? `：${exerciseNames}` : ''}
+                            ${w.time ? `${escapeHtml(w.time)} ・ ` : ''}${exerciseCount}種目
                         </div>
+                        ${exerciseRows ? `<ul class="day-summary-exercises">${exerciseRows}</ul>` : ''}
                         ${w.impression ? `<div class="day-summary-item-sub">${escapeHtml(w.impression)}</div>` : ''}
                         ${w.estimatedCalories ? `<div class="day-summary-item-sub">推定消費: ${Math.round(Number(w.estimatedCalories) || 0)} kcal</div>` : ''}
                     </div>
@@ -142,7 +153,7 @@ function renderDaySummaryBody(dateStr) {
                 </div>
             `;
         }).join('');
-        sections.push(daySummarySectionHtml('🏋️ 筋トレ', workoutsHtml));
+        sections.push(daySummarySectionHtml('🏋️ 筋トレ', workoutsHtml, 'workouts', dateStr));
     }
 
     if (dayCardio) {
@@ -158,7 +169,7 @@ function renderDaySummaryBody(dateStr) {
                 </div>
             </div>
         `;
-        sections.push(daySummarySectionHtml('🏃 有酸素', cardioHtml));
+        sections.push(daySummarySectionHtml('🏃 有酸素', cardioHtml, 'cardio', dateStr));
     }
 
     if (dayMeal) {
@@ -176,7 +187,7 @@ function renderDaySummaryBody(dateStr) {
                 </div>
             </div>
         `;
-        sections.push(daySummarySectionHtml('🍽 食事', mealHtml));
+        sections.push(daySummarySectionHtml('🍽 食事', mealHtml, 'meals', dateStr));
     }
 
     if (dayWeight) {
@@ -192,16 +203,16 @@ function renderDaySummaryBody(dateStr) {
                 </div>
             </div>
         `;
-        sections.push(daySummarySectionHtml('⚖️ 体重', weightHtml));
+        sections.push(daySummarySectionHtml('⚖️ 体重', weightHtml, 'weight', dateStr));
     }
 
     if (dayDrinking) {
-        // 取り消しは「記録する」タブの飲み会フォーム(同じ日付を選んで送信)で行うため、ここは表示のみ
+        // 取り消しは食事の記録(夕食の「飲み会だった」のチェックを外して保存)で行うため、ここは表示のみ
         const drinkingHtml = `
             <div class="day-summary-item">
                 <div class="day-summary-item-main">
                     <div class="day-summary-item-title">この日は飲み会でした</div>
-                    <div class="day-summary-item-sub">取り消しは「記録する」タブの飲み会フォームで同じ日付を選んで行えます</div>
+                    <div class="day-summary-item-sub">取り消すには「＋ 食事」から夕食の「飲み会だった」のチェックを外して保存します</div>
                 </div>
             </div>
         `;

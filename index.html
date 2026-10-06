@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>FITFLOW - 筋トレ実績管理アプリ</title>
-    <!-- ホーム画面に追加してアプリとして使う・オフラインで開くための設定(v1.26.0)。
+    <!-- ホーム画面に追加してアプリとして使う・オフラインで開くための設定(v1.27.0)。
          Service Worker の登録は js/main.js、保存の方針は sw.js を参照 -->
     <link rel="manifest" href="manifest.webmanifest">
     <meta name="theme-color" content="#0017c1">
@@ -26,17 +26,17 @@
     <script src="vendor/lucide-0.469.0.min.js"></script>
     <!-- CSSはカスケードレイヤーで管理。layers.cssの宣言順が優先度を決めるため、
          必ずこれを他のどのスタイルシートよりも先に読み込むこと（<link>の物理的な順番には依存しない）。 -->
-    <link rel="stylesheet" href="css/layers.css?v=1.26.0">
-    <link rel="stylesheet" href="css/tokens.css?v=1.26.0">
-    <link rel="stylesheet" href="css/base.css?v=1.26.0">
-    <link rel="stylesheet" href="css/layout.css?v=1.26.0">
-    <link rel="stylesheet" href="css/components.css?v=1.26.0">
-    <link rel="stylesheet" href="css/pages/record.css?v=1.26.0">
-    <link rel="stylesheet" href="css/pages/dashboard.css?v=1.26.0">
-    <link rel="stylesheet" href="css/pages/plan.css?v=1.26.0">
-    <link rel="stylesheet" href="css/pages/history.css?v=1.26.0">
-    <link rel="stylesheet" href="css/pages/settings.css?v=1.26.0">
-    <link rel="stylesheet" href="css/responsive.css?v=1.26.0">
+    <link rel="stylesheet" href="css/layers.css?v=1.27.0">
+    <link rel="stylesheet" href="css/tokens.css?v=1.27.0">
+    <link rel="stylesheet" href="css/base.css?v=1.27.0">
+    <link rel="stylesheet" href="css/layout.css?v=1.27.0">
+    <link rel="stylesheet" href="css/components.css?v=1.27.0">
+    <link rel="stylesheet" href="css/pages/record.css?v=1.27.0">
+    <link rel="stylesheet" href="css/pages/dashboard.css?v=1.27.0">
+    <link rel="stylesheet" href="css/pages/plan.css?v=1.27.0">
+    <link rel="stylesheet" href="css/pages/history.css?v=1.27.0">
+    <link rel="stylesheet" href="css/pages/settings.css?v=1.27.0">
+    <link rel="stylesheet" href="css/responsive.css?v=1.27.0">
 </head>
 <body>
     <div class="app-container">
@@ -48,26 +48,26 @@
                 </div>
                 <div class="brand-text">
                     <h1>FITFLOW</h1>
-                    <span class="app-version">v1.26.0</span>
+                    <span class="app-version">v1.27.0</span>
                 </div>
             </div>
 
             <nav class="nav-menu">
-                <a href="#quick-log" class="nav-item active" data-tab="quick-log">
-                    <i data-lucide="plus-circle"></i>
-                    <span>記録する</span>
-                </a>
-                <a href="#analytics" class="nav-item" data-tab="analytics">
+                <a href="#analytics" class="nav-item active" data-tab="analytics" aria-current="page">
                     <i data-lucide="layout-dashboard"></i>
                     <span>ダッシュ<wbr>ボード</span>
                 </a>
-                <a href="#plan" class="nav-item" data-tab="plan">
-                    <i data-lucide="target"></i>
-                    <span>最適化<wbr>計画</span>
+                <a href="#quick-log" class="nav-item" data-tab="quick-log">
+                    <i data-lucide="plus-circle"></i>
+                    <span>記録する</span>
                 </a>
                 <a href="#history" class="nav-item" data-tab="history">
                     <i data-lucide="history"></i>
                     <span>履歴<wbr>リスト</span>
+                </a>
+                <a href="#plan" class="nav-item" data-tab="plan">
+                    <i data-lucide="target"></i>
+                    <span>最適化<wbr>計画</span>
                 </a>
                 <a href="#settings" class="nav-item" data-tab="settings">
                     <i data-lucide="settings"></i>
@@ -81,30 +81,158 @@
             <!-- Top bar -->
             <header class="top-bar">
                 <div class="welcome">
-                    <h2 id="greeting-text">こんにちは！<span class="app-version-badge">v1.26.0</span></h2>
+                    <h2 id="greeting-text">こんにちは！<span class="app-version-badge">v1.27.0</span></h2>
                     <p id="date-text">2026年7月3日 金曜日</p>
                 </div>
                 <div class="header-right-controls">
                     <div class="quick-stats-header">
                         <div class="header-stat">
-                            <span class="stat-label">継続日数</span>
+                            <span class="stat-label">記録の継続</span>
                             <span class="stat-value" id="streak-count">0 日</span>
                         </div>
                     </div>
                 </div>
             </header>
 
-            <!-- Quick Log Tab: トレーニング・有酸素・体重・食事・飲み会の5つの独立したフォーム。
-                 それぞれ一つずつ入力・保存できる(まとめて完了する送信は廃止)。
+            <!-- 記録する(v1.27.0で3ページに分割)。いちばん触る食事を先頭に、トレーニング(有酸素を含む)、
+                 1日の最後に測る体重を最後に置く。ページの切り替えは js/record-form.js の switchRecordPage。
                  日付のデフォルトは「27時ルール」(AM3時までは前日扱い)で入る。 -->
-            <section id="quick-log" class="tab-content active">
-                <div class="quick-log-grid">
-                    <!-- パート1: トレーニング(筋トレ)の記録 -->
-                    <form id="workout-form" class="card log-card main-logger col-span-2">
+            <section id="quick-log" class="tab-content">
+                <div class="history-sub-tabs record-page-tabs" role="tablist" aria-label="記録の種類">
+                    <button type="button" class="btn btn-sm history-sub-tab-btn record-page-btn active" role="tab" aria-selected="true" aria-controls="record-page-meal" id="record-tab-meal" data-record-page="meal">食事</button>
+                    <button type="button" class="btn btn-sm history-sub-tab-btn record-page-btn" role="tab" aria-selected="false" aria-controls="record-page-training" id="record-tab-training" data-record-page="training">トレーニング<span class="record-page-badge is-hidden" id="record-training-badge">記録中</span></button>
+                    <button type="button" class="btn btn-sm history-sub-tab-btn record-page-btn" role="tab" aria-selected="false" aria-controls="record-page-weight" id="record-tab-weight" data-record-page="weight">体重</button>
+                </div>
+
+                <div class="record-page" id="record-page-meal" role="tabpanel" aria-labelledby="record-tab-meal">
+                    <form id="meal-form" class="card log-card">
+                        <div class="card-header">
+                            <div class="header-title">
+                                <i data-lucide="utensils"></i>
+                                <h3>🍽 食事の記録</h3>
+                            </div>
+                        </div>
+                        <p class="form-hint form-section-intro">その日食べたものの目安カロリーを一食ごとに入力します。外食・間食などカロリーがわかるものは「手動入力」、家で作ってもらった食事など正確な量がわからないものは「目安から選択」を使ってください。間食は登録するたびに、その日の間食合計へ加算されます。夕食が飲み会だった日は、夕食欄の「🍻 飲み会だった」にチェックを入れてください。</p>
+                        <div class="card-body">
+                            <div class="form-group">
+                                <label for="meal-date">日付 <span class="required">*</span></label>
+                                <div class="input-icon-wrapper">
+                                    <i data-lucide="calendar" class="input-icon"></i>
+                                    <input type="date" id="meal-date" required>
+                                </div>
+                                <div class="existing-data-hint is-hidden" id="meal-existing-hint">
+                                    <i data-lucide="info"></i>
+                                    <span id="meal-existing-hint-text"></span>
+                                </div>
+                            </div>
+
+                            <div class="form-group margin-top-1">
+                                <div class="meal-field-header">
+                                    <label for="meal-breakfast">朝食</label>
+                                    <div class="chart-period-toggle meal-mode-toggle" data-meal="breakfast">
+                                        <button type="button" class="chart-period-btn meal-mode-btn active" data-mode="manual">手動入力</button>
+                                        <button type="button" class="chart-period-btn meal-mode-btn" data-mode="estimate">目安から選択</button>
+                                    </div>
+                                </div>
+                                <input type="number" min="0" step="1" inputmode="numeric" id="meal-breakfast" placeholder="0">
+                                <select id="meal-breakfast-estimate" class="is-hidden margin-top-0-5">
+                                    <option value="">目安を選択してください</option>
+                                    <option value="200">少なめ（約200kcal）</option>
+                                    <option value="400">普通（約400kcal）</option>
+                                    <option value="600">多め（約600kcal）</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group margin-top-1">
+                                <div class="meal-field-header">
+                                    <label for="meal-lunch">昼食</label>
+                                    <div class="chart-period-toggle meal-mode-toggle" data-meal="lunch">
+                                        <button type="button" class="chart-period-btn meal-mode-btn active" data-mode="manual">手動入力</button>
+                                        <button type="button" class="chart-period-btn meal-mode-btn" data-mode="estimate">目安から選択</button>
+                                    </div>
+                                </div>
+                                <input type="number" min="0" step="1" inputmode="numeric" id="meal-lunch" placeholder="0">
+                                <select id="meal-lunch-estimate" class="is-hidden margin-top-0-5">
+                                    <option value="">目安を選択してください</option>
+                                    <option value="400">少なめ（約400kcal）</option>
+                                    <option value="650">普通（約650kcal）</option>
+                                    <option value="900">多め（約900kcal）</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group margin-top-1">
+                                <div class="meal-field-header">
+                                    <label for="meal-dinner">夕食</label>
+                                    <div class="chart-period-toggle meal-mode-toggle" data-meal="dinner">
+                                        <button type="button" class="chart-period-btn meal-mode-btn active" data-mode="manual">手動入力</button>
+                                        <button type="button" class="chart-period-btn meal-mode-btn" data-mode="estimate">目安から選択</button>
+                                    </div>
+                                </div>
+                                <input type="number" min="0" step="1" inputmode="numeric" id="meal-dinner" placeholder="0">
+                                <select id="meal-dinner-estimate" class="is-hidden margin-top-0-5">
+                                    <option value="">目安を選択してください</option>
+                                    <option value="450">少なめ（約450kcal）</option>
+                                    <option value="700">普通（約700kcal）</option>
+                                    <option value="950">多め（約950kcal）</option>
+                                </select>
+                                <!-- 飲み会は夕食の分岐として記録する(v1.27.0で独立したフォームから統合)。
+                                     チェックを付けて保存するとdrinkingLogsにも記録され、体重グラフに🍻が付く。
+                                     記録済みの日にチェックを外して保存すると、飲み会の記録だけを取り消す -->
+                                <label class="meal-drinking-check">
+                                    <input type="checkbox" id="meal-dinner-drinking">
+                                    <span>🍻 飲み会だった</span>
+                                </label>
+                                <div class="meal-drinking-panel is-hidden" id="meal-drinking-panel">
+                                    <label for="meal-drinking-estimate">飲み会の摂取の目安（選ぶと夕食欄に入ります）</label>
+                                    <select id="meal-drinking-estimate">
+                                        <option value="">目安から選択...</option>
+                                        <option value="800">軽め（約800kcal・数杯＋つまみ）</option>
+                                        <option value="1500">普通（約1500kcal・飲み放題＋コース）</option>
+                                        <option value="2200">がっつり（約2200kcal・二次会/締めラーメン）</option>
+                                    </select>
+                                    <p class="form-hint">飲み会の日は体重グラフに🍻が付き、翌日の体重変化も確認できます。カロリーが分からなくても、チェックだけで記録できます。</p>
+                                </div>
+                                <div class="existing-data-hint is-hidden" id="meal-drinking-hint">
+                                    <i data-lucide="info"></i>
+                                    <span id="meal-drinking-hint-text"></span>
+                                </div>
+                            </div>
+
+                            <div class="form-group margin-top-1">
+                                <div class="meal-field-header">
+                                    <label for="meal-snacks">間食（今回の分）</label>
+                                    <div class="chart-period-toggle meal-mode-toggle" data-meal="snacks">
+                                        <button type="button" class="chart-period-btn meal-mode-btn active" data-mode="manual">手動入力</button>
+                                        <button type="button" class="chart-period-btn meal-mode-btn" data-mode="estimate">目安から選択</button>
+                                    </div>
+                                </div>
+                                <input type="number" min="0" step="1" inputmode="numeric" id="meal-snacks" placeholder="0">
+                                <select id="meal-snacks-estimate" class="is-hidden margin-top-0-5">
+                                    <option value="">目安を選択してください</option>
+                                    <option value="100">少なめ（約100kcal）</option>
+                                    <option value="200">普通（約200kcal）</option>
+                                    <option value="350">多め（約350kcal）</option>
+                                </select>
+                                <p class="form-hint">※他の3食と違い、登録するたびにその日の間食合計へ加算されます（3時のおやつ、夜食…と分けて記録できます）。</p>
+                            </div>
+
+                            <div class="form-hint" id="meal-total-hint">
+                                ※合計摂取目安: 0 kcal
+                            </div>
+
+                            <button type="submit" class="btn btn-primary btn-full margin-top-1">
+                                <i data-lucide="check"></i> 食事を記録
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                <div class="record-page is-hidden" id="record-page-training" role="tabpanel" aria-labelledby="record-tab-training">
+                    <form id="workout-form" class="card log-card">
                         <div class="form-header-row">
                             <h2 id="logger-form-title">🏋️ トレーニングの記録</h2>
                         </div>
-                        <p class="form-hint form-section-intro">種目は入力し終えるごとに、その場で個別に保存できます。深夜27時(AM3時)までは前日の日付が入ります。</p>
+                        <p class="form-hint form-section-intro">種目は入力し終えるごとに、その場で個別に保存できます。走った日は下の「有酸素」に距離を入れておくと、「トレーニングを記録完了」で一緒に保存されます。深夜27時(AM3時)までは前日の日付が入ります。</p>
                         <!-- 進行中のセッションを開き直した時だけ出す。前回の種目が並んでいる理由と、
                              まだ終わっていないこと(=完了ボタンを押すまで追記できる)を示す -->
                         <p class="workout-resume-hint is-hidden" id="workout-resume-hint"></p>
@@ -178,259 +306,89 @@
                                 </div>
                             </div>
 
+                            <!-- 有酸素(v1.27.0でトレーニングの記録に統合)。日付はトレーニングと共通で、
+                                 「トレーニングを記録完了」を押した時に一緒に保存する。走っただけの日は
+                                 種目を入れずに距離だけ入れて完了を押せばよい -->
+                            <hr class="form-section-divider">
+                            <div class="form-group" id="cardio-fields">
+                                <h3 class="form-subsection-title">🏃 有酸素（走った日だけ）</h3>
+                                <label for="log-cardio-dist">走行距離 (km)</label>
+                                <div class="input-icon-wrapper">
+                                    <i data-lucide="footprints" class="input-icon"></i>
+                                    <input type="number" step="0.01" inputmode="decimal" id="log-cardio-dist" placeholder="走らなかった日は空欄のまま">
+                                </div>
+                                <div class="form-hint" id="cardio-calc-hint">
+                                    ※消費目安: 0 kcal (最新体重: -- kg)
+                                </div>
+                                <div class="existing-data-hint is-hidden" id="cardio-existing-hint">
+                                    <i data-lucide="info"></i>
+                                    <span id="cardio-existing-hint-text"></span>
+                                </div>
+                            </div>
+
                             <button type="submit" class="btn btn-primary btn-full margin-top-1" id="save-workout-btn">
                                 <i data-lucide="check"></i> トレーニングを記録完了
                             </button>
                         </div>
                     </form>
-
-                    <!-- パート2: 有酸素の記録 / パート3: 体重の記録 -->
-                    <div class="side-loggers-column">
-                        <form id="cardio-form" class="card log-card">
-                            <div class="card-header">
-                                <div class="header-title">
-                                    <i data-lucide="flame"></i>
-                                    <h3>🏃 有酸素の記録</h3>
-                                </div>
-                            </div>
-                            <p class="form-hint form-section-intro">走った日に入力する部分です。</p>
-                            <div class="card-body">
-                                <div class="form-group">
-                                    <label for="cardio-date">日付 <span class="required">*</span></label>
-                                    <div class="input-icon-wrapper">
-                                        <i data-lucide="calendar" class="input-icon"></i>
-                                        <input type="date" id="cardio-date" required>
-                                    </div>
-                                    <div class="existing-data-hint is-hidden" id="cardio-existing-hint">
-                                        <i data-lucide="info"></i>
-                                        <span id="cardio-existing-hint-text"></span>
-                                    </div>
-                                </div>
-                                <div class="form-group margin-top-1">
-                                    <label for="log-cardio-dist">走行距離 (km) <span class="required">*</span></label>
-                                    <div class="input-icon-wrapper">
-                                        <i data-lucide="flame" class="input-icon"></i>
-                                        <input type="number" step="0.01" id="log-cardio-dist" placeholder="走った距離を入力してください...">
-                                    </div>
-                                    <div class="form-hint" id="cardio-calc-hint">
-                                        ※消費目安: 0 kcal (最新体重: -- kg)
-                                    </div>
-                                </div>
-
-                                <button type="submit" class="btn btn-primary btn-full margin-top-1">
-                                    <i data-lucide="check"></i> 有酸素を記録
-                                </button>
-                            </div>
-                        </form>
-
-                        <form id="weight-quick-form" class="card log-card">
-                            <div class="card-header">
-                                <div class="header-title">
-                                    <i data-lucide="scale"></i>
-                                    <h3>⚖️ 体重の記録</h3>
-                                </div>
-                            </div>
-                            <p class="form-hint form-section-intro">ジムに行かない日でも入力する部分です。</p>
-                            <div class="card-body">
-                                <div class="form-group">
-                                    <label for="weight-quick-date">日付 <span class="required">*</span></label>
-                                    <div class="input-icon-wrapper">
-                                        <i data-lucide="calendar" class="input-icon"></i>
-                                        <input type="date" id="weight-quick-date" required>
-                                    </div>
-                                    <div class="existing-data-hint is-hidden" id="daily-log-existing-hint">
-                                        <i data-lucide="info"></i>
-                                        <span id="daily-log-existing-hint-text"></span>
-                                    </div>
-                                </div>
-                                <div class="form-group margin-top-1">
-                                    <label for="weight-quick-val">体重 (kg) <span class="required">*</span></label>
-                                    <div class="input-icon-wrapper">
-                                        <i data-lucide="scale" class="input-icon"></i>
-                                        <input type="number" step="0.1" id="weight-quick-val" placeholder="体重計の数値を入力してください...">
-                                    </div>
-                                </div>
-
-                                <button type="submit" class="btn btn-primary btn-full margin-top-1">
-                                    <i data-lucide="check"></i> 体重を記録
-                                </button>
-                            </div>
-                        </form>
-
-                        <form id="meal-form" class="card log-card">
-                            <div class="card-header">
-                                <div class="header-title">
-                                    <i data-lucide="utensils"></i>
-                                    <h3>🍽 食事の記録</h3>
-                                </div>
-                            </div>
-                            <p class="form-hint form-section-intro">その日食べたものの目安カロリーを一食ごとに入力します。外食・間食などカロリーがわかるものは「手動入力」、家で作ってもらった食事など正確な量がわからないものは「目安から選択」を使ってください。間食は登録するたびに、その日の間食合計へ加算されます。</p>
-                            <div class="card-body">
-                                <div class="form-group">
-                                    <label for="meal-date">日付 <span class="required">*</span></label>
-                                    <div class="input-icon-wrapper">
-                                        <i data-lucide="calendar" class="input-icon"></i>
-                                        <input type="date" id="meal-date" required>
-                                    </div>
-                                    <div class="existing-data-hint is-hidden" id="meal-existing-hint">
-                                        <i data-lucide="info"></i>
-                                        <span id="meal-existing-hint-text"></span>
-                                    </div>
-                                </div>
-
-                                <div class="form-group margin-top-1">
-                                    <div class="meal-field-header">
-                                        <label for="meal-breakfast">朝食</label>
-                                        <div class="chart-period-toggle meal-mode-toggle" data-meal="breakfast">
-                                            <button type="button" class="chart-period-btn meal-mode-btn active" data-mode="manual">手動入力</button>
-                                            <button type="button" class="chart-period-btn meal-mode-btn" data-mode="estimate">目安から選択</button>
-                                        </div>
-                                    </div>
-                                    <input type="number" min="0" step="1" id="meal-breakfast" placeholder="0">
-                                    <select id="meal-breakfast-estimate" class="is-hidden margin-top-0-5">
-                                        <option value="">目安を選択してください</option>
-                                        <option value="200">少なめ（約200kcal）</option>
-                                        <option value="400">普通（約400kcal）</option>
-                                        <option value="600">多め（約600kcal）</option>
-                                    </select>
-                                </div>
-
-                                <div class="form-group margin-top-1">
-                                    <div class="meal-field-header">
-                                        <label for="meal-lunch">昼食</label>
-                                        <div class="chart-period-toggle meal-mode-toggle" data-meal="lunch">
-                                            <button type="button" class="chart-period-btn meal-mode-btn active" data-mode="manual">手動入力</button>
-                                            <button type="button" class="chart-period-btn meal-mode-btn" data-mode="estimate">目安から選択</button>
-                                        </div>
-                                    </div>
-                                    <input type="number" min="0" step="1" id="meal-lunch" placeholder="0">
-                                    <select id="meal-lunch-estimate" class="is-hidden margin-top-0-5">
-                                        <option value="">目安を選択してください</option>
-                                        <option value="400">少なめ（約400kcal）</option>
-                                        <option value="650">普通（約650kcal）</option>
-                                        <option value="900">多め（約900kcal）</option>
-                                    </select>
-                                </div>
-
-                                <div class="form-group margin-top-1">
-                                    <div class="meal-field-header">
-                                        <label for="meal-dinner">夕食</label>
-                                        <div class="chart-period-toggle meal-mode-toggle" data-meal="dinner">
-                                            <button type="button" class="chart-period-btn meal-mode-btn active" data-mode="manual">手動入力</button>
-                                            <button type="button" class="chart-period-btn meal-mode-btn" data-mode="estimate">目安から選択</button>
-                                        </div>
-                                    </div>
-                                    <input type="number" min="0" step="1" id="meal-dinner" placeholder="0">
-                                    <select id="meal-dinner-estimate" class="is-hidden margin-top-0-5">
-                                        <option value="">目安を選択してください</option>
-                                        <option value="450">少なめ（約450kcal）</option>
-                                        <option value="700">普通（約700kcal）</option>
-                                        <option value="950">多め（約950kcal）</option>
-                                    </select>
-                                </div>
-
-                                <div class="form-group margin-top-1">
-                                    <div class="meal-field-header">
-                                        <label for="meal-snacks">間食（今回の分）</label>
-                                        <div class="chart-period-toggle meal-mode-toggle" data-meal="snacks">
-                                            <button type="button" class="chart-period-btn meal-mode-btn active" data-mode="manual">手動入力</button>
-                                            <button type="button" class="chart-period-btn meal-mode-btn" data-mode="estimate">目安から選択</button>
-                                        </div>
-                                    </div>
-                                    <input type="number" min="0" step="1" id="meal-snacks" placeholder="0">
-                                    <select id="meal-snacks-estimate" class="is-hidden margin-top-0-5">
-                                        <option value="">目安を選択してください</option>
-                                        <option value="100">少なめ（約100kcal）</option>
-                                        <option value="200">普通（約200kcal）</option>
-                                        <option value="350">多め（約350kcal）</option>
-                                    </select>
-                                    <p class="form-hint">※他の3食と違い、登録するたびにその日の間食合計へ加算されます（3時のおやつ、夜食…と分けて記録できます）。</p>
-                                </div>
-
-                                <div class="form-hint" id="meal-total-hint">
-                                    ※合計摂取目安: 0 kcal
-                                </div>
-
-                                <button type="submit" class="btn btn-primary btn-full margin-top-1">
-                                    <i data-lucide="check"></i> 食事を記録
-                                </button>
-                            </div>
-                        </form>
-
-                        <form id="drinking-form" class="card log-card">
-                            <div class="card-header">
-                                <div class="header-title">
-                                    <i data-lucide="beer"></i>
-                                    <h3>🍻 飲み会の記録</h3>
-                                </div>
-                            </div>
-                            <p class="form-hint form-section-intro">飲み会があった日を記録します。体重は特に飲み会の前後で変化が著しいので、体重グラフに🍻マークで表示され、翌日の平均体重変化も確認できます。</p>
-                            <div class="card-body">
-                                <div class="form-group">
-                                    <label for="drinking-date">日付 <span class="required">*</span></label>
-                                    <div class="input-icon-wrapper">
-                                        <i data-lucide="calendar" class="input-icon"></i>
-                                        <input type="date" id="drinking-date" required>
-                                    </div>
-                                    <div class="existing-data-hint is-hidden" id="drinking-existing-hint">
-                                        <i data-lucide="info"></i>
-                                        <span id="drinking-existing-hint-text"></span>
-                                    </div>
-                                </div>
-
-                                <!-- 飲み会の日は食事を記録し忘れやすく、その日だけ摂取が集計から抜けると
-                                     実測TDEEが低めに出てしまうため、ここで概算を入れられるようにする。
-                                     保存先はdrinkingLogsではなくその日のmealLogsの「夕食」。 -->
-                                <div class="form-group" id="drinking-calorie-group">
-                                    <label for="drinking-calories">推定摂取カロリー（任意）</label>
-                                    <select id="drinking-calories-estimate" class="width-full">
-                                        <option value="">目安から選択...</option>
-                                        <option value="800">🍻 軽め（約800kcal・数杯＋つまみ）</option>
-                                        <option value="1500">🍻 普通（約1500kcal・飲み放題＋コース）</option>
-                                        <option value="2200">🍻 がっつり（約2200kcal・二次会/締めラーメン）</option>
-                                    </select>
-                                    <div class="input-icon-wrapper margin-top-0-5">
-                                        <i data-lucide="flame" class="input-icon"></i>
-                                        <!-- min属性は付けない。付けるとブラウザの制約検証がsubmitごと止めてしまい、
-                                             任意項目であるカロリーの入力ミスだけで飲み会の記録まで保存できなくなる。
-                                             体重・有酸素の入力欄と同じく、検証はJS側で行いトーストで知らせる。 -->
-                                        <input type="number" id="drinking-calories" step="10" placeholder="kcal（空欄なら食事記録は作りません）">
-                                    </div>
-                                    <p class="form-hint">入力すると、その日の食事記録の「夕食」として保存され、実測TDEEの計算に反映されます。</p>
-                                    <div class="existing-data-hint is-hidden" id="drinking-meal-hint">
-                                        <i data-lucide="info"></i>
-                                        <span id="drinking-meal-hint-text"></span>
-                                    </div>
-                                </div>
-
-                                <button type="submit" class="btn btn-primary btn-full margin-top-1" id="drinking-submit-btn">
-                                    <i data-lucide="check"></i> 飲み会を記録
-                                </button>
-                            </div>
-                        </form>
-
-                    </div>
-                    <!-- Global datalist for popular exercises list suggestions -->
-                    <datalist id="popular-exercises">
-                        <option value="ベンチプレス">
-                        <option value="インクラインダンベルプレス">
-                        <option value="ラットプルダウン">
-                        <option value="懸垂 (チンニング)">
-                        <option value="デッドリフト">
-                        <option value="スクワット">
-                        <option value="レッグプレス">
-                        <option value="ショルダープレス">
-                        <option value="サイドレイズ">
-                        <option value="アームカール">
-                        <option value="クランチ">
-                        <option value="腹筋ローラー">
-                        <option value="プランク">
-                    </datalist>
                 </div>
+
+                <div class="record-page is-hidden" id="record-page-weight" role="tabpanel" aria-labelledby="record-tab-weight">
+                    <form id="weight-quick-form" class="card log-card">
+                        <div class="card-header">
+                            <div class="header-title">
+                                <i data-lucide="scale"></i>
+                                <h3>⚖️ 体重の記録</h3>
+                            </div>
+                        </div>
+                        <p class="form-hint form-section-intro">お風呂上がりなど、1日の最後に測った体重を記録します。毎日同じタイミングで測ると、日々のぶれが小さくなります。</p>
+                        <div class="card-body">
+                            <div class="form-group">
+                                <label for="weight-quick-date">日付 <span class="required">*</span></label>
+                                <div class="input-icon-wrapper">
+                                    <i data-lucide="calendar" class="input-icon"></i>
+                                    <input type="date" id="weight-quick-date" required>
+                                </div>
+                                <div class="existing-data-hint is-hidden" id="daily-log-existing-hint">
+                                    <i data-lucide="info"></i>
+                                    <span id="daily-log-existing-hint-text"></span>
+                                </div>
+                            </div>
+                            <div class="form-group margin-top-1">
+                                <label for="weight-quick-val">体重 (kg) <span class="required">*</span></label>
+                                <div class="input-icon-wrapper">
+                                    <i data-lucide="scale" class="input-icon"></i>
+                                    <input type="number" step="0.1" id="weight-quick-val" inputmode="decimal" placeholder="体重計の数値を入力してください...">
+                                </div>
+                            </div>
+
+                            <button type="submit" class="btn btn-primary btn-full margin-top-1">
+                                <i data-lucide="check"></i> 体重を記録
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Global datalist for popular exercises list suggestions -->
+                <datalist id="popular-exercises">
+                    <option value="ベンチプレス">
+                    <option value="インクラインダンベルプレス">
+                    <option value="ラットプルダウン">
+                    <option value="懸垂 (チンニング)">
+                    <option value="デッドリフト">
+                    <option value="スクワット">
+                    <option value="レッグプレス">
+                    <option value="ショルダープレス">
+                    <option value="サイドレイズ">
+                    <option value="アームカール">
+                    <option value="クランチ">
+                    <option value="腹筋ローラー">
+                    <option value="プランク">
+                </datalist>
             </section>
 
-            <!-- Dashboard Tab: 統計・グラフ・カレンダー + メンテナンスカロリー設定 + 計画サマリー -->
-            <section id="analytics" class="tab-content">
+            <!-- Dashboard Tab(起動時に最初に開くタブ): 統計・週のまとめ・カレンダー・体重推移・カロリーバランス -->
+            <section id="analytics" class="tab-content active">
                 <div class="dashboard-grid">
                     <!-- Stats summary cards -->
                     <div class="card stat-card total-workouts">
@@ -439,6 +397,7 @@
                             <h3>総ワークアウト数</h3>
                             <p class="big-number" id="total-workouts-num">0</p>
                             <span class="stat-desc">これまでの積み重ね</span>
+                            <a href="#history" class="stat-card-link" data-history-jump="workouts">筋トレの履歴を見る</a>
                         </div>
                     </div>
 
@@ -448,6 +407,7 @@
                             <h3>最新体重</h3>
                             <p class="big-number"><span id="latest-weight-num">0.0</span> <span class="unit">kg</span></p>
                             <span class="stat-desc" id="latest-weight-date">未登録</span>
+                            <a href="#history" class="stat-card-link" data-history-jump="weight">体重の履歴を見る</a>
                         </div>
                     </div>
 
@@ -457,10 +417,11 @@
                             <h3>本日のラン消費</h3>
                             <p class="big-number"><span id="today-calorie-num">0</span> <span class="unit">kcal</span></p>
                             <span class="stat-desc" id="today-cardio-dist">0.00 km 走行</span>
+                            <a href="#history" class="stat-card-link" data-history-jump="cardio">有酸素の履歴を見る</a>
                         </div>
                     </div>
 
-                    <!-- 週のまとめ(v1.26.0)。今週(日曜〜今日)と先週を並べて比べる。
+                    <!-- 週のまとめ(v1.27.0)。今週(日曜〜今日)と先週を並べて比べる。
                          中身は js/dashboard.js の renderWeeklySummary が組み立てる -->
                     <div class="card weekly-summary-card">
                         <div class="card-header">
@@ -473,44 +434,63 @@
                         <div id="weekly-summary-body"></div>
                     </div>
 
-                    <!-- Calorie Balance comparison chart (TDEE vs active) -->
-                    <div class="card calorie-balance-card col-span-2">
+                    <!-- Training Calendar Card -->
+                    <div class="card calendar-card">
                         <div class="card-header">
                             <div class="header-title">
-                                <i data-lucide="activity"></i>
-                                <h3>カロリーバランス（過去7日間）</h3>
+                                <i data-lucide="calendar-range"></i>
+                                <h3>トレーニングカレンダー</h3>
+                            </div>
+                            <span class="calendar-range-label" id="calendar-range-label"></span>
+                            <a href="#history" class="card-header-link" data-history-jump="workouts">筋トレの履歴へ</a>
+                        </div>
+                        <!-- 月ごとのページ送りをやめ、直近26週を1枚に並べる連続ヒートマップにした
+                             (GitHubの草と同じ形)。月初・月末をまたぐ連続記録が2ページに割れて
+                             「続いているのか途切れたのか」が読み取れなかったため。
+                             縦=曜日、横=週。右端が今週で、狭い画面では横スクロールする。 -->
+                        <div class="calendar-wrapper">
+                            <div class="calendar-layout">
+                                <!-- 曜日ラベルは横スクロールの外に置き、スクロールしても残るようにする -->
+                                <div class="calendar-weekday-labels">
+                                    <span></span><span>月</span><span></span><span>水</span><span></span><span>金</span><span></span>
+                                </div>
+                                <div class="calendar-scroll" id="calendar-scroll">
+                                    <div class="calendar-months" id="calendar-months">
+                                        <!-- Generated by JS -->
+                                    </div>
+                                    <div class="calendar-grid-days" id="calendar-days">
+                                        <!-- Generated by JS -->
+                                    </div>
+                                </div>
                             </div>
                         </div>
-                        <div class="calorie-analytics-wrapper">
-                            <div class="calorie-stats-column">
-                                <!-- 今日あと何kcal食べられるか(v1.26.0)。計画タブの目標摂取カロリーから、
-                                     今日の食事記録を引いた残り。飲み会の日はイベント日の目標を使う -->
-                                <div class="calorie-summary-tile intake-budget-tile">
-                                    <span class="tile-label">今日あと食べられる量</span>
-                                    <span class="tile-value" id="today-intake-remaining">— <span class="unit">kcal</span></span>
-                                    <span class="tile-desc" id="today-intake-remaining-desc"></span>
-                                </div>
-                                <div class="calorie-summary-tile">
-                                    <span class="tile-label">本日の総消費（メンテナンス＋運動）</span>
-                                    <span class="tile-value" id="today-burned-kcal">0 <span class="unit">kcal</span></span>
-                                </div>
-                                <div class="calorie-summary-tile">
-                                    <span class="tile-label">本日の摂取（食事記録の合計）</span>
-                                    <span class="tile-value" id="today-intake-kcal">0 <span class="unit">kcal</span></span>
-                                </div>
-                                <div class="calorie-summary-tile">
-                                    <span class="tile-label">本日の収支（消費−摂取）</span>
-                                    <span class="tile-value" id="today-calorie-diff-kcal">0 <span class="unit">kcal</span></span>
-                                </div>
-                                <div class="calorie-summary-tile">
-                                    <span class="tile-label">メンテナンス基準</span>
-                                    <span class="tile-value" id="current-maintenance-kcal">2000 <span class="unit">kcal</span></span>
-                                </div>
+                        <p class="calendar-hint">日付を押すと、その日の記録（筋トレの内容・食事・体重）をまとめて見られます。</p>
+                        <div class="calendar-legend">
+                            <span class="legend-item"><span class="dot cal-strong"></span>トレーニングした日</span>
+                            <span class="legend-item"><span class="dot cal-medium"></span>走っただけの日</span>
+                            <span class="legend-item"><span class="dot cal-none"></span>運動していない日</span>
+                            <span class="legend-item"><span class="dot today"></span>本日</span>
+                        </div>
+                    </div>
+
+                    <!-- Weight progress chart -->
+                    <div class="card weight-progress-card col-span-2">
+                        <div class="card-header">
+                            <div class="header-title">
+                                <i data-lucide="trending-up"></i>
+                                <h3>体重推移</h3>
                             </div>
-                            <div class="chart-container calorie-chart-container">
-                                <canvas id="calorieComparisonChart"></canvas>
-                                <div id="no-calorie-data" class="no-data-msg">データがありません</div>
+                            <div class="chart-period-toggle">
+                                <button type="button" class="chart-period-btn" id="weight-period-7d" data-days="7">1週間</button>
+                                <button type="button" class="chart-period-btn active" id="weight-period-30d" data-days="30">1ヶ月</button>
                             </div>
+                            <span class="weight-change-summary" id="weight-change-summary"></span>
+                            <span class="weight-change-summary drinking-impact-summary" id="drinking-impact-summary"></span>
+                            <a href="#history" class="card-header-link" data-history-jump="weight">体重の履歴へ</a>
+                        </div>
+                        <div class="chart-container weight-chart-container">
+                            <canvas id="weightChart"></canvas>
+                            <div id="no-weight-data" class="no-data-msg">データがありません</div>
                         </div>
                     </div>
 
@@ -540,91 +520,62 @@
                         </div>
                     </div>
 
-                    <!-- Weight progress chart -->
-                    <div class="card weight-progress-card">
+                    <!-- 最近のトレーニング(v1.27.0)。押すと履歴タブのその日のカードへ移動する。
+                         中身は js/dashboard.js の renderRecentWorkouts が組み立てる -->
+                    <div class="card recent-workouts-card">
                         <div class="card-header">
                             <div class="header-title">
-                                <i data-lucide="trending-up"></i>
-                                <h3>体重推移</h3>
+                                <i data-lucide="dumbbell"></i>
+                                <h3>最近のトレーニング</h3>
                             </div>
-                            <div class="chart-period-toggle">
-                                <button type="button" class="chart-period-btn" id="weight-period-7d" data-days="7">1週間</button>
-                                <button type="button" class="chart-period-btn active" id="weight-period-30d" data-days="30">1ヶ月</button>
-                            </div>
-                            <span class="weight-change-summary" id="weight-change-summary"></span>
-                            <span class="weight-change-summary drinking-impact-summary" id="drinking-impact-summary"></span>
                         </div>
-                        <div class="chart-container weight-chart-container">
-                            <canvas id="weightChart"></canvas>
-                            <div id="no-weight-data" class="no-data-msg">データがありません</div>
+                        <div id="recent-workouts-list" class="recent-workouts-list"></div>
+                        <a href="#history" class="card-footer-link" data-history-jump="workouts">すべての筋トレ履歴を見る</a>
+                    </div>
+
+                    <!-- Calorie Balance comparison chart (TDEE vs active) -->
+                    <div class="card calorie-balance-card col-span-2">
+                        <div class="card-header">
+                            <div class="header-title">
+                                <i data-lucide="activity"></i>
+                                <h3>カロリーバランス（過去7日間）</h3>
+                            </div>
+                            <a href="#history" class="card-header-link" data-history-jump="calorie-balance">カロリー収支の履歴へ</a>
+                        </div>
+                        <div class="calorie-analytics-wrapper">
+                            <div class="calorie-stats-column">
+                                <!-- 今日あと何kcal食べられるか(v1.27.0)。計画タブの目標摂取カロリーから、
+                                     今日の食事記録を引いた残り。飲み会の日はイベント日の目標を使う -->
+                                <div class="calorie-summary-tile intake-budget-tile">
+                                    <span class="tile-label">今日あと食べられる量</span>
+                                    <span class="tile-value" id="today-intake-remaining">— <span class="unit">kcal</span></span>
+                                    <span class="tile-desc" id="today-intake-remaining-desc"></span>
+                                </div>
+                                <div class="calorie-summary-tile">
+                                    <span class="tile-label">本日の総消費（メンテナンス＋運動）</span>
+                                    <span class="tile-value" id="today-burned-kcal">0 <span class="unit">kcal</span></span>
+                                </div>
+                                <div class="calorie-summary-tile">
+                                    <span class="tile-label">本日の摂取（食事記録の合計）</span>
+                                    <span class="tile-value" id="today-intake-kcal">0 <span class="unit">kcal</span></span>
+                                </div>
+                                <div class="calorie-summary-tile">
+                                    <span class="tile-label">本日の収支（消費−摂取）</span>
+                                    <span class="tile-value" id="today-calorie-diff-kcal">0 <span class="unit">kcal</span></span>
+                                </div>
+                                <div class="calorie-summary-tile">
+                                    <span class="tile-label">メンテナンス基準</span>
+                                    <span class="tile-value" id="current-maintenance-kcal">2000 <span class="unit">kcal</span></span>
+                                    <span class="tile-desc" id="current-maintenance-desc">基礎代謝 × 生活活動（最新の体重から自動で計算）</span>
+                                </div>
+                            </div>
+                            <div class="chart-container calorie-chart-container">
+                                <canvas id="calorieComparisonChart"></canvas>
+                                <div id="no-calorie-data" class="no-data-msg">データがありません</div>
+                            </div>
                         </div>
                     </div>
 
-                    <!-- Training Calendar Card -->
-                    <div class="card calendar-card col-span-2">
-                        <div class="card-header">
-                            <div class="header-title">
-                                <i data-lucide="calendar-range"></i>
-                                <h3>トレーニングカレンダー</h3>
-                            </div>
-                            <span class="calendar-range-label" id="calendar-range-label"></span>
-                        </div>
-                        <!-- 月ごとのページ送りをやめ、直近26週を1枚に並べる連続ヒートマップにした
-                             (GitHubの草と同じ形)。月初・月末をまたぐ連続記録が2ページに割れて
-                             「続いているのか途切れたのか」が読み取れなかったため。
-                             縦=曜日、横=週。右端が今週で、狭い画面では横スクロールする。 -->
-                        <div class="calendar-wrapper">
-                            <div class="calendar-layout">
-                                <!-- 曜日ラベルは横スクロールの外に置き、スクロールしても残るようにする -->
-                                <div class="calendar-weekday-labels">
-                                    <span></span><span>月</span><span></span><span>水</span><span></span><span>金</span><span></span>
-                                </div>
-                                <div class="calendar-scroll" id="calendar-scroll">
-                                    <div class="calendar-months" id="calendar-months">
-                                        <!-- Generated by JS -->
-                                    </div>
-                                    <div class="calendar-grid-days" id="calendar-days">
-                                        <!-- Generated by JS -->
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="calendar-legend">
-                            <span class="legend-item"><span class="dot cal-strong"></span>トレーニングした日</span>
-                            <span class="legend-item"><span class="dot cal-medium"></span>走っただけの日</span>
-                            <span class="legend-item"><span class="dot cal-none"></span>運動していない日</span>
-                            <span class="legend-item"><span class="dot today"></span>本日</span>
-                        </div>
-                    </div>
-
-                    <!-- Maintenance Calories Card (v2再構成で「同期と設定」タブから移設。
-                         このグラフに直接効く入力なので、入力→表示の距離を縮める) -->
-                    <div class="card settings-card col-span-2">
-                        <div class="card-header">
-                            <div class="header-title">
-                                <i data-lucide="flame"></i>
-                                <h3>メンテナンスカロリーの設定</h3>
-                            </div>
-                        </div>
-                        <div class="card-body">
-                            <p class="settings-desc">ご自身の1日のメンテナンスカロリー（体重維持に必要なエネルギー消費量）を設定し、上のカロリーバランスと比較します。</p>
-                            <div class="form-group">
-                                <label for="maintenance-input">メンテナンスカロリー (kcal)</label>
-                                <input type="number" id="maintenance-input" min="0" value="2000" class="width-full">
-                            </div>
-                            <div class="settings-actions">
-                                <button class="btn btn-secondary" id="save-maintenance-btn">
-                                    <i data-lucide="save"></i> 設定を保存
-                                </button>
-                                <button class="btn btn-primary" id="auto-calc-maintenance-btn" type="button">
-                                    <i data-lucide="calculator"></i> 体重と筋トレ実績から自動計算
-                                </button>
-                            </div>
-                            <p class="form-hint">
-                                ※直近30日間の筋トレ実績（頻度）と最新の体重に基づき、流動的に適切なメンテナンスカロリーを自動で再計算します。
-                            </p>
-                        </div>
-                    </div>
                 </div>
             </section>
 
@@ -905,35 +856,41 @@
             <div id="day-summary-body" class="day-summary-body">
                 <!-- Generated by JS -->
             </div>
+            <!-- この日に記録を追加する。押した種類の記録ページを、日付をこの日に合わせて開く -->
+            <div class="day-summary-add">
+                <span class="day-summary-add-label">この日に記録を追加</span>
+                <div class="day-summary-add-buttons">
+                    <button type="button" class="btn btn-secondary btn-sm day-summary-add-btn" data-record-page="meal">＋ 食事</button>
+                    <button type="button" class="btn btn-secondary btn-sm day-summary-add-btn" data-record-page="training">＋ トレーニング</button>
+                    <button type="button" class="btn btn-secondary btn-sm day-summary-add-btn" data-record-page="weight">＋ 体重</button>
+                </div>
+            </div>
             <div class="modal-actions day-summary-footer">
-                <button type="button" class="btn btn-secondary" id="day-summary-close-btn-2">閉じる</button>
-                <button type="button" class="btn btn-primary" id="day-summary-add-btn">
-                    <i data-lucide="plus"></i> この日に記録を追加
-                </button>
+                <button type="button" class="btn btn-primary" id="day-summary-close-btn-2">閉じる</button>
             </div>
         </div>
     </div>
 
     <!-- lib/data-utils.js: DOM非依存の純粋関数（node --testでもテストされる）。他のどのjs/*.jsよりも先に読み込む -->
-    <script src="lib/data-utils.js?v=1.26.0"></script>
+    <script src="lib/data-utils.js?v=1.27.0"></script>
     <!-- js/*.js: すべてグローバルスコープに関数を定義するクラシックscript。
          ESモジュールにはしていない（index.htmlをダブルクリックしてfile://で開いても動作させるため）。
          依存関係は読み込み順で解決するので、この順番を変えないこと。 -->
-    <script src="js/config.js?v=1.26.0"></script>
-    <script src="js/state.js?v=1.26.0"></script>
-    <script src="js/utils.js?v=1.26.0"></script>
-    <script src="js/dom.js?v=1.26.0"></script>
-    <script src="js/notifications.js?v=1.26.0"></script>
-    <script src="js/navigation.js?v=1.26.0"></script>
-    <script src="js/dashboard.js?v=1.26.0"></script>
-    <script src="js/record-form.js?v=1.26.0"></script>
-    <script src="js/history-workouts.js?v=1.26.0"></script>
-    <script src="js/history-logs.js?v=1.26.0"></script>
-    <script src="js/history-nav.js?v=1.26.0"></script>
-    <script src="js/day-summary.js?v=1.26.0"></script>
-    <script src="js/plan.js?v=1.26.0"></script>
-    <script src="js/sync.js?v=1.26.0"></script>
-    <script src="js/backup.js?v=1.26.0"></script>
-    <script src="js/main.js?v=1.26.0"></script>
+    <script src="js/config.js?v=1.27.0"></script>
+    <script src="js/state.js?v=1.27.0"></script>
+    <script src="js/utils.js?v=1.27.0"></script>
+    <script src="js/dom.js?v=1.27.0"></script>
+    <script src="js/notifications.js?v=1.27.0"></script>
+    <script src="js/navigation.js?v=1.27.0"></script>
+    <script src="js/dashboard.js?v=1.27.0"></script>
+    <script src="js/record-form.js?v=1.27.0"></script>
+    <script src="js/history-workouts.js?v=1.27.0"></script>
+    <script src="js/history-logs.js?v=1.27.0"></script>
+    <script src="js/history-nav.js?v=1.27.0"></script>
+    <script src="js/day-summary.js?v=1.27.0"></script>
+    <script src="js/plan.js?v=1.27.0"></script>
+    <script src="js/sync.js?v=1.27.0"></script>
+    <script src="js/backup.js?v=1.27.0"></script>
+    <script src="js/main.js?v=1.27.0"></script>
 </body>
 </html>

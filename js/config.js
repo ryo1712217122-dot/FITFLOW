@@ -120,6 +120,14 @@ const DEFAULT_PLAN_SETTINGS = {
     targetPaceKgMonth: 2,
     // 目標体重(kg)。null は未設定。今のペースで「いつ届くか」を計画タブと週のまとめに出す(v1.26.0)
     targetWeight: null,
+    // 体格(v1.27.0)。揃っていれば基礎代謝を Ganpule の式で出す(lib/data-utils.js の computeBmr)。
+    // bodySex は 1=男性 / 2=女性(式の係数の都合で数値)。null は未設定で、体重×23 に戻る
+    bodySex: null,
+    bodyHeightCm: null,
+    bodyAge: null,
+    // 減量の減速係数(kcal/kg/日)。表示には使わないが、計画を反映した時にシートへ書き出して、
+    // 外部のブリーフィングがアプリと同じ係数で計画体重を出せるようにする
+    kcalPerKgPerDay: null,
     // シミュレーションのTDEEをどちらから取るか: 'estimated'(推定式) / 'measured'(実測=食事記録と
     // 体重推移からの逆算)。'measured'選択中でもデータ不足時は推定式にフォールバックする
     tdeeSource: 'estimated',

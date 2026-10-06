@@ -1,10 +1,9 @@
-// FITFLOW - 「記録する」タブ: トレーニング・有酸素・体重・食事・飲み会の5つの独立したフォーム。
-//   パート1(#workout-form)     : トレーニング(筋トレ)
-//   パート2(#cardio-form)      : 有酸素(走行距離)
-//   パート3(#weight-quick-form): 体重
-//   パート4(#meal-form)        : 食事(朝食/昼食/夕食/間食の摂取kcal目安)
-//   パート5(#drinking-form)    : 飲み会(日付のみ。体重変化の文脈として体重グラフに重ねる)
-// それぞれ一つずつ入力・保存できる(以前の「有酸素を保存して完了」のような合体送信は廃止)。
+// FITFLOW - 「記録する」タブ。v1.27.0 で3ページに分けた(切り替えは switchRecordPage)。
+//   食事(#meal-form)            : 朝食/昼食/夕食/間食の摂取kcal目安。夕食の分岐として「飲み会だった」
+//                                 (drinkingLogs。体重グラフに🍻を重ねる)もここで記録する
+//   トレーニング(#workout-form) : 筋トレの種目＋有酸素(走行距離)。有酸素は「トレーニングを記録完了」で一緒に保存
+//   体重(#weight-quick-form)    : 1日の最後(風呂上がり)に測る想定なので最後のページ
+// いちばん触るのは食事なので、起動後に開くと食事のページが出る。
 //
 // 筋トレの種目は「まとめて最後に一括保存」ではなく、1種目入力し終えるごとに
 // その場で個別保存できる（ジムでのリアルタイム入力を想定）。編集中/記録中のワークアウトの
@@ -41,7 +40,64 @@ function syncWorkoutFormWithOpenSession({ force = false } = {}) {
         // 参照先が消えている(履歴で削除された等)。開いたままにせず新規に戻す
         setOpenWorkoutId(null);
     }
+    // 新規フォームに未保存の入力があれば作り直さない。以前はタブを開くたびにリセットしており、
+    // まだ保存していない種目や有酸素の距離を入れたまま別タブを見に行くと消えていた。
+    // 入力が無ければ作り直す(日付・時刻を今に戻す。日別サマリーで過去の日を開いたまま
+    // 離れた場合や、翌日にアプリを復帰させた場合に、古い日付のまま記録されないように)
+    if (!force && workoutFormInitialized && formBoundWorkoutId === null && hasUnsavedNewWorkoutInput()) return;
     resetWorkoutForm();
+}
+
+// 新規トレーニングのフォームに、まだ保存していない入力があるか
+function hasUnsavedNewWorkoutInput() {
+    if (DOM.workoutImpression && DOM.workoutImpression.value.trim() !== '') return true;
+    if (DOM.logCardioDist) {
+        const v = DOM.logCardioDist.value.trim();
+        if (v !== '' && v !== lastSyncedCardioValue) return true;
+    }
+    if (!DOM.exerciseList) return false;
+    return Array.from(DOM.exerciseList.querySelectorAll('.exercise-name, .set-weight, .set-reps'))
+        .some(input => input.value.trim() !== '');
+}
+
+// 新規フォームを一度でも組み立てたか(上の「作り直さない」判定に使う)
+let workoutFormInitialized = false;
+
+// ==========================================
+// 記録ページの切り替え(食事 / トレーニング / 体重)
+// ==========================================
+
+const RECORD_PAGES = ['meal', 'training', 'weight'];
+
+function switchRecordPage(page) {
+    const target = RECORD_PAGES.includes(page) ? page : 'meal';
+    RECORD_PAGES.forEach(p => {
+        const tab = document.getElementById(`record-tab-${p}`);
+        const panel = document.getElementById(`record-page-${p}`);
+        const active = p === target;
+        if (tab) {
+            tab.classList.toggle('active', active);
+            tab.setAttribute('aria-selected', active ? 'true' : 'false');
+        }
+        if (panel) panel.classList.toggle('is-hidden', !active);
+    });
+}
+
+function initRecordPages() {
+    document.querySelectorAll('.record-page-btn').forEach(btn => {
+        btn.addEventListener('click', () => switchRecordPage(btn.getAttribute('data-record-page')));
+    });
+    updateRecordTrainingBadge();
+}
+
+// 「トレーニング」のページ見出しに、記録中(または編集中)のセッションがあることを出す。
+// 食事のページを開いている間も、トレーニングが締めくくられていないことに気づけるように
+function updateRecordTrainingBadge() {
+    const badge = document.getElementById('record-training-badge');
+    if (!badge) return;
+    const open = !!state.editingWorkoutId;
+    badge.classList.toggle('is-hidden', !open);
+    badge.textContent = workoutFormMode === 'edit' ? '編集中' : '記録中';
 }
 
 // ワークアウトの内容をフォームへ流し込む。履歴からの編集(mode='edit')と、
@@ -89,6 +145,8 @@ function populateWorkoutForm(workout, mode) {
     }
 
     updateWorkoutCalorieHint();
+    syncCardioFieldForDate(workout.date);
+    updateRecordTrainingBadge();
     if (window.lucide) lucide.createIcons();
 }
 
@@ -111,6 +169,8 @@ function hideWorkoutResumeHint() {
 }
 
 function initFormControls() {
+    initRecordPages();
+
     if (DOM.addExerciseBtn) {
         DOM.addExerciseBtn.addEventListener('click', () => {
             addExerciseBlock();
@@ -125,9 +185,11 @@ function initFormControls() {
     }
 
     // 「前回の記録」はフォームの日付以前から探すので、日付を変えたら出し直す
+    // 有酸素の欄もトレーニングと同じ日付で、その日の既存の記録を出し直す
     if (DOM.workoutDate && DOM.exerciseList) {
         DOM.workoutDate.addEventListener('change', () => {
             DOM.exerciseList.querySelectorAll('.exercise-item').forEach(updateExerciseLastHint);
+            syncCardioFieldForDate(DOM.workoutDate.value, { keepTyped: true });
         });
     }
 
@@ -146,25 +208,17 @@ function initFormControls() {
         });
     }
 
-    // パート2: 有酸素
-    if (DOM.cardioForm) {
-        if (DOM.cardioDate) {
-            DOM.cardioDate.value = getFitnessDateString();
-            syncCardioFormWithExistingDataForDate(DOM.cardioDate.value);
-            // 日付を選び直した時、その日にすでにある有酸素の記録をフォームに反映する
-            // (未保存の入力があれば、破棄前に確認する = handleCardioDateChange)
-            DOM.cardioDate.addEventListener('change', handleCardioDateChange);
-        }
-        if (DOM.logCardioDist) {
-            DOM.logCardioDist.addEventListener('input', updateCardioHint);
-        }
-        DOM.cardioForm.addEventListener('submit', (e) => {
-            e.preventDefault();
-            saveCardioLog();
+    // 有酸素(トレーニングのページ内。保存は「トレーニングを記録完了」で一緒に行う)
+    if (DOM.logCardioDist) {
+        DOM.logCardioDist.addEventListener('input', updateCardioHint);
+        // 距離の欄はトレーニングのフォームの中にあるので、Enterで暗黙の送信が起きると
+        // 記録中のセッションごと締めくくってしまう。保存は記録完了ボタンを押した時だけにする
+        DOM.logCardioDist.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') e.preventDefault();
         });
     }
 
-    // パート3: 体重
+    // 体重
     if (DOM.weightQuickForm) {
         if (DOM.weightQuickDate) {
             DOM.weightQuickDate.value = getFitnessDateString();
@@ -177,7 +231,7 @@ function initFormControls() {
         });
     }
 
-    // パート4: 食事
+    // 食事
     if (DOM.mealForm) {
         if (DOM.mealDate) {
             DOM.mealDate.value = getFitnessDateString();
@@ -194,29 +248,17 @@ function initFormControls() {
         });
     }
 
-    // パート5: 飲み会
-    if (DOM.drinkingForm) {
-        if (DOM.drinkingDate) {
-            DOM.drinkingDate.value = getFitnessDateString();
-            syncDrinkingFormWithExistingDataForDate(DOM.drinkingDate.value);
-            // 日付を変えると推定カロリーの入力もクリアされるが、飲み会フォームは
-            // 目安を選び直すだけで復元できる軽い入力なので、確認なしで同期する
-            DOM.drinkingDate.addEventListener('change', () => {
-                syncDrinkingFormWithExistingDataForDate(DOM.drinkingDate.value);
-            });
-        }
-        // 目安セレクトは数値欄へ値を書き込むだけの入力補助(食事フォームの目安selectと同じ考え方)。
-        // 選んだあと数値欄で微調整できるよう、食事フォームのように入力欄を隠す切り替えはしない。
-        if (DOM.drinkingCaloriesEstimate && DOM.drinkingCalories) {
-            DOM.drinkingCaloriesEstimate.addEventListener('change', () => {
-                if (DOM.drinkingCaloriesEstimate.value) {
-                    DOM.drinkingCalories.value = DOM.drinkingCaloriesEstimate.value;
-                }
-            });
-        }
-        DOM.drinkingForm.addEventListener('submit', (e) => {
-            e.preventDefault();
-            saveDrinkingLog();
+    // 飲み会(夕食の分岐)
+    if (DOM.mealDinnerDrinking) {
+        DOM.mealDinnerDrinking.addEventListener('change', updateMealDrinkingUi);
+    }
+    if (DOM.mealDrinkingEstimate && DOM.mealDinner) {
+        // 目安は夕食欄へ値を書き込むだけの入力補助(数値欄で微調整できる)
+        DOM.mealDrinkingEstimate.addEventListener('change', () => {
+            if (!DOM.mealDrinkingEstimate.value) return;
+            setMealFieldMode('dinner', 'manual');
+            DOM.mealDinner.value = DOM.mealDrinkingEstimate.value;
+            updateMealTotalHint();
         });
     }
 
@@ -245,6 +287,10 @@ function resetWorkoutForm() {
 
     addExerciseBlock();
     updateWorkoutCalorieHint();
+    if (DOM.logCardioDist) DOM.logCardioDist.value = '';
+    syncCardioFieldForDate(DOM.workoutDate ? DOM.workoutDate.value : '');
+    workoutFormInitialized = true;
+    updateRecordTrainingBadge();
 
     if (window.lucide) {
         lucide.createIcons();
@@ -739,17 +785,21 @@ function updateWorkoutCalorieHint() {
     DOM.workoutCalorieHint.textContent = `※このセッションの筋トレ消費目安: ${kcal} kcal`;
 }
 
-// 直近でフォームAに反映した日付。日付変更時の「未保存の入力を破棄してよいか」判定の基準にする。
+// 有酸素欄に最後に反映した日付と、その時に表示した既存の距離(空文字=記録なし)。
+// 日付を変えた時に「ユーザーが打ち込んだ値か、既存記録を表示しているだけか」を見分けるために使う。
 let lastSyncedCardioDate = null;
+let lastSyncedCardioValue = '';
 
-// フォームで選択された日付にすでにある有酸素の記録を、フォームへ反映する。
-// (これをせずに空欄のまま日付だけ変えて誤送信すると、その日の有酸素記録を意図せず消してしまうため)
-function syncCardioFormWithExistingDataForDate(date) {
-    if (!date) return;
-
-    const existingCardio = state.cardioLogs.find(c => c.date === date);
+// トレーニングの日付にすでにある有酸素の記録を、有酸素欄へ反映する。
+// keepTyped=true(日付の変更時)は、ユーザーが打ち込んだ値を残して既存記録の案内だけ出し直す
+// (距離を入れてから日付を直す、という順番でも入力が消えないように)。
+function syncCardioFieldForDate(date, { keepTyped = false } = {}) {
+    const existingCardio = date ? state.cardioLogs.find(c => c.date === date) : null;
+    const existingVal = existingCardio ? String(existingCardio.distance) : '';
     if (DOM.logCardioDist) {
-        DOM.logCardioDist.value = existingCardio ? existingCardio.distance : '';
+        const current = DOM.logCardioDist.value.trim();
+        const typed = current !== '' && current !== lastSyncedCardioValue;
+        if (!(keepTyped && typed)) DOM.logCardioDist.value = existingVal;
     }
     updateCardioHint();
 
@@ -758,253 +808,144 @@ function syncCardioFormWithExistingDataForDate(date) {
     if (DOM.cardioExistingHint && DOM.cardioExistingHintText) {
         if (existingCardio) {
             DOM.cardioExistingHintText.textContent =
-                `この日はすでに有酸素 ${existingCardio.distance}km を記録済みです（内容を変更すると上書きされます）`;
+                `この日はすでに有酸素 ${existingCardio.distance}km を記録済みです（距離を変えて「トレーニングを記録完了」を押すと上書きされます）`;
             DOM.cardioExistingHint.classList.remove('is-hidden');
         } else {
             DOM.cardioExistingHint.classList.add('is-hidden');
         }
     }
 
-    lastSyncedCardioDate = date;
+    lastSyncedCardioDate = date || null;
+    lastSyncedCardioValue = existingVal;
 }
 
-// 日付選択(change)時のハンドラ。入力中の未保存の値が破棄されそうな場合は先に確認する。
-function handleCardioDateChange() {
-    const newDate = DOM.cardioDate.value;
-    const currentVal = DOM.logCardioDist ? DOM.logCardioDist.value.trim() : '';
-    const savedForOldDate = lastSyncedCardioDate ? state.cardioLogs.find(c => c.date === lastSyncedCardioDate) : null;
-    const savedVal = savedForOldDate ? String(savedForOldDate.distance) : '';
-    const isDirty = currentVal !== '' && currentVal !== savedVal;
-
-    if (isDirty && !confirm('入力中の有酸素の記録が保存されていません。日付を変更すると入力内容が失われます。続けますか？')) {
-        if (lastSyncedCardioDate) DOM.cardioDate.value = lastSyncedCardioDate;
-        return;
-    }
-    syncCardioFormWithExistingDataForDate(newDate);
+// 有酸素欄を読む。{ state: 'empty' | 'invalid' | 'value', distance }
+function readCardioField() {
+    const text = DOM.logCardioDist ? DOM.logCardioDist.value.trim() : '';
+    if (text === '') return { state: 'empty', distance: null };
+    const dist = parseFloat(text);
+    if (isNaN(dist) || dist <= 0) return { state: 'invalid', distance: null };
+    return { state: 'value', distance: dist };
 }
 
-// パート2: 有酸素を単独で保存する(同じ日付の既存エントリがあれば上書き)。
-function saveCardioLog() {
-    if (!DOM.cardioDate) return;
-    const date = DOM.cardioDate.value;
-    if (!date) {
-        showToast('日付を入力してください');
-        return;
-    }
-
-    const cardioText = DOM.logCardioDist ? DOM.logCardioDist.value.trim() : '';
-    if (cardioText === '') {
-        showToast('走行距離を入力してください');
-        return;
-    }
-    const dist = parseFloat(cardioText);
-    if (isNaN(dist) || dist <= 0) {
-        showToast('有効な走行距離を入力してください');
-        return;
-    }
+// 有酸素を保存する(同じ日付の既存エントリがあれば上書き)。保存したかどうかを返す。
+// 同期・再描画は呼び出し側(finishTrainingSession)でまとめて行う。
+function saveCardioForDate(date, dist) {
     const calories = Math.round(dist * getLatestWeight());
-
-    // 体重ログと同様、同じ日付の既存エントリがあれば上書きする
     const existingCardioIndex = state.cardioLogs.findIndex(c => c.date === date);
-    const cardioUpdated = existingCardioIndex !== -1;
-    if (cardioUpdated) {
+    const updated = existingCardioIndex !== -1;
+    if (updated) {
         state.cardioLogs[existingCardioIndex] = { date, distance: dist, calories };
     } else {
         state.cardioLogs.push({ date, distance: dist, calories });
     }
     state.cardioLogs.sort((a, b) => new Date(a.date) - new Date(b.date));
-
-    saveDataAndSync();
-
-    // 既存日付への上書きだと誤操作に気づきやすいよう、新規/更新を区別した文言にする
-    showToast(`${cardioUpdated ? '有酸素(更新)' : '有酸素'}を記録しました！`);
-
-    // 保存直後のフォームには「たった今保存した内容」が表示され続けるようにする
-    syncCardioFormWithExistingDataForDate(date);
-
-    updateDashboard();
-    updateCardioHistoryList();
+    return { updated };
 }
 
-// パート1: 開いているトレーニングセッション(種目は既に個別保存済み)を締めくくる。
-// 種目自体はこの関数では扱わない(各種目ブロックの「保存」ボタンで個別に保存済みのため)。
+// 「トレーニングを記録完了」。開いている筋トレのセッション(種目は個別保存済み)を締めくくり、
+// 有酸素の距離が入っていれば同じ日付で一緒に保存する(v1.27.0)。
+// 走っただけの日は種目を入れずに距離だけで完了できる。
 function finishTrainingSession() {
-    if (!state.editingWorkoutId) {
-        showToast('先に種目を1つ以上保存してください（種目ごとの「この種目を保存」ボタン）');
+    const date = DOM.workoutDate ? DOM.workoutDate.value : '';
+    const cardio = readCardioField();
+    if (cardio.state === 'invalid') {
+        showToast('有酸素の走行距離は0より大きい数値で入力してください（走らなかった日は空欄のまま）');
+        return;
+    }
+    const hasSession = !!state.editingWorkoutId;
+    if (!hasSession && cardio.state !== 'value') {
+        showToast('先に種目を1つ以上保存するか（種目ごとの「この種目を保存」ボタン）、有酸素の距離を入力してください');
+        return;
+    }
+    if (cardio.state === 'value' && !date) {
+        showToast('日付を入力してください');
+        return;
+    }
+
+    // 有酸素は距離が既存の記録と違う時だけ書き込む(開き直しただけの記録完了で上書きしない)
+    let cardioNote = '';
+    let cardioSaved = false;
+    if (cardio.state === 'value') {
+        const existing = state.cardioLogs.find(c => c.date === date);
+        if (!existing || existing.distance !== cardio.distance) {
+            const { updated } = saveCardioForDate(date, cardio.distance);
+            cardioSaved = true;
+            cardioNote = `有酸素 ${cardio.distance}km${updated ? '（更新）' : ''}`;
+        }
+    }
+
+    if (!hasSession) {
+        saveDataAndSync();
+        showToast(cardioSaved ? `${cardioNote}を記録しました！` : 'この日の有酸素はすでにこの距離で記録済みです');
+        syncCardioFieldForDate(date);
+        updateDashboard();
+        updateCardioHistoryList();
         return;
     }
 
     // blurのタイミングに関わらず、完了時点の調子・メモを取りこぼさないよう念のため反映する
     const workout = state.workouts.find(w => w.id === state.editingWorkoutId);
     if (workout) applyOpenWorkoutMetaFromForm(workout);
+    const finishedDate = workout ? workout.date : date;
 
     saveDataAndSync();
-    showToast('トレーニングを記録しました！');
+    showToast(`トレーニングを記録しました！${cardioNote ? `（${cardioNote}も保存）` : ''}`);
 
     resetWorkoutForm();
 
     updateDashboard();
     updateHistoryList();
+    updateCardioHistoryList();
 
-    const historyNavItem = document.querySelector('[data-tab="history"]');
-    if (historyNavItem) {
-        historyNavItem.click();
-    }
+    // 締めくくったセッションを履歴で目立たせて見せる
+    openHistoryAt('workouts', finishedDate);
 }
 
 // クラウド同期のダウンロード・JSONインポートのマージ・全データ初期化など、
 // state.*(workouts/weightLogs/cardioLogs/mealLogs)が外部要因でまとめて置き換わった直後に呼ぶ。
 // 「記録する」タブのフォームを表示したまま(古い値のまま)にしておくと、次にどちらかの
 // フォームを送信した時に、今取り込んだばかりのデータを古い値で上書きしてしまう
-// (実際に発生した不具合)。フォームAは進行中のセッションが裏で入れ替わっている可能性が
-// あるため安全にリセットし、他のフォームは選択中の日付で最新のstateに合わせ直す。
+// (実際に発生した不具合)。トレーニングは進行中のセッションが裏で入れ替わっている可能性が
+// あるため安全に組み立て直し、他のフォームは選択中の日付で最新のstateに合わせ直す。
 function refreshRecordFormsAfterExternalDataChange() {
     // 進行中のセッションは、取り込み後のデータにも同じidが残っていれば引き継ぐ。
     // ただしフォームは必ず新しいstateから組み立て直す(force)。表示が古いまま残ると、
     // 次の送信で取り込んだばかりのデータを古い値で上書きしてしまうため。
     // 起動時の自動同期もここを通るので、単純にresetすると開いているセッションが
     // 毎回失われてしまう(セッションの永続化が意味を成さなくなる)。
+    // 有酸素欄も populate / reset の中で選択中の日付に合わせ直される。
     syncWorkoutFormWithOpenSession({ force: true });
 
-    if (DOM.cardioDate && DOM.cardioDate.value) {
-        syncCardioFormWithExistingDataForDate(DOM.cardioDate.value);
-    }
     if (DOM.weightQuickDate && DOM.weightQuickDate.value) {
         syncDailyLogFormWithExistingDataForDate(DOM.weightQuickDate.value);
     }
     if (DOM.mealDate && DOM.mealDate.value) {
         syncMealFormWithExistingDataForDate(DOM.mealDate.value);
     }
-    if (DOM.drinkingDate && DOM.drinkingDate.value) {
-        syncDrinkingFormWithExistingDataForDate(DOM.drinkingDate.value);
-    }
 }
 
 // ==========================================
-// DRINKING (飲み会: 日付のみの記録)
+// DRINKING (飲み会: 食事の記録の「夕食」の分岐)
 // ==========================================
 
-// 飲み会フォームの推定摂取カロリー欄を読み取る。
-// 「空欄(=食事記録を作らない)」と「不正な入力」を呼び出し側が区別できるよう、
-// { ok, value } で返す。不正値を黙ってnull扱いにすると、ユーザーは入力したつもりなのに
-// 食事記録が作られず、原因も分からないままになるため。
-function readDrinkingCalories() {
-    if (!DOM.drinkingCalories) return { ok: true, value: null };
-    const text = DOM.drinkingCalories.value.trim();
-    if (text === '') return { ok: true, value: null };
-    const v = parseFloat(text);
-    if (isNaN(v) || v < 0) return { ok: false, value: null };
-    return { ok: true, value: Math.round(v) };
+function isDrinkingDate(date) {
+    return !!date && state.drinkingLogs.some(d => d.date === date);
 }
 
-// 選択中の日付がすでに飲み会として記録済みかに応じて、ヒントと送信ボタンの文言を切り替える。
-// 送信は「未記録なら記録、記録済みなら取り消し」のトグル動作(入力欄が日付しかないため、
-// 体重フォームのような上書き保存の概念がなく、削除だけ別UIにするより一箇所で完結させる)。
-//
-// 推定カロリー欄は「記録する時にだけ使う」ため、記録済みの日では隠す
-// (ボタンが「取り消す」になっている状態で入力欄が残っていると、その値がどう扱われるのか
-//  分からなくなるため)。記録後にカロリーだけ直したい場合は食事フォーム・食事履歴で編集する。
-function syncDrinkingFormWithExistingDataForDate(date) {
-    const exists = !!date && state.drinkingLogs.some(d => d.date === date);
-
-    if (DOM.drinkingExistingHint && DOM.drinkingExistingHintText) {
-        if (exists) {
-            DOM.drinkingExistingHintText.textContent = 'この日はすでに飲み会として記録済みです（ボタンで記録を取り消せます）';
-            DOM.drinkingExistingHint.classList.remove('is-hidden');
-        } else {
-            DOM.drinkingExistingHint.classList.add('is-hidden');
-        }
-    }
-
-    // 日付を変えたら前の日付向けの入力を持ち越さない
-    if (DOM.drinkingCalories) DOM.drinkingCalories.value = '';
-    if (DOM.drinkingCaloriesEstimate) DOM.drinkingCaloriesEstimate.value = '';
-    if (DOM.drinkingCalorieGroup) DOM.drinkingCalorieGroup.classList.toggle('is-hidden', exists);
-
-    // その日にすでに食事記録があるなら、上書き対象がある旨を明示する
-    if (DOM.drinkingMealHint && DOM.drinkingMealHintText) {
-        const existingMeal = date ? state.mealLogs.find(m => m.date === date) : null;
-        if (existingMeal && !exists) {
-            DOM.drinkingMealHintText.textContent =
-                `この日はすでに食事の記録（合計 ${sumMealCalories(existingMeal)} kcal、うち夕食 ${Number(existingMeal.dinner) || 0} kcal）があります。入力すると夕食が上書きされます（朝食・昼食・間食はそのまま）。`;
-            DOM.drinkingMealHint.classList.remove('is-hidden');
-        } else {
-            DOM.drinkingMealHint.classList.add('is-hidden');
-        }
-    }
-
-    if (DOM.drinkingSubmitBtn) {
-        DOM.drinkingSubmitBtn.innerHTML = exists
-            ? '<i data-lucide="x"></i> この日の飲み会記録を取り消す'
-            : '<i data-lucide="check"></i> 飲み会を記録';
-        if (window.lucide) lucide.createIcons();
-    }
-}
-
-function saveDrinkingLog() {
-    if (!DOM.drinkingDate) return;
-    const date = DOM.drinkingDate.value;
-    if (!date) {
-        showToast('日付を入力してください');
-        return;
-    }
-
-    const existingIndex = state.drinkingLogs.findIndex(d => d.date === date);
-    let mealChanged = false;
-
-    // 記録する時だけカロリーを検証する(取り消し時は入力欄自体を隠しているため対象外)。
-    // 何も書き換える前に弾くことで、失敗時に中途半端な状態が残らないようにする。
-    const calories = existingIndex === -1 ? readDrinkingCalories() : { ok: true, value: null };
-    if (!calories.ok) {
-        showToast('推定摂取カロリーは0以上の数値で入力してください（空欄なら食事記録は作りません）');
-        return;
-    }
-
-    if (existingIndex !== -1) {
-        // 取り消し時は食事記録に手を付けない。ここで消すと、あとから食事フォームや
-        // 食事履歴で調整した値まで巻き添えで失われるため(このアプリはデータ消失に
-        // 繰り返し悩まされてきたので、迷ったら残す側に倒す)。
-        state.drinkingLogs.splice(existingIndex, 1);
-        const stillHasMeal = state.mealLogs.some(m => m.date === date);
-        showToast(stillHasMeal
-            ? '飲み会の記録を取り消しました（その日の食事記録は残しています）'
-            : '飲み会の記録を取り消しました');
-    } else {
-        state.drinkingLogs.push({ date });
-        state.drinkingLogs.sort((a, b) => new Date(a.date) - new Date(b.date));
-
-        // 推定カロリーが入っていれば、その日の食事記録の「夕食」として保存する。
-        // 実測TDEE(computeMeasuredTdee)はmealLogsしか見ないため、ここに入れて初めて
-        // 「飲み会の日だけ摂取が抜ける」偏りが解消される。
-        const kcal = calories.value;
-        if (kcal !== null) {
-            const idx = state.mealLogs.findIndex(m => m.date === date);
-            const record = buildMealLogWithField(idx !== -1 ? state.mealLogs[idx] : null, date, 'dinner', kcal);
-            if (idx !== -1) {
-                state.mealLogs[idx] = record;
-            } else {
-                state.mealLogs.push(record);
-                state.mealLogs.sort((a, b) => new Date(a.date) - new Date(b.date));
-            }
-            mealChanged = true;
-            showToast(`🍻 飲み会を記録しました！摂取 ${kcal} kcal を夕食として保存しました`);
-        } else {
-            showToast('🍻 飲み会を記録しました！翌日の体重変化に注目です');
-        }
-    }
-
-    saveDataAndSync();
-    syncDrinkingFormWithExistingDataForDate(date);
-    updateDashboard();
-    updateWeightHistoryList();
-    if (mealChanged) {
-        // 食事フォームが同じ日付を開いていれば、今書き込んだ値に合わせ直す
-        // (古い表示のまま送信すると、いま保存した夕食を上書きしてしまうため)
-        if (DOM.mealDate && DOM.mealDate.value === date) {
-            syncMealFormWithExistingDataForDate(date);
-        }
-        updateMealHistoryList();
-        updateCalorieBalanceHistoryList();
+// 「飲み会だった」のチェックに合わせて、目安の選択欄と案内を出し分ける。
+// 記録済みの日にチェックを外すと、保存で飲み会の記録だけを取り消すことをここで予告する
+// (黙って取り消すと、チェックを触っただけで記録が消えたように見えるため)。
+function updateMealDrinkingUi() {
+    const checked = !!(DOM.mealDinnerDrinking && DOM.mealDinnerDrinking.checked);
+    const exists = isDrinkingDate(DOM.mealDate ? DOM.mealDate.value : '');
+    if (DOM.mealDrinkingPanel) DOM.mealDrinkingPanel.classList.toggle('is-hidden', !checked);
+    if (DOM.mealDrinkingHint && DOM.mealDrinkingHintText) {
+        let text = '';
+        if (exists && checked) text = 'この日は飲み会として記録済みです。';
+        if (exists && !checked) text = '「食事を記録」を押すと、この日の飲み会の記録を取り消します（夕食のカロリーはそのまま残ります）。';
+        DOM.mealDrinkingHintText.textContent = text;
+        DOM.mealDrinkingHint.classList.toggle('is-hidden', text === '');
     }
 }
 
@@ -1054,6 +995,18 @@ function initMealModeToggles() {
             updateMealTotalHint();
         });
     });
+}
+
+// 1つの食事欄の表示モードを切り替える(飲み会の目安を選んだ時に夕食欄を手動入力へ戻すのに使う)
+function setMealFieldMode(mealKey, mode) {
+    const toggle = document.querySelector(`.meal-mode-toggle[data-meal="${mealKey}"]`);
+    const els = getMealFieldEls(mealKey);
+    if (!toggle || !els.input || !els.select) return;
+    toggle.querySelectorAll('.meal-mode-btn').forEach(b => {
+        b.classList.toggle('active', b.getAttribute('data-mode') === mode);
+    });
+    els.select.classList.toggle('is-hidden', mode !== 'estimate');
+    els.input.classList.toggle('is-hidden', mode === 'estimate');
 }
 
 // 各食事欄の表示モードを「手動入力」に戻す(number inputを表示、目安selectを隠して選択を解除する)。
@@ -1145,6 +1098,10 @@ function syncMealFormWithExistingDataForDate(date) {
     // 間食欄だけは「今回追加する分」を入力する欄のため、既存の合計値をここに出さない
     // (出してしまうと、そのまま保存し直した時に既存分と二重に加算されてしまう)
     if (DOM.mealSnacks) DOM.mealSnacks.value = '';
+    // 飲み会(夕食の分岐)はその日の記録の有無をそのままチェックに出す
+    if (DOM.mealDinnerDrinking) DOM.mealDinnerDrinking.checked = isDrinkingDate(date);
+    if (DOM.mealDrinkingEstimate) DOM.mealDrinkingEstimate.value = '';
+    updateMealDrinkingUi();
     updateMealTotalHint();
 
     if (DOM.mealExistingHint && DOM.mealExistingHintText) {
@@ -1175,7 +1132,8 @@ function handleMealDateChange() {
         fieldUnchanged(current.breakfast, 'breakfast') &&
         fieldUnchanged(current.lunch, 'lunch') &&
         fieldUnchanged(current.dinner, 'dinner') &&
-        (current.snacks === null || current.snacks === 0);
+        (current.snacks === null || current.snacks === 0) &&
+        !isMealDrinkingChanged(lastSyncedMealDate);
 
     if (!matchesSaved && !confirm('入力中の食事の記録が保存されていません。日付を変更すると入力内容が失われます。続けますか？')) {
         if (lastSyncedMealDate) DOM.mealDate.value = lastSyncedMealDate;
@@ -1184,10 +1142,18 @@ function handleMealDateChange() {
     syncMealFormWithExistingDataForDate(newDate);
 }
 
-// パート4: 食事を単独で保存する。朝食/昼食/夕食は「入力した項目だけ上書き、空欄は
+// 「飲み会だった」のチェックが、その日の記録の有無と食い違っているか(=保存で変わるか)
+function isMealDrinkingChanged(date) {
+    if (!DOM.mealDinnerDrinking || !date) return false;
+    return DOM.mealDinnerDrinking.checked !== isDrinkingDate(date);
+}
+
+// 食事を保存する。朝食/昼食/夕食は「入力した項目だけ上書き、空欄は
 // 既存値のまま維持」、間食は「時間帯ごとに複数回記録することが多いため、既存の間食合計に
 // 今回の入力分を加算」する(「ある時間帯にひとつ登録して、次に登録する時には現在の登録に
-// 足し算される」仕様)。全欄が空欄の場合のみ「入力してください」で弾く。
+// 足し算される」仕様)。
+// 夕食の「飲み会だった」のチェックが記録と食い違っていれば、飲み会の記録も付け外しする。
+// 食事欄が全部空欄でも、飲み会のチェックだけを変えた場合は保存できる。
 function saveMealLog() {
     if (!DOM.mealDate) return;
     const date = DOM.mealDate.value;
@@ -1198,33 +1164,53 @@ function saveMealLog() {
 
     const values = readMealFormValues();
     const hasAnyInput = values.breakfast !== null || values.lunch !== null || values.dinner !== null || values.snacks !== null;
-    if (!hasAnyInput) {
+    const drinkingChanged = isMealDrinkingChanged(date);
+    if (!hasAnyInput && !drinkingChanged) {
         showToast('少なくとも1つの項目を入力してください');
         return;
     }
 
-    const existingIndex = state.mealLogs.findIndex(m => m.date === date);
-    const mealUpdated = existingIndex !== -1;
-    const existingMeal = mealUpdated ? state.mealLogs[existingIndex] : null;
-    const projected = computeProjectedMealValues(values, existingMeal);
-    const record = { date, breakfast: projected.breakfast, lunch: projected.lunch, dinner: projected.dinner, snacks: projected.snacks };
-    if (mealUpdated) {
-        state.mealLogs[existingIndex] = record;
-    } else {
-        state.mealLogs.push(record);
+    const messages = [];
+    let mealUpdated = false;
+    if (hasAnyInput) {
+        const existingIndex = state.mealLogs.findIndex(m => m.date === date);
+        mealUpdated = existingIndex !== -1;
+        const existingMeal = mealUpdated ? state.mealLogs[existingIndex] : null;
+        const projected = computeProjectedMealValues(values, existingMeal);
+        const record = { date, breakfast: projected.breakfast, lunch: projected.lunch, dinner: projected.dinner, snacks: projected.snacks };
+        if (mealUpdated) {
+            state.mealLogs[existingIndex] = record;
+        } else {
+            state.mealLogs.push(record);
+        }
+        state.mealLogs.sort((a, b) => new Date(a.date) - new Date(b.date));
+        const snackSuffix = projected.snacksIncrement > 0 ? `（間食 +${projected.snacksIncrement}kcal）` : '';
+        messages.push(`${mealUpdated ? '食事(更新)' : '食事'}を記録しました${snackSuffix}`);
     }
-    state.mealLogs.sort((a, b) => new Date(a.date) - new Date(b.date));
+
+    if (drinkingChanged) {
+        if (DOM.mealDinnerDrinking.checked) {
+            state.drinkingLogs.push({ date });
+            state.drinkingLogs.sort((a, b) => new Date(a.date) - new Date(b.date));
+            messages.push('🍻 飲み会として記録しました');
+        } else {
+            // 取り消し時も食事記録(夕食のカロリー)には手を付けない。消すと、あとから
+            // 調整した値まで巻き添えで失われるため(迷ったら残す側に倒す)
+            state.drinkingLogs = state.drinkingLogs.filter(d => d.date !== date);
+            messages.push('飲み会の記録を取り消しました');
+        }
+    }
 
     saveDataAndSync();
-
-    const snackSuffix = projected.snacksIncrement > 0 ? `（間食 +${projected.snacksIncrement}kcal）` : '';
-    showToast(`${mealUpdated ? '食事(更新)' : '食事'}を記録しました！${snackSuffix}`);
+    showToast(messages.join('。') + '！');
 
     // 保存直後のフォームには「たった今保存した内容」が表示され続けるようにする
     syncMealFormWithExistingDataForDate(date);
 
     updateDashboard();
     updateMealHistoryList();
+    if (drinkingChanged) updateWeightHistoryList();
+    if (hasAnyInput) updateCalorieBalanceHistoryList();
 }
 
 // 日別サマリーモーダルからの削除で使う(cardio/weightのdelete*Logと同じ形)。
@@ -1260,10 +1246,10 @@ function updateCardioHint() {
     DOM.cardioCalcHint.textContent = `※消費目安: ${kcal} kcal (最新体重: ${latestWeight} kg)`;
 }
 
-// 直近でフォームBに反映した日付。日付変更時の「未保存の入力を破棄してよいか」判定の基準にする。
+// 直近で体重フォームに反映した日付。日付変更時の「未保存の入力を破棄してよいか」判定の基準にする。
 let lastSyncedDailyLogDate = null;
 
-// フォームBで選択された日付にすでにある体重の記録を、フォームへ反映する。
+// 体重フォームで選択された日付にすでにある体重の記録を、フォームへ反映する。
 // (これをせずに空欄のまま日付だけ変えて誤送信すると、既存記録の見落としに気づけないため)
 function syncDailyLogFormWithExistingDataForDate(date) {
     if (!date) return;

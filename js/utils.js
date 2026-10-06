@@ -26,9 +26,16 @@ function getActivityProfile(latestWeight, todayStr) {
         {
             lifestylePal: s.lifestyleActivityLevel || DEFAULT_PLAN_SETTINGS.lifestyleActivityLevel,
             caloriesPerSet: WORKOUT_CALORIES_PER_SET,
-            bmrPerKg: BMR_KCAL_PER_KG
+            bmrPerKg: BMR_KCAL_PER_KG,
+            body: getBodyProfile()
         }
     );
+}
+
+// 基礎代謝の式に使う体格(計画タブの「体格」で設定)。未設定なら computeBmr が体重×23に戻す
+function getBodyProfile() {
+    const s = state.planSettings || DEFAULT_PLAN_SETTINGS;
+    return { sex: s.bodySex, heightCm: s.bodyHeightCm, age: s.bodyAge };
 }
 
 // Escape free-text user input before inserting it via innerHTML

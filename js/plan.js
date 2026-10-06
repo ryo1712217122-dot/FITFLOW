@@ -85,6 +85,9 @@ function renderPlanTab() {
                             <button type="button" class="plan-inline-edit-btn" id="btn-edit-lifestyle" title="運動を除いた日常の活動量を変更する">
                                 <i data-lucide="pencil"></i> 生活活動
                             </button>
+                            <button type="button" class="plan-inline-edit-btn" id="btn-edit-body" title="基礎代謝の計算に使う身長・年齢・性別を設定する">
+                                <i data-lucide="pencil"></i> 体格
+                            </button>
                         </span>
                         <span class="plan-sim-fact-value">${tdeeChoice.tdee}${tdeeChoice.source === 'measured' ? ` <span class="plan-tdee-range">± ${Math.round(1.96 * tdeeChoice.measured.tdeeStdError)}</span>` : ''} kcal/日</span>
                         <div class="chart-period-toggle plan-tdee-toggle">
@@ -95,6 +98,7 @@ function renderPlanTab() {
                     </div>
                 </div>
                 <div id="plan-lifestyle-editor" class="plan-inline-editor is-hidden"></div>
+                <div id="plan-body-editor" class="plan-inline-editor is-hidden"></div>
 
                 <div class="plan-sim-pace-row">
                     <span class="plan-sim-pace-label">減量ペース</span>
@@ -234,7 +238,7 @@ function isPlanInlineEditorOpen() {
 
 // 個別の編集ボタン。一括編集画面の代わりに、その設定が効いている場所のすぐ隣で
 // 開閉するインラインエディタとして実装する。
-// fields: [{ key, label, type, step, min, options }]、onSave(values) は検証済みの値を受け取る。
+// fields: [{ key, label, type, step, min, options, optional }]、onSave(values) は検証済みの値を受け取る(optional の空欄は null)。
 // type='select' の場合は options: [{ value, label }] から選択肢を組み立て、数値として返す。
 function openInlineEditor(editorEl, fields, currentSettings, onSave) {
     if (!editorEl) return;
@@ -294,6 +298,11 @@ function openInlineEditor(editorEl, fields, currentSettings, onSave) {
                 continue;
             }
             const raw = parseFloat(input.value);
+            // optional の項目は空欄を null として通す(体格を未設定に戻す時など)
+            if (f.optional && input.value.trim() === '') {
+                values[f.key] = null;
+                continue;
+            }
             // 数値項目は空欄・不正値・下限割れをここで弾く(一括編集の頃は
             // parseInt(...)||0 で黙って0にしており、日数配分が全部0になると
             // 週平均の分母が7へフォールバックして意図しない目標値が出ていた)
@@ -383,12 +392,51 @@ function wirePlanInlineEditors(s) {
                 const settings = state.planSettings || Object.assign({}, DEFAULT_PLAN_SETTINGS);
                 settings.lifestyleActivityLevel = level;
                 state.planSettings = settings;
-                state.maintenanceCalories = getActivityProfile(getLatestWeight()).baseBurn;
-                if (DOM.maintenanceInput) DOM.maintenanceInput.value = state.maintenanceCalories;
+                state.maintenanceCalories = getMaintenanceForDate(getTodayStr());
                 saveDataAndSync();
                 showToast(`日常の活動量を「${getLifestyleLevelLabel(level)}」に変更しました（メンテナンス ${state.maintenanceCalories} kcal）`);
                 renderPlanTab();
                 updateDashboard();
+            });
+        });
+    }
+
+    // 体格(身長・年齢・性別)。揃うと基礎代謝を体重×23ではなく Ganpule の式で出す。
+    // 性別を「未設定」にすると3つとも未設定に戻す
+    const bodyBtn = document.getElementById('btn-edit-body');
+    const bodyEditor = document.getElementById('plan-body-editor');
+    if (bodyBtn && bodyEditor) {
+        bodyBtn.addEventListener('click', () => {
+            if (!bodyEditor.classList.contains('is-hidden')) {
+                bodyEditor.classList.add('is-hidden');
+                bodyEditor.innerHTML = '';
+                return;
+            }
+            const current = Object.assign({}, s, {
+                bodySex: Number(s.bodySex) === 1 || Number(s.bodySex) === 2 ? Number(s.bodySex) : 0,
+                bodyHeightCm: Number(s.bodyHeightCm) > 0 ? s.bodyHeightCm : '',
+                bodyAge: Number(s.bodyAge) > 0 ? s.bodyAge : ''
+            });
+            openInlineEditor(bodyEditor, [
+                { key: 'bodySex', label: '性別（基礎代謝の式の係数に使います）', type: 'select',
+                    options: [{ value: 0, label: '未設定（体重×23で計算）' }, { value: 1, label: '男性' }, { value: 2, label: '女性' }] },
+                { key: 'bodyHeightCm', label: '身長 (cm)', step: '0.1', min: 0, optional: true },
+                { key: 'bodyAge', label: '年齢', min: 0, optional: true }
+            ], current, (values) => {
+                if (!(values.bodySex === 1 || values.bodySex === 2)) {
+                    savePlanSettingsPatch({ bodySex: null, bodyHeightCm: null, bodyAge: null },
+                        '体格を未設定にしました（基礎代謝は体重×23で計算します）');
+                    return;
+                }
+                if (values.bodyHeightCm === null || values.bodyHeightCm < 120 || values.bodyHeightCm > 230) {
+                    showToast('身長は120〜230cmの範囲で入力してください');
+                    return;
+                }
+                if (values.bodyAge === null || values.bodyAge < 18 || values.bodyAge > 100) {
+                    showToast('年齢は18〜100の範囲で入力してください（式が成人向けのため）');
+                    return;
+                }
+                savePlanSettingsPatch(values, '体格を保存しました（基礎代謝を身長・年齢・性別から計算します）');
             });
         });
     }
@@ -470,7 +518,7 @@ function tdeeSubtextHtml(tdeeChoice, profile) {
             + `<br>95%の確からしさで ${m.tdeeLow}〜${m.tdeeHigh} kcal/日（体重を毎日測るほど狭まります）`;
     }
     // 推定式の内訳。運動分はPALに埋め込まず、実績からの1日平均として明示的に足している
-    const parts = [`基礎${profile.bmr}×生活活動${profile.pal}（${getLifestyleLevelLabel(profile.pal)}）`];
+    const parts = [`基礎${profile.bmr}${profile.bmrSource === 'formula' ? '（身長・年齢・性別から）' : '（体重×23）'}×生活活動${profile.pal}（${getLifestyleLevelLabel(profile.pal)}）`];
     if (profile.cardioDailyAvg > 0) parts.push(`有酸素+${profile.cardioDailyAvg}`);
     if (profile.workoutDailyAvg > 0) parts.push(`筋トレ+${profile.workoutDailyAvg}（直近30日${profile.workoutsLast30Days}回）`);
     const base = parts.join(' ');
@@ -617,6 +665,8 @@ function adoptSimulationPlan() {
     // 平衡体重も実績から出し直す(固定値のまま放置されていた項目)
     const equilibrium = computeEquilibriumWeight(latestWeight, sim.effectiveDailyDeficit, basis.kcalPerKgPerDay);
     if (equilibrium !== null) s.weightEquilibrium = equilibrium;
+    // 減速係数もシートへ書き出す(ブリーフィングがアプリと同じ係数で計画体重を出せるように)
+    s.kcalPerKgPerDay = Math.round(basis.kcalPerKgPerDay * 10) / 10;
 
     state.planSettings = s;
     saveDataAndSync();

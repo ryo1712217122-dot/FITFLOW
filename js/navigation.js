@@ -4,47 +4,51 @@ function initNavigation() {
     DOM.navItems.forEach(item => {
         item.addEventListener('click', (e) => {
             e.preventDefault();
-            const tabId = item.getAttribute('data-tab');
-
-            // Update active state in nav
-            DOM.navItems.forEach(i => i.classList.remove('active'));
-            item.classList.add('active');
-
-            // Switch tabs
-            DOM.tabContents.forEach(content => {
-                content.classList.remove('active');
-                if (content.id === tabId) {
-                    content.classList.add('active');
-                }
-            });
-
-            // Specific tab entry actions
-            if (tabId === 'analytics') {
-                updateDashboard();
-            } else if (tabId === 'history') {
-                updateHistoryList();
-                updateCardioHistoryList();
-                updateWeightHistoryList();
-                updateMealHistoryList();
-                updateCalorieBalanceHistoryList();
-            } else if (tabId === 'quick-log') {
-                // 進行中のセッションがあればフォームへ復元し、無ければ新規フォームにする
-                syncWorkoutFormWithOpenSession();
-            } else if (tabId === 'plan') {
-                // 減量シミュレーション(TDEE・目標摂取カロリー・予測体重)は最新体重と
-                // 直近の記録から毎回算出しているため、開くたびに再計算する。
-                // これをしないと、体重を記録し直してもリロードするまで古い数字のままになる
-                // (ダッシュボードだけ更新され、計画タブが取り残される不具合があった)。
-                // ただし個別の編集欄(日数配分・計画開始日)を開いている最中は、
-                // 入力中の値を捨てないよう再描画しない。
-                if (!isPlanInlineEditorOpen()) {
-                    renderPlanTab();
-                }
-            }
-
-            window.scrollTo({ top: 0, behavior: 'smooth' });
+            switchTab(item.getAttribute('data-tab'));
         });
     });
+}
+
+// タブを切り替える。ナビのクリックだけでなく、ダッシュボードから履歴へ飛ぶ時
+// (openHistoryAt)や日別サマリーから記録ページを開く時にも使う。
+// scroll=false は、切り替えた先で特定のカードまでスクロールしたい呼び出し元のため
+// (先頭への smooth スクロールと競合して、目的のカードまで届かなくなる)。
+function switchTab(tabId, { scroll = true } = {}) {
+    DOM.navItems.forEach(i => {
+        const active = i.getAttribute('data-tab') === tabId;
+        i.classList.toggle('active', active);
+        if (active) i.setAttribute('aria-current', 'page');
+        else i.removeAttribute('aria-current');
+    });
+    DOM.tabContents.forEach(content => {
+        content.classList.toggle('active', content.id === tabId);
+    });
+
+    // Specific tab entry actions
+    if (tabId === 'analytics') {
+        updateDashboard();
+    } else if (tabId === 'history') {
+        updateHistoryList();
+        updateCardioHistoryList();
+        updateWeightHistoryList();
+        updateMealHistoryList();
+        updateCalorieBalanceHistoryList();
+    } else if (tabId === 'quick-log') {
+        // 進行中のセッションがあればフォームへ復元し、無ければ新規フォームにする
+        syncWorkoutFormWithOpenSession();
+    } else if (tabId === 'plan') {
+        // 減量シミュレーション(TDEE・目標摂取カロリー・予測体重)は最新体重と
+        // 直近の記録から毎回算出しているため、開くたびに再計算する。
+        // これをしないと、体重を記録し直してもリロードするまで古い数字のままになる
+        // (ダッシュボードだけ更新され、計画タブが取り残される不具合があった)。
+        // ただし個別の編集欄(日数配分・計画開始日)を開いている最中は、
+        // 入力中の値を捨てないよう再描画しない。
+        if (!isPlanInlineEditorOpen()) {
+            renderPlanTab();
+        }
+    }
+
+    if (scroll) window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
 function initDateTexts() {

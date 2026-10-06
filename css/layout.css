@@ -225,7 +225,7 @@
     font-size: 20px;
 }
 
-/* Generic grid utilities shared across pages (dashboard-grid, settings-grid, quick-log-grid all rely on col-span-2) */
+/* Generic grid utilities shared across pages (dashboard-grid, settings-grid rely on col-span-2) */
 .dashboard-grid {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
