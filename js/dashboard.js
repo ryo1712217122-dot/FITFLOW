@@ -500,14 +500,16 @@ function renderWeightChart() {
 
     const ctx = canvas.getContext('2d');
 
-    // 表示期間: 今日からweightChartPeriodDays日分の日付ウィンドウで絞り込む
-    // (「最近N件」ではなく日数で切ることで、記録の抜けがあっても期間の意味が変わらない)
-    const windowStart = new Date(getTodayStr() + 'T00:00:00');
-    windowStart.setDate(windowStart.getDate() - (weightChartPeriodDays - 1));
-    const startIndex = state.weightLogs.findIndex(l => {
-        const d = new Date(l.date + 'T00:00:00');
-        return !isNaN(d.getTime()) && d >= windowStart;
-    });
+    // 描く範囲と、1画面に見える範囲を分ける(v1.27.1)。グラフは横にスライドでき、
+    // 期間ボタン(1週間/1ヶ月)は「1画面にどれだけ見えるか」を決める。
+    // 描く範囲は 1週間表示なら直近90日、1ヶ月表示なら直近1年。全期間を描かないのは、
+    // キャンバスが横に長くなりすぎると(特にiPhoneで)描けなくなるため。
+    // 日数で切るのは「最近N件」と違い、記録の抜けがあっても期間の意味が変わらないから
+    const todayStr = getTodayStr();
+    const rangeDays = weightChartPeriodDays <= 7 ? WEIGHT_CHART_RANGE_DAYS_WEEK : WEIGHT_CHART_RANGE_DAYS_MONTH;
+    const firstIndexSince = (days) => state.weightLogs.findIndex(l => l.date >= addDaysToDateString(todayStr, -(days - 1)));
+    const startIndex = firstIndexSince(rangeDays);
+    const visibleStartIndex = firstIndexSince(weightChartPeriodDays);
 
     if (state.weightLogs.length === 0 || startIndex === -1) {
         DOM.noWeightData.style.display = 'block';
@@ -517,6 +519,10 @@ function renderWeightChart() {
         }
         if (DOM.weightChangeSummary) DOM.weightChangeSummary.textContent = '';
         if (DOM.drinkingImpactSummary) DOM.drinkingImpactSummary.textContent = '';
+        const axis = document.getElementById('weightChartAxis');
+        if (axis) axis.classList.add('is-hidden');
+        const hint = document.getElementById('weight-chart-hint');
+        if (hint) hint.classList.add('is-hidden');
         return;
     }
 
@@ -528,6 +534,20 @@ function renderWeightChart() {
     const movingAverages = computeMovingAverage(state.weightLogs, WEIGHT_TREND_WINDOW_DAYS);
     const recentLogs = state.weightLogs.slice(startIndex);
     const recentAverages = movingAverages.slice(startIndex);
+
+    // 1画面に見える点の数から、グラフ全体の横幅を決める(見える範囲の何倍の長さか)
+    const visibleCount = visibleStartIndex === -1 ? 1 : Math.max(1, state.weightLogs.length - visibleStartIndex);
+    const scrollEl = document.getElementById('weight-chart-scroll');
+    const innerEl = document.getElementById('weight-chart-inner');
+    let chartWidth = null;
+    if (scrollEl && innerEl) {
+        const viewWidth = scrollEl.clientWidth || 300;
+        const ratio = Math.max(1, recentLogs.length / visibleCount);
+        chartWidth = Math.min(Math.round(viewWidth * ratio), WEIGHT_CHART_MAX_WIDTH_PX);
+        innerEl.style.width = `${chartWidth}px`;
+    }
+    const hintEl = document.getElementById('weight-chart-hint');
+    if (hintEl) hintEl.classList.toggle('is-hidden', !(chartWidth && scrollEl && chartWidth > scrollEl.clientWidth + 1));
 
     const labels = recentLogs.map(l => {
         const parts = l.date.split('-');
@@ -633,15 +653,24 @@ function renderWeightChart() {
         }
     }
 
+    const legendPlan = document.getElementById('weight-legend-plan');
+    if (legendPlan) legendPlan.classList.toggle('is-hidden', datasets.length < 3);
+
     state.charts.weight = new Chart(ctx, {
         type: 'line',
         data: {
             labels: labels,
             datasets: datasets
         },
+        // 縦軸の目盛りを左に固定するため、描き終わった時点で目盛り部分を別のキャンバスへ写す
+        plugins: [{ id: 'weightAxisCopy', afterRender: (chart) => copyWeightChartAxis(chart) }],
         options: {
             responsive: true,
             maintainAspectRatio: false,
+            // 横に長いキャンバスは、画素数が多すぎると端末によって描けない。解像度を抑える
+            devicePixelRatio: Math.min(window.devicePixelRatio || 1, 2),
+            // スライドして見るグラフなので、描き直しのたびに動くと位置を見失う
+            animation: false,
             // 点を押すと、その日の記録をまとめた日別サマリーを開く
             onClick: (evt, elements) => {
                 if (!elements || elements.length === 0) return;
@@ -652,11 +681,8 @@ function renderWeightChart() {
                 if (evt.native && evt.native.target) evt.native.target.style.cursor = elements.length ? 'pointer' : 'default';
             },
             plugins: {
-                legend: {
-                    display: true,
-                    position: 'top',
-                    labels: { color: theme.text }
-                },
+                // 凡例はグラフの外(HTML)に置いている
+                legend: { display: false },
                 tooltip: {
                     callbacks: {
                         footer: () => '押すとこの日の記録を表示',
@@ -682,6 +708,34 @@ function renderWeightChart() {
             }
         }
     });
+
+    // 最新が見えている状態で始める(過去は右へスライドして見る)
+    if (scrollEl) scrollEl.scrollLeft = scrollEl.scrollWidth;
+}
+
+// 体重グラフの縦軸(目盛り)部分を、左に固定した別キャンバスへ写す。
+// グラフ本体は横にスライドするので、そのままだと目盛りが一緒に流れて見えなくなる
+function copyWeightChartAxis(chart) {
+    const axis = document.getElementById('weightChartAxis');
+    if (!axis || !chart || !chart.chartArea) return;
+    // ダッシュボードが隠れている間(別タブで記録を保存した時など)はキャンバスの大きさが0で、
+    // 写そうとすると例外になりグラフごと作れなくなる。表示された時に描き直されるので何もしない
+    if (!chart.canvas || chart.canvas.width === 0 || chart.canvas.height === 0 || chart.chartArea.left <= 7) return;
+    const dpr = chart.currentDevicePixelRatio || 1;
+    const axisWidth = Math.ceil(chart.chartArea.left);
+    const height = chart.height;
+    axis.width = Math.round(axisWidth * dpr);
+    axis.height = Math.round(height * dpr);
+    axis.style.width = `${axisWidth}px`;
+    axis.style.height = `${height}px`;
+    const actx = axis.getContext('2d');
+    actx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--bg-surface').trim() || '#ffffff';
+    actx.fillRect(0, 0, axis.width, axis.height);
+    // 写すのは目盛りの文字だけ。グラフ左端の点(半径6px)と、下の日付ラベルの端は写さない
+    const copyWidth = Math.max(0, Math.round((chart.chartArea.left - 7) * dpr));
+    const copyHeight = Math.round(chart.chartArea.bottom * dpr) + Math.round(8 * dpr);
+    actx.drawImage(chart.canvas, 0, 0, copyWidth, copyHeight, 0, 0, copyWidth, copyHeight);
+    axis.classList.remove('is-hidden');
 }
 
 function renderCalorieChart() {

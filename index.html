@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>FITFLOW - 筋トレ実績管理アプリ</title>
-    <!-- ホーム画面に追加してアプリとして使う・オフラインで開くための設定(v1.27.0)。
+    <!-- ホーム画面に追加してアプリとして使う・オフラインで開くための設定(v1.27.1)。
          Service Worker の登録は js/main.js、保存の方針は sw.js を参照 -->
     <link rel="manifest" href="manifest.webmanifest">
     <meta name="theme-color" content="#0017c1">
@@ -26,17 +26,17 @@
     <script src="vendor/lucide-0.469.0.min.js"></script>
     <!-- CSSはカスケードレイヤーで管理。layers.cssの宣言順が優先度を決めるため、
          必ずこれを他のどのスタイルシートよりも先に読み込むこと（<link>の物理的な順番には依存しない）。 -->
-    <link rel="stylesheet" href="css/layers.css?v=1.27.0">
-    <link rel="stylesheet" href="css/tokens.css?v=1.27.0">
-    <link rel="stylesheet" href="css/base.css?v=1.27.0">
-    <link rel="stylesheet" href="css/layout.css?v=1.27.0">
-    <link rel="stylesheet" href="css/components.css?v=1.27.0">
-    <link rel="stylesheet" href="css/pages/record.css?v=1.27.0">
-    <link rel="stylesheet" href="css/pages/dashboard.css?v=1.27.0">
-    <link rel="stylesheet" href="css/pages/plan.css?v=1.27.0">
-    <link rel="stylesheet" href="css/pages/history.css?v=1.27.0">
-    <link rel="stylesheet" href="css/pages/settings.css?v=1.27.0">
-    <link rel="stylesheet" href="css/responsive.css?v=1.27.0">
+    <link rel="stylesheet" href="css/layers.css?v=1.27.1">
+    <link rel="stylesheet" href="css/tokens.css?v=1.27.1">
+    <link rel="stylesheet" href="css/base.css?v=1.27.1">
+    <link rel="stylesheet" href="css/layout.css?v=1.27.1">
+    <link rel="stylesheet" href="css/components.css?v=1.27.1">
+    <link rel="stylesheet" href="css/pages/record.css?v=1.27.1">
+    <link rel="stylesheet" href="css/pages/dashboard.css?v=1.27.1">
+    <link rel="stylesheet" href="css/pages/plan.css?v=1.27.1">
+    <link rel="stylesheet" href="css/pages/history.css?v=1.27.1">
+    <link rel="stylesheet" href="css/pages/settings.css?v=1.27.1">
+    <link rel="stylesheet" href="css/responsive.css?v=1.27.1">
 </head>
 <body>
     <div class="app-container">
@@ -48,7 +48,7 @@
                 </div>
                 <div class="brand-text">
                     <h1>FITFLOW</h1>
-                    <span class="app-version">v1.27.0</span>
+                    <span class="app-version">v1.27.1</span>
                 </div>
             </div>
 
@@ -81,7 +81,7 @@
             <!-- Top bar -->
             <header class="top-bar">
                 <div class="welcome">
-                    <h2 id="greeting-text">こんにちは！<span class="app-version-badge">v1.27.0</span></h2>
+                    <h2 id="greeting-text">こんにちは！<span class="app-version-badge">v1.27.1</span></h2>
                     <p id="date-text">2026年7月3日 金曜日</p>
                 </div>
                 <div class="header-right-controls">
@@ -94,7 +94,7 @@
                 </div>
             </header>
 
-            <!-- 記録する(v1.27.0で3ページに分割)。いちばん触る食事を先頭に、トレーニング(有酸素を含む)、
+            <!-- 記録する(v1.27.1で3ページに分割)。いちばん触る食事を先頭に、トレーニング(有酸素を含む)、
                  1日の最後に測る体重を最後に置く。ページの切り替えは js/record-form.js の switchRecordPage。
                  日付のデフォルトは「27時ルール」(AM3時までは前日扱い)で入る。 -->
             <section id="quick-log" class="tab-content">
@@ -175,7 +175,7 @@
                                     <option value="700">普通（約700kcal）</option>
                                     <option value="950">多め（約950kcal）</option>
                                 </select>
-                                <!-- 飲み会は夕食の分岐として記録する(v1.27.0で独立したフォームから統合)。
+                                <!-- 飲み会は夕食の分岐として記録する(v1.27.1で独立したフォームから統合)。
                                      チェックを付けて保存するとdrinkingLogsにも記録され、体重グラフに🍻が付く。
                                      記録済みの日にチェックを外して保存すると、飲み会の記録だけを取り消す -->
                                 <label class="meal-drinking-check">
@@ -306,7 +306,7 @@
                                 </div>
                             </div>
 
-                            <!-- 有酸素(v1.27.0でトレーニングの記録に統合)。日付はトレーニングと共通で、
+                            <!-- 有酸素(v1.27.1でトレーニングの記録に統合)。日付はトレーニングと共通で、
                                  「トレーニングを記録完了」を押した時に一緒に保存する。走っただけの日は
                                  種目を入れずに距離だけ入れて完了を押せばよい -->
                             <hr class="form-section-divider">
@@ -421,7 +421,7 @@
                         </div>
                     </div>
 
-                    <!-- 週のまとめ(v1.27.0)。今週(日曜〜今日)と先週を並べて比べる。
+                    <!-- 週のまとめ(v1.27.1)。今週(日曜〜今日)と先週を並べて比べる。
                          中身は js/dashboard.js の renderWeeklySummary が組み立てる -->
                     <div class="card weekly-summary-card">
                         <div class="card-header">
@@ -488,10 +488,25 @@
                             <span class="weight-change-summary drinking-impact-summary" id="drinking-impact-summary"></span>
                             <a href="#history" class="card-header-link" data-history-jump="weight">体重の履歴へ</a>
                         </div>
+                        <!-- 凡例はグラフの外に置く(グラフ本体は横にスライドするので、中に描くと一緒に流れて見えなくなる) -->
+                        <div class="weight-chart-legend" aria-hidden="true">
+                            <span class="weight-legend-item"><span class="weight-legend-swatch is-weight"></span>体重</span>
+                            <span class="weight-legend-item"><span class="weight-legend-swatch is-average"></span>7日移動平均</span>
+                            <span class="weight-legend-item is-hidden" id="weight-legend-plan"><span class="weight-legend-swatch is-plan"></span>予測（計画）</span>
+                            <span class="weight-legend-item"><span class="weight-legend-swatch is-drinking"></span>飲み会の日</span>
+                        </div>
+                        <!-- 横にスライドすると過去の体重が見られる(v1.27.1)。期間ボタンは「1画面に見える幅」。
+                             縦軸の目盛りは左に固定する(#weightChartAxis にグラフの目盛り部分を写す) -->
                         <div class="chart-container weight-chart-container">
-                            <canvas id="weightChart"></canvas>
+                            <div class="weight-chart-scroll" id="weight-chart-scroll">
+                                <div class="weight-chart-inner" id="weight-chart-inner">
+                                    <canvas id="weightChart"></canvas>
+                                </div>
+                            </div>
+                            <canvas id="weightChartAxis" class="weight-chart-axis" aria-hidden="true"></canvas>
                             <div id="no-weight-data" class="no-data-msg">データがありません</div>
                         </div>
+                        <p class="weight-chart-hint" id="weight-chart-hint">グラフを横にスライドすると、過去の体重が見られます（左ほど過去）。</p>
                     </div>
 
                     <!-- Weekly running distance goal progress -->
@@ -520,7 +535,7 @@
                         </div>
                     </div>
 
-                    <!-- 最近のトレーニング(v1.27.0)。押すと履歴タブのその日のカードへ移動する。
+                    <!-- 最近のトレーニング(v1.27.1)。押すと履歴タブのその日のカードへ移動する。
                          中身は js/dashboard.js の renderRecentWorkouts が組み立てる -->
                     <div class="card recent-workouts-card">
                         <div class="card-header">
@@ -544,7 +559,7 @@
                         </div>
                         <div class="calorie-analytics-wrapper">
                             <div class="calorie-stats-column">
-                                <!-- 今日あと何kcal食べられるか(v1.27.0)。計画タブの目標摂取カロリーから、
+                                <!-- 今日あと何kcal食べられるか(v1.27.1)。計画タブの目標摂取カロリーから、
                                      今日の食事記録を引いた残り。飲み会の日はイベント日の目標を使う -->
                                 <div class="calorie-summary-tile intake-budget-tile">
                                     <span class="tile-label">今日あと食べられる量</span>
@@ -872,25 +887,25 @@
     </div>
 
     <!-- lib/data-utils.js: DOM非依存の純粋関数（node --testでもテストされる）。他のどのjs/*.jsよりも先に読み込む -->
-    <script src="lib/data-utils.js?v=1.27.0"></script>
+    <script src="lib/data-utils.js?v=1.27.1"></script>
     <!-- js/*.js: すべてグローバルスコープに関数を定義するクラシックscript。
          ESモジュールにはしていない（index.htmlをダブルクリックしてfile://で開いても動作させるため）。
          依存関係は読み込み順で解決するので、この順番を変えないこと。 -->
-    <script src="js/config.js?v=1.27.0"></script>
-    <script src="js/state.js?v=1.27.0"></script>
-    <script src="js/utils.js?v=1.27.0"></script>
-    <script src="js/dom.js?v=1.27.0"></script>
-    <script src="js/notifications.js?v=1.27.0"></script>
-    <script src="js/navigation.js?v=1.27.0"></script>
-    <script src="js/dashboard.js?v=1.27.0"></script>
-    <script src="js/record-form.js?v=1.27.0"></script>
-    <script src="js/history-workouts.js?v=1.27.0"></script>
-    <script src="js/history-logs.js?v=1.27.0"></script>
-    <script src="js/history-nav.js?v=1.27.0"></script>
-    <script src="js/day-summary.js?v=1.27.0"></script>
-    <script src="js/plan.js?v=1.27.0"></script>
-    <script src="js/sync.js?v=1.27.0"></script>
-    <script src="js/backup.js?v=1.27.0"></script>
-    <script src="js/main.js?v=1.27.0"></script>
+    <script src="js/config.js?v=1.27.1"></script>
+    <script src="js/state.js?v=1.27.1"></script>
+    <script src="js/utils.js?v=1.27.1"></script>
+    <script src="js/dom.js?v=1.27.1"></script>
+    <script src="js/notifications.js?v=1.27.1"></script>
+    <script src="js/navigation.js?v=1.27.1"></script>
+    <script src="js/dashboard.js?v=1.27.1"></script>
+    <script src="js/record-form.js?v=1.27.1"></script>
+    <script src="js/history-workouts.js?v=1.27.1"></script>
+    <script src="js/history-logs.js?v=1.27.1"></script>
+    <script src="js/history-nav.js?v=1.27.1"></script>
+    <script src="js/day-summary.js?v=1.27.1"></script>
+    <script src="js/plan.js?v=1.27.1"></script>
+    <script src="js/sync.js?v=1.27.1"></script>
+    <script src="js/backup.js?v=1.27.1"></script>
+    <script src="js/main.js?v=1.27.1"></script>
 </body>
 </html>

@@ -6,6 +6,11 @@ const DEFAULT_WEIGHT_KG = 70.0;
 const CARDIO_DAYS_WINDOW = 7;
 // 体重推移グラフの移動平均・週間変化量サマリーで使う日数
 const WEIGHT_TREND_WINDOW_DAYS = 7;
+// 体重グラフを横にスライドして遡れる範囲(1週間表示/1ヶ月表示)と、グラフ全体の横幅の上限。
+// 横に長いキャンバスは画素数が多すぎると端末(特にiPhoneのSafari)で描けなくなるため上限を設ける
+const WEIGHT_CHART_RANGE_DAYS_WEEK = 90;
+const WEIGHT_CHART_RANGE_DAYS_MONTH = 365;
+const WEIGHT_CHART_MAX_WIDTH_PX = 8000;
 // トレーニングカレンダー(連続ヒートマップ)で表示する週数。右端が今週。
 // 26週=約半年。月ごとのページ送りを廃止した代わりに、ここで見える範囲を決める
 const CALENDAR_HEATMAP_WEEKS = 26;
